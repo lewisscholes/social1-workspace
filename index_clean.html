@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Social1 - Affiliate Editor</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js"></script>
+<style>
+  :root{--bg:#f4f6f9;--sidebar:#fbfcfe;--blue:#2f6bff;--blue-d:#1a50d0;--card:#fff;--border:#e2e6ed;--text:#1a1d23;--muted:#6b7280;--danger:#ef4444;--green:#22c55e;--yellow:#f59e0b;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+  button{cursor:pointer;font-family:inherit;}
+  input,select,textarea{font-family:inherit;}
+
+  /* -- AUTH -- */
+  #auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem;}
+  .auth-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:2rem;width:100%;max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,.06);}
+  .auth-card h1{font-size:1.4rem;margin-bottom:.25rem;}
+  .auth-card p{color:var(--muted);font-size:.875rem;margin-bottom:1.5rem;}
+  .form-row{margin-bottom:1rem;}
+  .form-row label{display:block;font-size:.8125rem;font-weight:500;margin-bottom:.375rem;}
+  .form-row input{width:100%;padding:.625rem .75rem;border:1px solid var(--border);border-radius:8px;font-size:.9375rem;outline:none;transition:border .15s;}
+  .form-row input:focus{border-color:var(--blue);}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;padding:.625rem 1.1rem;border-radius:8px;font-size:.9rem;font-weight:500;border:none;transition:background .15s,opacity .15s;}
+  .btn-primary{background:var(--blue);color:#fff;}
+  .btn-primary:hover{background:var(--blue-d);}
+  .btn-full{width:100%;}
+  .btn-sm{padding:.375rem .7rem;font-size:.8125rem;}
+  .btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border);}
+  .btn-ghost:hover{background:var(--bg);}
+  .btn-danger{background:var(--danger);color:#fff;}
+  .btn-danger:hover{opacity:.85;}
+  .btn-green{background:var(--green);color:#fff;}
+  .auth-toggle{text-align:center;margin-top:1rem;font-size:.875rem;color:var(--muted);}
+  .auth-toggle a{color:var(--blue);cursor:pointer;text-decoration:none;}
+  .pending-screen{text-align:center;padding:2rem;}
+  .pending-screen h2{margin-bottom:.5rem;}
+  .error-msg{color:var(--danger);font-size:.8125rem;margin-top:.4rem;}
+
+  /* -- SHELL -- */
+  #app{display:none;min-height:100vh;}
+  .shell{display:flex;min-height:100vh;}
+  .sidebar{width:220px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;}
+  .sidebar-logo{padding:1.25rem 1rem 1rem;font-size:1.1rem;font-weight:700;color:var(--blue);}
+  .sidebar-nav{flex:1;padding:.5rem 0;}
+  .nav-item{display:flex;align-items:center;gap:.6rem;padding:.6rem 1rem;font-size:.9rem;color:var(--muted);cursor:pointer;border-radius:0;transition:background .12s,color .12s;}
+  .nav-item:hover,.nav-item.active{background:rgba(47,107,255,.07);color:var(--blue);}
+  .nav-item svg{width:16px;height:16px;flex-shrink:0;}
+  .sidebar-user{padding:.75rem 1rem;border-top:1px solid var(--border);font-size:.8125rem;color:var(--muted);}
+  .sidebar-user strong{display:block;color:var(--text);margin-bottom:.15rem;}
+  .main{margin-left:220px;flex:1;padding:1.5rem 2rem;max-width:1400px;}
+  .main-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;}
+  .main-header h2{font-size:1.25rem;}
+
+  /* bottom tab bar (mobile) */
+  .tab-bar{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--sidebar);border-top:1px solid var(--border);z-index:100;}
+  .tab-bar-inner{display:flex;justify-content:space-around;}
+  .tab-btn{flex:1;padding:.6rem .2rem .4rem;display:flex;flex-direction:column;align-items:center;gap:.15rem;font-size:.65rem;color:var(--muted);background:none;border:none;cursor:pointer;}
+  .tab-btn.active{color:var(--blue);}
+  .tab-btn svg{width:20px;height:20px;}
+
+  @media(max-width:768px){
+    .sidebar{display:none;}
+    .main{margin-left:0;padding:1rem 1rem 4.5rem;}
+    .tab-bar{display:block;}
+  }
+
+  /* -- CARDS & GRIDS -- */
+  .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;}
+  @media(max-width:600px){.stats-grid{grid-template-columns:1fr 1fr;}}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;}
+  .stat-card h3{font-size:.8125rem;color:var(--muted);margin-bottom:.5rem;}
+  .stat-periods{display:flex;gap:.75rem;flex-wrap:wrap;}
+  .stat-period{text-align:center;}
+  .stat-period .val{font-size:1.35rem;font-weight:700;}
+  .stat-period .lbl{font-size:.7rem;color:var(--muted);}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.25rem;}
+  .card+.card{margin-top:1rem;}
+  .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+  .card-header h3{font-size:1rem;}
+
+  /* -- TABLE -- */
+  .table-wrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:.875rem;}
+  th{text-align:left;padding:.5rem .75rem;border-bottom:2px solid var(--border);color:var(--muted);font-weight:500;white-space:nowrap;}
+  td{padding:.6rem .75rem;border-bottom:1px solid var(--border);vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  .badge{display:inline-block;padding:.15rem .5rem;border-radius:999px;font-size:.75rem;font-weight:500;}
+  .badge-blue{background:#eff4ff;color:var(--blue);}
+  .badge-green{background:#f0fdf4;color:#16a34a;}
+  .badge-yellow{background:#fffbeb;color:#b45309;}
+  .badge-red{background:#fef2f2;color:#dc2626;}
+  .badge-gray{background:#f3f4f6;color:#6b7280;}
+
+  /* -- VIDEO GRID -- */
+  .video-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;}
+  .video-card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;position:relative;}
+  .video-thumb{width:100%;aspect-ratio:9/16;background:#1a1d23;display:flex;align-items:center;justify-content:center;color:#4b5563;font-size:.8rem;}
+  .video-thumb img{width:100%;height:100%;object-fit:cover;}
+  .video-info{padding:.6rem .75rem;}
+  .video-info .name{font-size:.8125rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .video-info .meta{font-size:.75rem;color:var(--muted);margin-top:.2rem;}
+  .video-menu-btn{position:absolute;top:.4rem;right:.4rem;background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;cursor:pointer;z-index:2;}
+  .dropdown-menu{position:fixed;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:1000;min-width:160px;padding:.3rem 0;}
+  .dropdown-menu button{display:block;width:100%;text-align:left;padding:.5rem .9rem;font-size:.875rem;background:none;border:none;color:var(--text);cursor:pointer;}
+  .dropdown-menu button:hover{background:var(--bg);}
+  .dropdown-menu button.danger{color:var(--danger);}
+
+  /* -- MODAL -- */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;padding:1rem;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--card);border-radius:12px;padding:1.5rem;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;}
+  .modal h3{font-size:1.05rem;margin-bottom:1rem;}
+  .modal-footer{display:flex;gap:.6rem;justify-content:flex-end;margin-top:1.25rem;}
+  .tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1rem;}
+  .tab{padding:.5rem 1rem;font-size:.875rem;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;}
+  .tab.active{color:var(--blue);border-bottom-color:var(--blue);}
+
+  /* -- UPLOAD PROGRESS -- */
+  .upload-progress{background:var(--bg);border-radius:8px;padding:.75rem;margin-top:.75rem;}
+  .progress-bar-wrap{background:#e2e6ed;border-radius:999px;height:6px;margin:.4rem 0;}
+  .progress-bar{background:var(--blue);height:6px;border-radius:999px;transition:width .2s;}
+
+  /* -- OVERLAY SUGGESTIONS -- */
+  .suggestion-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.1rem;margin-bottom:1rem;}
+  .suggestion-card h4{font-size:.9rem;margin-bottom:.5rem;color:var(--muted);}
+  .overlay-lines{display:flex;flex-direction:column;gap:.25rem;margin-bottom:.5rem;}
+  .overlay-line{font-size:.85rem;background:#eff4ff;color:var(--blue);padding:.25rem .6rem;border-radius:6px;}
+  .suggestion-desc{font-size:.8125rem;color:var(--muted);margin-bottom:.5rem;font-style:italic;}
+  .suggestion-rationale{font-size:.8125rem;margin-bottom:.75rem;}
+  .suggestion-actions{display:flex;gap:.5rem;flex-wrap:wrap;}
+
+  /* -- MISC -- */
+  .empty-state{text-align:center;padding:3rem 1rem;color:var(--muted);}
+  .empty-state svg{width:40px;height:40px;margin:0 auto .75rem;display:block;opacity:.35;}
+  .search-row{display:flex;gap:.6rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap;}
+  .search-row input{flex:1;min-width:160px;padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;font-size:.875rem;outline:none;}
+  .search-row input:focus{border-color:var(--blue);}
+  .inline-loader{display:inline-block;width:14px;height:14px;border:2px solid #ddd;border-top-color:var(--blue);border-radius:50%;animation:spin .6s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#1a1d23;color:#fff;padding:.625rem 1rem;border-radius:8px;font-size:.875rem;z-index:9999;opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateY(0);}
+  .reason-area{width:100%;padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;font-size:.875rem;resize:vertical;margin-top:.5rem;outline:none;}
+  .reason-area:focus{border-color:var(--blue);}
+  #global-upload-btn{position:fixed;top:1rem;right:1.5rem;z-index:200;}
+  @media(max-width:768px){#global-upload-btn{top:auto;bottom:4.5rem;right:1rem;}}
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+<!-- AUTH -->
+<div id="auth-screen">
+  <div class="auth-card" id="login-card">
+    <h1>Social1</h1>
+    <p>Affiliate Editor -- sign in to continue</p>
+    <div class="form-row"><label>Email</label><input type="email" id="login-email" placeholder="you@example.com"/></div>
+    <div class="form-row"><label>Password</label><input type="password" id="login-pass" placeholder="********"/></div>
+    <div id="login-err" class="error-msg"></div>
+    <button class="btn btn-primary btn-full" style="margin-top:.5rem" onclick="doLogin()">Sign in</button>
+    <div class="auth-toggle">No account? <a onclick="showSignup()">Sign up</a></div>
+  </div>
+  <div class="auth-card" id="signup-card" style="display:none">
+    <h1>Create account</h1>
+    <p>You'll need admin approval before you can access the app.</p>
+    <div class="form-row"><label>First name</label><input type="text" id="signup-name" placeholder="Alex"/></div>
+    <div class="form-row"><label>Email</label><input type="email" id="signup-email" placeholder="you@example.com"/></div>
+    <div class="form-row"><label>Password</label><input type="password" id="signup-pass" placeholder="min 6 chars"/></div>
+    <div id="signup-err" class="error-msg"></div>
+    <button class="btn btn-primary btn-full" style="margin-top:.5rem" onclick="doSignup()">Create account</button>
+    <div class="auth-toggle">Have an account? <a onclick="showLogin()">Sign in</a></div>
+  </div>
+  <div class="auth-card pending-screen" id="pending-card" style="display:none">
+    <h2>Waiting for approval</h2>
+    <p style="color:var(--muted);margin-top:.5rem">An admin will approve your account shortly. Check back soon.</p>
+    <button class="btn btn-ghost" style="margin-top:1.25rem" onclick="supabase.auth.signOut()">Sign out</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <button class="btn btn-primary btn-sm" id="global-upload-btn" onclick="openUploadModal()">+ Upload videos</button>
+  <div class="shell">
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+      <div class="sidebar-logo">Social1</div>
+      <div class="sidebar-nav" id="sidebar-nav"></div>
+      <div class="sidebar-user" id="sidebar-user"></div>
+    </nav>
+    <!-- MAIN -->
+    <main class="main" id="main-content"></main>
+  </div>
+  <!-- BOTTOM TAB BAR -->
+  <div class="tab-bar"><div class="tab-bar-inner" id="tab-bar-inner"></div></div>
+</div>
+
+<!-- UPLOAD MODAL -->
+<div class="modal-overlay" id="upload-modal">
+  <div class="modal">
+    <h3>Upload videos</h3>
+    <div class="form-row">
+      <label>Product</label>
+      <select id="upload-product-sel" style="width:100%;padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;font-size:.9rem;outline:none;"></select>
+    </div>
+    <div class="form-row">
+      <label>Files</label>
+      <input type="file" id="upload-files" multiple accept="video/*"/>
+    </div>
+    <div id="upload-progress-list"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('upload-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="startUpload()">Upload</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCRAPE MODAL -->
+<div class="modal-overlay" id="scrape-modal">
+  <div class="modal" style="max-width:560px">
+    <h3>New scrape job</h3>
+    <div class="form-row">
+      <label>Product</label>
+      <select id="scrape-product-sel" style="width:100%;padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;font-size:.9rem;outline:none;">
+        <option value="">-- select product --</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Or new product name</label>
+      <input type="text" id="scrape-new-product" placeholder="Leave blank to use above"/>
+    </div>
+    <div class="form-row">
+      <label>Product URL (social1.ai)</label>
+      <input type="url" id="scrape-url" placeholder="https://..."/>
+    </div>
+    <div class="form-row">
+      <label>Max records</label>
+      <input type="number" id="scrape-max" value="24" min="1" max="200"/>
+    </div>
+    <div class="form-row">
+      <label>Repeat</label>
+      <select id="scrape-repeat" style="width:100%;padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;font-size:.9rem;outline:none;">
+        <option value="0">Just once</option>
+        <option value="60">Every hour</option>
+        <option value="180">Every 3 hours</option>
+        <option value="360">Every 6 hours</option>
+        <option value="720">Every 12 hours</option>
+        <option value="1440">Daily</option>
+      </select>
+    </div>
+    <div class="form-row" id="scrape-for-row" style="display:none">
+      <label>For</label>
+      <select id="scrape-for" style="width:100%;padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;font-size:.9rem;outline:none;">
+        <option value="1">1 day</option>
+        <option value="3">3 days</option>
+        <option value="7" selected>7 days</option>
+        <option value="14">14 days</option>
+        <option value="30">30 days</option>
+        <option value="0">Until stopped</option>
+      </select>
+    </div>
+    <div id="scrape-err" class="error-msg"></div>
+
+    <h4 style="margin:.75rem 0 .5rem;font-size:.875rem">Recent jobs</h4>
+    <div id="scrape-jobs-list" style="font-size:.8125rem;max-height:160px;overflow-y:auto;"></div>
+    <h4 style="margin:.75rem 0 .5rem;font-size:.875rem">Active schedules</h4>
+    <div id="scrape-schedules-list" style="font-size:.8125rem;max-height:120px;overflow-y:auto;"></div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('scrape-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitScrape()">Start</button>
+    </div>
+  </div>
+</div>
+
+<!-- REASON MODAL -->
+<div class="modal-overlay" id="reason-modal">
+  <div class="modal" style="max-width:420px">
+    <h3 id="reason-title">Feedback</h3>
+    <p id="reason-prompt" style="font-size:.875rem;color:var(--muted);margin-bottom:.75rem"></p>
+    <textarea id="reason-input" class="reason-area" rows="3" placeholder="Optional -- why?"></textarea>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('reason-modal')">Cancel</button>
+      <button class="btn btn-primary" id="reason-confirm-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// -- CONSTANTS --
+const SUPABASE_URL = 'https://vcrforlyuhapvkewsogq.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjcmZvcmx5dWhhcHZrZXdzb2dxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzODk4NzAsImV4cCI6MjA5NTk2NTg3MH0.lcFC5aJFUGYrj4iw8oJ8R1bci4y_-aYKyQg8v9zrMqQ';
+const BUCKET = 'videos';
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let currentUser = null, currentProfile = null, activeSection = 'dashboard';
+let openDropdown = null;
+
+// -- TOAST --
+function toast(msg, ms=2800){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),ms);}
+
+// -- MODAL --
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.addEventListener('mousedown',e=>{
+  if(e.target.classList.contains('modal-overlay'))e.target.classList.remove('open');
+  if(openDropdown&&!openDropdown.contains(e.target)){openDropdown.remove();openDropdown=null;}
+});
+
+// -- AUTH --
+function showLogin(){document.getElementById('signup-card').style.display='none';document.getElementById('login-card').style.display='';}
+function showSignup(){document.getElementById('login-card').style.display='none';document.getElementById('signup-card').style.display='';}
+
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  document.getElementById('login-err').textContent='';
+  const{error}=await supabase.auth.signInWithPassword({email,password:pass});
+  if(error)document.getElementById('login-err').textContent=error.message;
+}
+
+async function doSignup(){
+  const name=document.getElementById('signup-name').value.trim();
+  const email=document.getElementById('signup-email').value.trim();
+  const pass=document.getElementById('signup-pass').value;
+  document.getElementById('signup-err').textContent='';
+  const{data,error}=await supabase.auth.signUp({email,password:pass});
+  if(error){document.getElementById('signup-err').textContent=error.message;return;}
+  if(data.user){
+    await supabase.from('profiles').upsert({id:data.user.id,email,first_name:name,status:'pending'});
+  }
+}
+
+supabase.auth.onAuthStateChange(async(_,session)=>{
+  currentUser=session?.user??null;
+  if(!currentUser){showAuth();return;}
+  const{data:prof}=await supabase.from('profiles').select('*').eq('id',currentUser.id).single();
+  currentProfile=prof;
+  if(!prof||prof.status!=='approved'){showPending();return;}
+  showApp();
+});
+
+function showAuth(){
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('pending-card').style.display='none';
+  document.getElementById('login-card').style.display='';
+  document.getElementById('signup-card').style.display='none';
+}
+function showPending(){
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-card').style.display='none';
+  document.getElementById('signup-card').style.display='none';
+  document.getElementById('pending-card').style.display='';
+}
+function showApp(){
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  buildNav();
+  navigate(activeSection);
+}
+
+// -- NAV --
+const NAV=[
+  {id:'dashboard',label:'Dashboard',icon:'<path d="M3 12L12 3l9 9M5 10v9h5v-5h4v5h5v-9"/>'},
+  {id:'videos',label:'Video bank',icon:'<rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/>'},
+  {id:'editor',label:'Editor',icon:'<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/>'},
+  {id:'overlays',label:'Overlays',icon:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'},
+];
+const ADMIN_NAV={id:'team',label:'Team & Access',icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'};
+
+function buildNav(){
+  const items=[...NAV,...(currentProfile?.role==='admin'?[ADMIN_NAV]:[])];
+  const svg=(icon,cls='')=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls}">${icon}</svg>`;
+  document.getElementById('sidebar-nav').innerHTML=items.map(i=>`<div class="nav-item${activeSection===i.id?' active':''}" onclick="navigate('${i.id}')">${svg(i.icon)}${i.label}</div>`).join('');
+  document.getElementById('tab-bar-inner').innerHTML=items.map(i=>`<button class="tab-btn${activeSection===i.id?' active':''}" onclick="navigate('${i.id}')">${svg(i.icon,'tab-icon')}<span>${i.label}</span></button>`).join('');
+  document.getElementById('sidebar-user').innerHTML=`<strong>${currentProfile?.first_name||currentProfile?.email||'User'}</strong><a href="#" onclick="supabase.auth.signOut()" style="color:var(--muted)">Sign out</a>`;
+}
+
+function navigate(id){
+  activeSection=id;
+  buildNav();
+  const main=document.getElementById('main-content');
+  main.innerHTML='<div class="empty-state"><div class="inline-loader"></div></div>';
+  ({dashboard:renderDashboard,videos:renderVideos,editor:renderEditor,overlays:renderOverlays,team:renderTeam})[id]?.();
+}
+
+// -- DASHBOARD --
+async function renderDashboard(){
+  const main=document.getElementById('main-content');
+  main.innerHTML=`
+    <div class="main-header"><h2>Dashboard</h2><button class="btn btn-primary btn-sm" onclick="openScrapeModal()">+ Scrape</button></div>
+    <div class="stats-grid" id="stats-grid"><div class="stat-card"><div class="inline-loader"></div></div></div>
+    <div class="card"><div class="card-header"><h3>Competitor videos</h3>
+      <div style="display:flex;gap:.5rem">
+        <button class="btn btn-ghost btn-sm" id="view-toggle" onclick="toggleView()">Cards</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportTSV()">Export TSV</button>
+      </div></div>
+      <div class="search-row"><input id="comp-search" placeholder="Search handle, overlay, caption..." oninput="filterCompTable()"/><select id="comp-product-filter" style="padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;font-size:.875rem;outline:none;" onchange="filterCompTable()"><option value="">All products</option></select></div>
+      <div id="comp-view"></div>
+    </div>`;
+  loadStats();
+  loadCompetitorData();
+}
+
+async function loadStats(){
+  const now=new Date();
+  const todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate()).toISOString();
+  const d7=new Date(now-7*864e5).toISOString(),d14=new Date(now-14*864e5).toISOString(),d30=new Date(now-30*864e5).toISOString();
+  const uid=currentUser.id;
+  async function cnt(table,col,from,extra=''){
+    const q=supabase.from(table).select('*',{count:'exact',head:true}).gte(col,from);
+    if(extra)Object.entries(extra).forEach(([k,v])=>q.eq(k,v));
+    const{count}=await q;return count||0;
+  }
+  const[u0,u7,u14,u30,d0,d7c,d14c,d30c,p0,p7,p14,p30]=await Promise.all([
+    cnt('videos','created_at',todayStart,{kind:'raw'}),cnt('videos','created_at',d7,{kind:'raw'}),cnt('videos','created_at',d14,{kind:'raw'}),cnt('videos','created_at',d30,{kind:'raw'}),
+    supabase.from('video_downloads').select('*',{count:'exact',head:true}).gte('downloaded_at',todayStart).eq('user_id',uid).then(r=>r.count||0),
+    supabase.from('video_downloads').select('*',{count:'exact',head:true}).gte('downloaded_at',d7).eq('user_id',uid).then(r=>r.count||0),
+    supabase.from('video_downloads').select('*',{count:'exact',head:true}).gte('downloaded_at',d14).eq('user_id',uid).then(r=>r.count||0),
+    supabase.from('video_downloads').select('*',{count:'exact',head:true}).gte('downloaded_at',d30).eq('user_id',uid).then(r=>r.count||0),
+    cnt('videos','posted_at',todayStart,{status:'posted'}),cnt('videos','posted_at',d7,{status:'posted'}),cnt('videos','posted_at',d14,{status:'posted'}),cnt('videos','posted_at',d30,{status:'posted'}),
+  ]);
+  const tile=(title,vals)=>`<div class="stat-card"><h3>${title}</h3><div class="stat-periods">${vals.map(([v,l])=>`<div class="stat-period"><div class="val">${v}</div><div class="lbl">${l}</div></div>`).join('')}</div></div>`;
+  document.getElementById('stats-grid').innerHTML=
+    tile('Uploaded',[[u0,'Today'],[u7,'7d'],[u14,'14d'],[u30,'30d']])+
+    tile('Downloaded',[[d0,'Today'],[d7c,'7d'],[d14c,'14d'],[d30c,'30d']])+
+    tile('Posted',[[p0,'Today'],[p7,'7d'],[p14,'14d'],[p30,'30d']]);
+}
+
+let compData=[],compView='table';
+async function loadCompetitorData(){
+  const[{data:sv},{data:prods}]=await Promise.all([
+    supabase.from('scraped_videos').select('*').order('last_scraped_at',{ascending:false}).limit(500),
+    supabase.from('products').select('*').order('name'),
+  ]);
+  compData=sv||[];
+  const sel=document.getElementById('comp-product-filter');
+  (prods||[]).forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name;sel.appendChild(o);});
+  renderCompView(compData);
+}
+
+function filterCompTable(){
+  const q=document.getElementById('comp-search').value.toLowerCase();
+  const pid=document.getElementById('comp-product-filter').value;
+  renderCompView(compData.filter(r=>{
+    if(pid&&r.product_uid!==pid)return false;
+    if(!q)return true;
+    return[r.handle,r.caption,r.text_overlays,r.transcript].some(f=>f?.toLowerCase().includes(q));
+  }));
+}
+
+function toggleView(){compView=compView==='table'?'cards':'table';document.getElementById('view-toggle').textContent=compView==='table'?'Cards':'Table';filterCompTable();}
+
+function renderCompView(rows){
+  const c=document.getElementById('comp-view');
+  if(!rows.length){c.innerHTML='<div class="empty-state">No competitor videos yet. Hit + Scrape to start.</div>';return;}
+  if(compView==='table'){
+    c.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Handle</th><th>Views</th><th>Likes</th><th>GMV</th><th>Overlays</th><th>Caption</th><th>Scraped</th></tr></thead><tbody>${
+      rows.map(r=>`<tr>
+        <td><a href="${r.tiktok_url||'#'}" target="_blank" style="color:var(--blue)">${r.handle||'--'}</a></td>
+        <td>${r.views||'--'}</td><td>${r.likes||'--'}</td><td>${r.creator_gmv||'--'}</td>
+        <td style="max-width:180px;cursor:pointer" onclick="copyText('${encodeURIComponent(r.text_overlays||'')}')" title="Click to copy">${r.text_overlays?r.text_overlays.substring(0,80)+'...':'--'}</td>
+        <td style="max-width:180px;cursor:pointer" onclick="copyText('${encodeURIComponent(r.caption||'')}')" title="Click to copy">${r.caption?r.caption.substring(0,80)+'...':'--'}</td>
+        <td style="white-space:nowrap;font-size:.75rem;color:var(--muted)">${new Date(r.last_scraped_at).toLocaleDateString()}</td>
+      </tr>`).join('')
+    }</tbody></table></div>`;
+  } else {
+    c.innerHTML=`<div class="video-grid">${rows.map(r=>`
+      <div class="card" style="padding:.75rem">
+        <div style="font-weight:500;font-size:.875rem">${r.handle||'--'}</div>
+        <div style="font-size:.75rem;color:var(--muted);margin:.2rem 0 .5rem">${r.views||'--'} views . ${r.creator_gmv||'--'} GMV</div>
+        ${r.text_overlays?`<div class="overlay-line" style="margin-bottom:.4rem;cursor:pointer" onclick="copyText('${encodeURIComponent(r.text_overlays)}')" title="Click to copy">${r.text_overlays.substring(0,80)}</div>`:''}
+        ${r.caption?`<div style="font-size:.8rem;color:var(--muted);cursor:pointer" onclick="copyText('${encodeURIComponent(r.caption)}')" title="Click to copy">${r.caption.substring(0,100)}</div>`:''}
+      </div>`).join('')}</div>`;
+  }
+}
+function copyText(enc){navigator.clipboard.writeText(decodeURIComponent(enc));toast('Copied!');}
+function exportTSV(){
+  const rows=compData;if(!rows.length)return;
+  const h=['handle','views','likes','comments','saves','creator_gmv','text_overlays','caption','transcript','tiktok_url','posted_date'];
+  const tsv=[h.join('\t'),...rows.map(r=>h.map(k=>(r[k]||'').toString().replace(/\t|\n/g,' ')).join('\t'))].join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([tsv],{type:'text/tab-separated-values'}));a.download='competitor_videos.tsv';a.click();
+}
+
+// -- SCRAPE MODAL --
+async function openScrapeModal(){
+  openModal('scrape-modal');
+  document.getElementById('scrape-err').textContent='';
+  document.getElementById('scrape-repeat').onchange=()=>{
+    document.getElementById('scrape-for-row').style.display=document.getElementById('scrape-repeat').value!=='0'?'':'none';
+  };
+  const{data:prods}=await supabase.from('products').select('*').order('name');
+  const sel=document.getElementById('scrape-product-sel');
+  sel.innerHTML='<option value="">-- select product --</option>'+(prods||[]).map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  loadScrapeJobsList();loadScrapeSchedulesList();
+}
+async function loadScrapeJobsList(){
+  const{data}=await supabase.from('scrape_jobs').select('*,products(name)').order('created_at',{ascending:false}).limit(10);
+  const el=document.getElementById('scrape-jobs-list');
+  if(!data?.length){el.innerHTML='<div style="color:var(--muted)">No jobs yet.</div>';return;}
+  el.innerHTML=data.map(j=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border)">
+    <span>${j.products?.name||j.product_url||'--'} . <span class="badge badge-${j.status==='done'?'green':j.status==='error'?'red':j.status==='running'?'blue':'gray'}">${j.status}</span></span>
+    <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="deleteScrapeJob('${j.id}','${j.product_uid||''}')">[trash]</button>
+  </div>`).join('');
+}
+async function loadScrapeSchedulesList(){
+  const{data}=await supabase.from('scrape_schedules').select('*,products(name)').eq('active',true).order('created_at',{ascending:false});
+  const el=document.getElementById('scrape-schedules-list');
+  if(!data?.length){el.innerHTML='<div style="color:var(--muted)">No active schedules.</div>';return;}
+  el.innerHTML=data.map(s=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border)">
+    <span>${s.products?.name||s.product_url||'--'} . every ${s.every_minutes<60?s.every_minutes+'m':s.every_minutes/60+'h'}</span>
+    <button class="btn btn-ghost btn-sm" onclick="stopSchedule('${s.id}')">Stop</button>
+  </div>`).join('');
+}
+async function deleteScrapeJob(id,productUid){
+  await supabase.from('scrape_jobs').delete().eq('id',id);
+  if(productUid)await supabase.from('scraped_videos').delete().eq('product_uid',productUid);
+  toast('Job + scraped videos deleted');loadScrapeJobsList();
+}
+async function stopSchedule(id){
+  await supabase.from('scrape_schedules').update({active:false}).eq('id',id);
+  toast('Schedule stopped');loadScrapeSchedulesList();
+}
+async function submitScrape(){
+  const url=document.getElementById('scrape-url').value.trim();
+  const max=parseInt(document.getElementById('scrape-max').value)||24;
+  const repeat=parseInt(document.getElementById('scrape-repeat').value);
+  const forDays=parseInt(document.getElementById('scrape-for').value);
+  const newProd=document.getElementById('scrape-new-product').value.trim();
+  let productUid=document.getElementById('scrape-product-sel').value;
+  document.getElementById('scrape-err').textContent='';
+  if(!url){document.getElementById('scrape-err').textContent='URL required';return;}
+  if(newProd){
+    const{data:p}=await supabase.from('products').insert({name:newProd,created_by:currentUser.id}).select().single();
+    productUid=p?.id||null;
+  }
+  if(repeat===0){
+    await supabase.from('scrape_jobs').insert({product_uid:productUid||null,product_url:url,max_records:max,requested_by:currentUser.email});
+    toast('Scrape job queued');
+  } else {
+    const endsAt=forDays>0?new Date(Date.now()+forDays*864e5).toISOString():null;
+    await supabase.from('scrape_schedules').insert({product_uid:productUid||null,product_url:url,max_records:max,every_minutes:repeat,ends_at:endsAt,created_by:currentUser.email});
+    toast('Schedule created');
+  }
+  loadScrapeJobsList();loadScrapeSchedulesList();
+}
+
+// -- VIDEO BANK --
+let videoTab='new',viewingAs=null;
+async function renderVideos(){
+  const main=document.getElementById('main-content');
+  const{data:users}=currentProfile?.role==='admin'?await supabase.from('profiles').select('id,email,first_name').eq('status','approved'):{data:[]};
+  main.innerHTML=`
+    <div class="main-header"><h2>Video bank</h2></div>
+    ${currentProfile?.role==='admin'&&users?.length?`<div style="margin-bottom:.75rem;font-size:.875rem;color:var(--muted)">Viewing as: <select id="viewing-as-sel" onchange="changeViewAs()" style="padding:.3rem .5rem;border:1px solid var(--border);border-radius:6px;font-size:.875rem;outline:none;"><option value="${currentUser.id}">Me (${currentProfile.email})</option>${users.filter(u=>u.id!==currentUser.id).map(u=>`<option value="${u.id}">${u.first_name||u.email}</option>`).join('')}</select></div>`:''}
+    <div class="tabs">
+      <div class="tab${videoTab==='new'?' active':''}" onclick="switchVideoTab('new')">New</div>
+      <div class="tab${videoTab==='downloaded'?' active':''}" onclick="switchVideoTab('downloaded')">Downloaded</div>
+      <div class="tab${videoTab==='posted'?' active':''}" onclick="switchVideoTab('posted')">Posted</div>
+    </div>
+    <div id="video-bank-content"></div>`;
+  viewingAs=currentUser.id;
+  loadVideoBankTab();
+}
+function changeViewAs(){viewingAs=document.getElementById('viewing-as-sel').value;loadVideoBankTab();}
+function switchVideoTab(t){videoTab=t;renderVideos();}
+async function loadVideoBankTab(){
+  const el=document.getElementById('video-bank-content');
+  el.innerHTML='<div class="empty-state"><div class="inline-loader"></div></div>';
+  let vids=[];
+  if(videoTab==='new'){
+    const{data:dl}=await supabase.from('video_downloads').select('video_id').eq('user_id',viewingAs);
+    const dlIds=(dl||[]).map(d=>d.video_id);
+    let q=supabase.from('videos').select('*,products(name)').eq('kind','raw').eq('pending_approval',false).neq('status','posted').order('created_at',{ascending:false});
+    const{data}=await q;
+    vids=(data||[]).filter(v=>!dlIds.includes(v.id));
+  } else if(videoTab==='downloaded'){
+    const{data:dl}=await supabase.from('video_downloads').select('video_id,downloaded_at').eq('user_id',viewingAs);
+    const dlMap=Object.fromEntries((dl||[]).map(d=>[d.video_id,d.downloaded_at]));
+    const ids=Object.keys(dlMap);
+    if(ids.length){const{data}=await supabase.from('videos').select('*,products(name)').in('id',ids).neq('status','posted');vids=data||[];}
+  } else {
+    const{data}=await supabase.from('videos').select('*,products(name)').eq('status','posted').order('posted_at',{ascending:false});vids=data||[];
+  }
+  if(!vids.length){el.innerHTML='<div class="empty-state">No videos here yet.</div>';return;}
+  const{data:prods}=await supabase.from('products').select('*').order('name');
+  el.innerHTML=`<div class="video-grid">${vids.map(v=>videoCard(v,prods||[])).join('')}</div>`;
+}
+function videoCard(v,prods){
+  return`<div class="video-card" id="vc-${v.id}">
+    <div class="video-thumb"><span>[video]</span></div>
+    <button class="video-menu-btn" onclick="openVideoMenu(event,'${v.id}')">...</button>
+    <div class="video-info">
+      <div class="name">${v.title||v.filename}</div>
+      <div class="meta">${v.products?.name||'--'} . ${fmtBytes(v.size_bytes)}</div>
+    </div>
+  </div>`;
+}
+function fmtBytes(b){if(!b)return'--';if(b>1e9)return(b/1e9).toFixed(1)+'GB';if(b>1e6)return(b/1e6).toFixed(1)+'MB';return(b/1e3).toFixed(0)+'KB';}
+
+async function openVideoMenu(e,videoId){
+  e.stopPropagation();
+  if(openDropdown){openDropdown.remove();openDropdown=null;}
+  const{data:v}=await supabase.from('videos').select('*,products(name)').eq('id',videoId).single();
+  const{data:prods}=await supabase.from('products').select('*').order('name');
+  const menu=document.createElement('div');
+  menu.className='dropdown-menu';
+  const isMobile=/Mobi|Android/i.test(navigator.userAgent);
+  menu.innerHTML=`
+    <button onclick="downloadVideo('${v.id}','${v.storage_path}','${v.filename}',${isMobile})">Download</button>
+    ${v.status!=='posted'?`<button onclick="markPosted('${v.id}')">Mark as posted</button>`:`<button onclick="markUnposted('${v.id}')">Unpost</button>`}
+    <button onclick="queueEdit('${v.id}','${v.storage_path}','${v.filename}')">Edit video</button>
+    <button onclick="suggestOverlays('${v.id}')">[sparkles] Suggest overlays</button>
+    <button onclick="changeProduct('${v.id}',${JSON.stringify(prods).replace(/"/g,'&quot;')})">Change product</button>
+    <button class="danger" onclick="deleteVideo('${v.id}','${v.storage_path}')">Delete</button>`;
+  const r=e.currentTarget.getBoundingClientRect();
+  menu.style.top=r.bottom+window.scrollY+4+'px';
+  menu.style.left=r.left+window.scrollX+'px';
+  document.body.appendChild(menu);openDropdown=menu;
+}
+
+async function downloadVideo(id,path,filename,mobile){
+  const{data,error}=await supabase.storage.from(BUCKET).createSignedUrl(path,60);
+  if(error){toast('Error: '+error.message);return;}
+  await supabase.from('video_downloads').upsert({video_id:id,user_id:currentUser.id,user_email:currentUser.email,downloaded_at:new Date().toISOString()});
+  if(mobile&&navigator.share){
+    const resp=await fetch(data.signedUrl);const blob=await resp.blob();
+    const file=new File([blob],filename,{type:blob.type});
+    try{await navigator.share({files:[file],title:filename});}
+    catch(err){if(err.name!=='AbortError'){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();}}
+  } else {
+    const a=document.createElement('a');a.href=data.signedUrl;a.download=filename;a.click();
+  }
+  loadVideoBankTab();
+}
+
+async function markPosted(id){
+  await supabase.from('videos').update({status:'posted',posted_at:new Date().toISOString(),posted_by:currentUser.email}).eq('id',id);
+  toast('Marked as posted');loadVideoBankTab();
+}
+async function markUnposted(id){
+  await supabase.from('videos').update({status:'new',posted_at:null,posted_by:null}).eq('id',id);
+  toast('Unposted');loadVideoBankTab();
+}
+async function queueEdit(videoId,storagePath,filename){
+  await supabase.from('edit_jobs').insert({video_id:videoId,storage_path:storagePath,filename,requested_by:currentUser.email});
+  toast('Edit job queued');
+}
+async function suggestOverlays(videoId){
+  const{data:v}=await supabase.from('videos').select('product_uid').eq('id',videoId).single();
+  await supabase.from('ai_jobs').insert({video_id:videoId,product_uid:v?.product_uid,requested_by:currentUser.email});
+  toast('AI job queued -- check Overlays tab');
+}
+async function deleteVideo(id,path){
+  if(!confirm('Delete this video?'))return;
+  await supabase.storage.from(BUCKET).remove([path]);
+  await supabase.from('videos').delete().eq('id',id);
+  toast('Deleted');loadVideoBankTab();
+}
+function changeProduct(videoId,prods){
+  const sel=prods.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  const d=document.createElement('div');d.className='modal-overlay open';
+  d.innerHTML=`<div class="modal" style="max-width:360px"><h3>Change product</h3><select id="_cp_sel" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:8px;margin-bottom:1rem;outline:none;">${sel}</select><div class="modal-footer"><button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancel</button><button class="btn btn-primary" onclick="doChangeProduct('${videoId}',document.getElementById('_cp_sel').value,this.closest('.modal-overlay'))">Save</button></div></div>`;
+  document.body.appendChild(d);
+}
+async function doChangeProduct(videoId,productUid,overlay){
+  await supabase.from('videos').update({product_uid:productUid}).eq('id',videoId);
+  overlay.remove();toast('Product updated');loadVideoBankTab();
+}
+
+// -- UPLOAD --
+async function openUploadModal(){
+  openModal('upload-modal');
+  const{data:prods}=await supabase.from('products').select('*').order('name');
+  const sel=document.getElementById('upload-product-sel');
+  sel.innerHTML='<option value="">-- no product --</option>'+(prods||[]).map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  document.getElementById('upload-progress-list').innerHTML='';
+}
+
+async function startUpload(){
+  const files=document.getElementById('upload-files').files;
+  const productUid=document.getElementById('upload-product-sel').value||null;
+  if(!files.length){toast('Select files first');return;}
+  const list=document.getElementById('upload-progress-list');
+  for(const file of files){
+    const id=crypto.randomUUID();
+    const path=`${currentUser.id}/${id}_${file.name}`;
+    list.insertAdjacentHTML('beforeend',`<div class="upload-progress" id="up-${id}"><strong>${file.name}</strong><div class="progress-bar-wrap"><div class="progress-bar" id="pb-${id}" style="width:0%"></div></div><div id="ps-${id}" style="font-size:.75rem;color:var(--muted)">Starting...</div></div>`);
+    const upload=new tus.Upload(file,{
+      endpoint:`${SUPABASE_URL}/storage/v1/upload/resumable`,
+      retryDelays:[0,3000,5000,10000],
+      headers:{Authorization:`Bearer ${(await supabase.auth.getSession()).data.session.access_token}`,apikey:SUPABASE_KEY},
+      uploadDataDuringCreation:true,
+      removeFingerprintOnSuccess:true,
+      metadata:{bucketName:BUCKET,objectName:path,contentType:file.type},
+      chunkSize:6*1024*1024,
+      onProgress:(up,total)=>{const pct=Math.round(up/total*100);document.getElementById('pb-'+id).style.width=pct+'%';document.getElementById('ps-'+id).textContent=pct+'%'},
+      onSuccess:async()=>{
+        document.getElementById('ps-'+id).textContent='Done v';
+        await supabase.from('videos').insert({storage_path:path,filename:file.name,size_bytes:file.size,content_type:file.type,product_uid:productUid,uploaded_by:currentUser.email,kind:'raw'});
+        toast(file.name+' uploaded');
+      },
+      onError:err=>{document.getElementById('ps-'+id).textContent='Error: '+err.message;},
+    });
+    upload.start();
+  }
+}
+
+// -- EDITOR PAGE --
+async function renderEditor(){
+  const main=document.getElementById('main-content');
+  main.innerHTML=`<div class="main-header"><h2>Editor approvals</h2></div><div id="editor-content"><div class="inline-loader"></div></div>`;
+  const{data:vids}=await supabase.from('videos').select('*,products(name)').eq('pending_approval',true).order('created_at',{ascending:false});
+  const el=document.getElementById('editor-content');
+  if(!vids?.length){el.innerHTML='<div class="empty-state">No videos pending approval.</div>';return;}
+  el.innerHTML=`<div class="video-grid">${vids.map(v=>`
+    <div class="video-card" id="ec-${v.id}">
+      <div class="video-thumb"><span>[scissors]</span></div>
+      <div class="video-info">
+        <div class="name">${v.title||v.filename}</div>
+        <div class="meta">${v.products?.name||'--'}</div>
+        <div style="display:flex;gap:.4rem;margin-top:.5rem">
+          <button class="btn btn-green btn-sm" onclick="approveEdit('${v.id}')">Approve</button>
+          <button class="btn btn-danger btn-sm" onclick="rejectEdit('${v.id}','${v.storage_path}')">Reject</button>
+        </div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+async function approveEdit(id){
+  await supabase.from('videos').update({pending_approval:false}).eq('id',id);
+  toast('Approved -- video in bank');renderEditor();
+}
+async function rejectEdit(id,path){
+  await supabase.storage.from(BUCKET).remove([path]);
+  await supabase.from('videos').delete().eq('id',id);
+  toast('Rejected & deleted');renderEditor();
+}
+
+// -- OVERLAY GENERATOR --
+async function renderOverlays(){
+  const main=document.getElementById('main-content');
+  main.innerHTML=`<div class="main-header"><h2>Overlay generator</h2></div><div id="overlay-content"><div class="inline-loader"></div></div>`;
+  const[{data:jobs},{data:suggs}]=await Promise.all([
+    supabase.from('ai_jobs').select('*,videos(filename,products(name))').eq('status','queued').order('created_at',{ascending:false}),
+    supabase.from('caption_suggestions').select('*,videos(filename,products(name))').eq('status','pending').order('created_at',{ascending:false}),
+  ]);
+  const el=document.getElementById('overlay-content');
+  let html='';
+  if(jobs?.length)html+=`<div class="card" style="margin-bottom:1rem"><h3 style="margin-bottom:.75rem">In progress</h3>${jobs.map(j=>`<div style="padding:.4rem 0;font-size:.875rem;border-bottom:1px solid var(--border)"><span class="inline-loader"></span> ${j.videos?.filename||j.video_id} -- AI generating...</div>`).join('')}</div>`;
+  if(!suggs?.length&&!jobs?.length){el.innerHTML='<div class="empty-state">No pending suggestions. Use [sparkles] Suggest overlays from the Video bank.</div>';return;}
+  if(suggs?.length){
+    html+=suggs.map(s=>{
+      const opts=s.options||[];
+      return`<div class="card"><div style="font-size:.8125rem;color:var(--muted);margin-bottom:.5rem">${s.videos?.filename||s.video_id} . ${s.videos?.products?.name||'--'}</div>
+        ${opts.map((opt,i)=>`<div class="suggestion-card">
+          <h4>Option ${i+1} ${opt.inspired_by?`<span style="font-size:.75rem;color:var(--muted)">inspired by ${opt.inspired_by}</span>`:''}</h4>
+          <div class="overlay-lines">${(opt.overlay||[]).map(l=>`<div class="overlay-line">${l}</div>`).join('')}</div>
+          <div class="suggestion-desc">"${opt.description||''}"</div>
+          <div class="suggestion-rationale">${opt.rationale||''}</div>
+          <div class="suggestion-actions">
+            <button class="btn btn-green btn-sm" onclick="approveOverlay('${s.id}','${s.video_id}','${s.product_uid||''}',${i})">v Use this</button>
+            <button class="btn btn-ghost btn-sm" onclick="rejectOverlay('${s.id}','${s.video_id}','${s.product_uid||''}',${i})">x Not this</button>
+            <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(${JSON.stringify(JSON.stringify(opt))});toast('Copied!')">Copy</button>
+          </div>
+        </div>`).join('')}
+        <button class="btn btn-ghost btn-sm" onclick="regenerateSuggestion('${s.id}','${s.video_id}','${s.product_uid||''}')">Regenerate all</button>
+      </div>`;
+    }).join('');
+  }
+  el.innerHTML=html||'<div class="empty-state">Nothing pending.</div>';
+}
+function openReasonModal(title,prompt,onConfirm){
+  document.getElementById('reason-title').textContent=title;
+  document.getElementById('reason-prompt').textContent=prompt;
+  document.getElementById('reason-input').value='';
+  document.getElementById('reason-confirm-btn').onclick=()=>{onConfirm(document.getElementById('reason-input').value);closeModal('reason-modal');};
+  openModal('reason-modal');
+}
+async function approveOverlay(suggId,videoId,productUid,optIdx){
+  openReasonModal('Why it worked','Optional: note what made this effective (helps future AI suggestions).',async reason=>{
+    const{data:s}=await supabase.from('caption_suggestions').select('options').eq('id',suggId).single();
+    const opt=(s?.options||[])[optIdx]||{};
+    await supabase.from('caption_feedback').insert({suggestion_id:suggId,video_id:videoId,product_uid:productUid||null,option_index:optIdx,decision:'approved',chosen_overlay:opt.overlay,chosen_description:opt.description,reason,created_by:currentUser.email});
+    await supabase.from('caption_suggestions').update({status:'decided'}).eq('id',suggId);
+    await supabase.from('videos').update({caption_final:opt.description}).eq('id',videoId);
+    toast('Overlay approved');renderOverlays();
+  });
+}
+async function rejectOverlay(suggId,videoId,productUid,optIdx){
+  openReasonModal('Why not?','Optional: note what was wrong.',async reason=>{
+    await supabase.from('caption_feedback').insert({suggestion_id:suggId,video_id:videoId,product_uid:productUid||null,option_index:optIdx,decision:'rejected',reason,created_by:currentUser.email});
+    toast('Feedback saved');renderOverlays();
+  });
+}
+async function regenerateSuggestion(suggId,videoId,productUid){
+  await supabase.from('caption_suggestions').update({status:'decided'}).eq('id',suggId);
+  await supabase.from('ai_jobs').insert({video_id:videoId,product_uid:productUid||null,requested_by:currentUser.email});
+  toast('Regenerating...');renderOverlays();
+}
+
+// -- TEAM & ACCESS --
+async function renderTeam(){
+  if(currentProfile?.role!=='admin'){document.getElementById('main-content').innerHTML='<div class="empty-state">Admins only.</div>';return;}
+  const main=document.getElementById('main-content');
+  main.innerHTML=`<div class="main-header"><h2>Team & Access</h2></div><div id="team-content"><div class="inline-loader"></div></div>`;
+  const{data:users}=await supabase.from('profiles').select('*').order('status').order('email');
+  const el=document.getElementById('team-content');
+  if(!users?.length){el.innerHTML='<div class="empty-state">No users yet.</div>';return;}
+  el.innerHTML=`<div class="card"><div class="table-wrap"><table><thead><tr><th>Email</th><th>Name</th><th>Status</th><th>Role</th><th>Actions</th></tr></thead><tbody>${
+    users.map(u=>`<tr>
+      <td>${u.email}</td>
+      <td>${u.first_name||'--'}</td>
+      <td><span class="badge badge-${u.status==='approved'?'green':u.status==='pending'?'yellow':'red'}">${u.status}</span></td>
+      <td>${u.role}</td>
+      <td style="display:flex;gap:.4rem;flex-wrap:wrap">
+        ${u.status==='pending'?`<button class="btn btn-green btn-sm" onclick="approveUser('${u.id}')">Approve</button><button class="btn btn-danger btn-sm" onclick="rejectUser('${u.id}')">Decline</button>`:''}
+        ${u.status==='approved'&&u.id!==currentUser.id?`<button class="btn btn-ghost btn-sm" onclick="toggleAdmin('${u.id}','${u.role}')">${u.role==='admin'?'Remove admin':'Make admin'}</button><button class="btn btn-danger btn-sm" onclick="revokeUser('${u.id}')">Revoke</button>`:''}
+      </td>
+    </tr>`).join('')
+  }</tbody></table></div></div>`;
+}
+async function approveUser(id){
+  await supabase.from('profiles').update({status:'approved',approved_by:currentUser.id,approved_at:new Date().toISOString()}).eq('id',id);
+  toast('User approved');renderTeam();
+}
+async function rejectUser(id){
+  await supabase.from('profiles').update({status:'rejected'}).eq('id',id);
+  toast('User declined');renderTeam();
+}
+async function revokeUser(id){
+  await supabase.from('profiles').update({status:'rejected'}).eq('id',id);
+  toast('Access revoked');renderTeam();
+}
+async function toggleAdmin(id,role){
+  await supabase.from('profiles').update({role:role==='admin'?'user':'admin'}).eq('id',id);
+  toast('Role updated');renderTeam();
+}
+</script>
+</body>
+</html>
