@@ -317,8 +317,16 @@ async function doLogin(){
   const email=document.getElementById('login-email').value.trim();
   const pass=document.getElementById('login-pass').value;
   document.getElementById('login-err').textContent='';
-  const{error}=await supabase.auth.signInWithPassword({email,password:pass});
-  if(error)document.getElementById('login-err').textContent=error.message;
+  const{data,error}=await supabase.auth.signInWithPassword({email,password:pass});
+  if(error){document.getElementById('login-err').textContent=error.message;return;}
+  // Explicitly handle navigation after login (don't rely solely on onAuthStateChange)
+  if(data.user){
+    currentUser=data.user;
+    const{data:prof}=await supabase.from('profiles').select('*').eq('id',data.user.id).single();
+    currentProfile=prof;
+    if(!prof||prof.status!=='approved'){showPending();}
+    else{showApp();}
+  }
 }
 
 async function doSignup(){
@@ -330,6 +338,7 @@ async function doSignup(){
   if(error){document.getElementById('signup-err').textContent=error.message;return;}
   if(data.user){
     await supabase.from('profiles').upsert({id:data.user.id,email,first_name:name,status:'pending'});
+    showPending();
   }
 }
 
