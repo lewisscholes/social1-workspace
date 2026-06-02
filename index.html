@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Affiliate Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js"></script>
 <style>
@@ -390,11 +391,11 @@
             <hr class="ep-divider">
             <div class="ep-ctrl">
               <div class="ep-ctrl-lbl">Weight <span id="epWeightLbl">Medium</span></div>
-              <input type="range" class="ep-slider" id="epWeight" min="100" max="900" step="100" value="500" oninput="epUpdateText()">
+              <input type="range" class="ep-slider" id="epWeight" min="100" max="900" step="100" value="800" oninput="epUpdateText()">
             </div>
             <div class="ep-ctrl">
               <div class="ep-ctrl-lbl">Size <span id="epSizeLbl">16px</span></div>
-              <input type="range" class="ep-slider" id="epSize" min="10" max="48" value="16" oninput="epUpdateText()">
+              <input type="range" class="ep-slider" id="epSize" min="10" max="48" value="20" oninput="epUpdateText()">
             </div>
             <div class="ep-ctrl">
               <div class="ep-ctrl-lbl">Color</div>
@@ -405,7 +406,7 @@
             </div>
             <div class="ep-ctrl">
               <div class="ep-ctrl-lbl">Stroke <span id="epStrokeLbl">3px</span></div>
-              <input type="range" class="ep-slider" id="epStroke" min="0" max="8" value="3" oninput="epUpdateText()">
+              <input type="range" class="ep-slider" id="epStroke" min="0" max="8" step="0.5" value="2.5" oninput="epUpdateText()">
             </div>
             <div class="ep-ctrl">
               <div class="ep-ctrl-lbl">Stroke Color</div>
@@ -417,9 +418,9 @@
             <div class="ep-ctrl">
               <div class="ep-ctrl-lbl">Background</div>
               <div class="ep-bg-row">
-                <div class="ep-bg-opt" id="epBgNone" onclick="epSetBg('none')">None</div>
+                <div class="ep-bg-opt sel" id="epBgNone" onclick="epSetBg('none')">None</div>
                 <div class="ep-bg-opt" id="epBgWhite" onclick="epSetBg('white')">White</div>
-                <div class="ep-bg-opt sel" id="epBgSnap" onclick="epSetBg('snap')">Snapchat</div>
+                <div class="ep-bg-opt" id="epBgSnap" onclick="epSetBg('snap')">Snapchat</div>
               </div>
             </div>
           </div>
@@ -869,7 +870,7 @@ async function deleteVideo(id){ const v=state.videos.find(x=>x.id===id); if(!v)r
 //  SWIPE EDITOR
 // ──────────────────────────────────────────────────────
 let swVids=[], swIdx=0, swDragging=false, swStartX=0, swStartY=0, swCurX=0, swCurY=0;
-let epCurrentId=null, epMuted=false, epTextPos={x:50,y:72}, epBg='snap', epDragActive=false, epDragOX=0, epDragOY=0;
+let epCurrentId=null, epMuted=false, epTextPos={x:50,y:72}, epBg='none', epDragActive=false, epDragOX=0, epDragOY=0;
 
 async function loadEditor(){
   await loadProducts();
@@ -922,7 +923,7 @@ function swRender(){
 function swOverlayHtml(v){
   const txt=v.caption_suggested||'';
   if(!txt)return '';
-  return `<div class="sw-text" style="bottom:24%;left:50%;transform:translateX(-50%);font-size:15px;font-weight:500;color:#fff;text-shadow:0 0 4px #000,0 0 4px #000;text-align:center;max-width:85%;padding:4px 8px">${esc(txt)}</div>`;
+  return `<div class="sw-text" style="bottom:24%;left:50%;transform:translateX(-50%);font-family:'Nunito',sans-serif;font-size:18px;font-weight:800;color:#fff;-webkit-text-stroke:2.5px #000;paint-order:stroke fill;text-align:center;max-width:85%;padding:4px 8px;letter-spacing:-0.01em;line-height:1.25">${esc(txt)}</div>`;
 }
 
 function swInitDrag(){
@@ -1041,18 +1042,30 @@ async function epDone(){
 
 function epUpdateText(){
   const drag=document.getElementById('epDragText'); if(!drag)return;
-  const w=document.getElementById('epWeight')?.value||500;
+  const w=document.getElementById('epWeight')?.value||800;
   const wLabels={100:'Thin',200:'Extra Light',300:'Light',400:'Regular',500:'Medium',600:'Semi Bold',700:'Bold',800:'Extra Bold',900:'Black'};
-  const sz=document.getElementById('epSize')?.value||16;
+  const sz=document.getElementById('epSize')?.value||20;
   const col=document.getElementById('epColor')?.value||'#ffffff';
-  const stroke=document.getElementById('epStroke')?.value||3;
+  const stroke=parseFloat(document.getElementById('epStroke')?.value||2.5);
   const scol=document.getElementById('epStrokeCol')?.value||'#000000';
   document.getElementById('epWeightLbl').textContent=wLabels[w]||w;
   document.getElementById('epSizeLbl').textContent=sz+'px';
   document.getElementById('epStrokeLbl').textContent=stroke+'px';
-  const shadow=stroke>0?`0 0 ${stroke}px ${scol},0 0 ${stroke}px ${scol},0 0 ${stroke}px ${scol}`:'none';
-  drag.style.fontWeight=w; drag.style.fontSize=sz+'px'; drag.style.color=col; drag.style.textShadow=shadow;
-  // bg applied by epSetBg
+  // TikTok-identical: crisp outline stroke (not blurry shadow)
+  drag.style.fontFamily="'Nunito', sans-serif";
+  drag.style.fontWeight=w;
+  drag.style.fontSize=sz+'px';
+  drag.style.color=col;
+  drag.style.letterSpacing='-0.01em';
+  drag.style.lineHeight='1.25';
+  if(stroke>0){
+    drag.style.webkitTextStroke=`${stroke}px ${scol}`;
+    drag.style.paintOrder='stroke fill';
+    drag.style.textShadow='none';
+  } else {
+    drag.style.webkitTextStroke='0px transparent';
+    drag.style.textShadow='none';
+  }
 }
 
 function epSetBg(bg){
