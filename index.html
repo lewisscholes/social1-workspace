@@ -288,7 +288,7 @@
   </div>
 </div>
 
-<script>
+<script type="text/template" id="app-script">
 // -- CONSTANTS --
 const SUPABASE_URL = 'https://vcrforlyuhapvkewsogq.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjcmZvcmx5dWhhcHZrZXdzb2dxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzODk4NzAsImV4cCI6MjA5NTk2NTg3MH0.lcFC5aJFUGYrj4iw8oJ8R1bci4y_-aYKyQg8v9zrMqQ';
@@ -854,6 +854,10 @@ Object.assign(window, {
   approveUser, rejectUser, revokeUser, toggleAdmin,
   closeModal, openModal, navigate, copyText, toast
 });
+</script>
+<script>
+// Bootstrap: execute app script with explicit window context
+(new Function(document.getElementById('app-script').textContent)).call(window);
 </script>
 </body>
 </html>
