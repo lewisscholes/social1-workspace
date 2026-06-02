@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Social1 â Affiliate Editor</title>
+<title>Social1 - Affiliate Editor</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js"></script>
 <style>
@@ -13,7 +13,7 @@
   button{cursor:pointer;font-family:inherit;}
   input,select,textarea{font-family:inherit;}
 
-  /* ââ AUTH ââ */
+  /* -- AUTH -- */
   #auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem;}
   .auth-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:2rem;width:100%;max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,.06);}
   .auth-card h1{font-size:1.4rem;margin-bottom:.25rem;}
@@ -38,7 +38,7 @@
   .pending-screen h2{margin-bottom:.5rem;}
   .error-msg{color:var(--danger);font-size:.8125rem;margin-top:.4rem;}
 
-  /* ââ SHELL ââ */
+  /* -- SHELL -- */
   #app{display:none;min-height:100vh;}
   .shell{display:flex;min-height:100vh;}
   .sidebar{width:220px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;}
@@ -66,7 +66,7 @@
     .tab-bar{display:block;}
   }
 
-  /* ââ CARDS & GRIDS ââ */
+  /* -- CARDS & GRIDS -- */
   .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;}
   @media(max-width:600px){.stats-grid{grid-template-columns:1fr 1fr;}}
   .stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;}
@@ -80,7 +80,7 @@
   .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
   .card-header h3{font-size:1rem;}
 
-  /* ââ TABLE ââ */
+  /* -- TABLE -- */
   .table-wrap{overflow-x:auto;}
   table{width:100%;border-collapse:collapse;font-size:.875rem;}
   th{text-align:left;padding:.5rem .75rem;border-bottom:2px solid var(--border);color:var(--muted);font-weight:500;white-space:nowrap;}
@@ -93,7 +93,7 @@
   .badge-red{background:#fef2f2;color:#dc2626;}
   .badge-gray{background:#f3f4f6;color:#6b7280;}
 
-  /* ââ VIDEO GRID ââ */
+  /* -- VIDEO GRID -- */
   .video-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;}
   .video-card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;position:relative;}
   .video-thumb{width:100%;aspect-ratio:9/16;background:#1a1d23;display:flex;align-items:center;justify-content:center;color:#4b5563;font-size:.8rem;}
@@ -107,7 +107,7 @@
   .dropdown-menu button:hover{background:var(--bg);}
   .dropdown-menu button.danger{color:var(--danger);}
 
-  /* ââ MODAL ââ */
+  /* -- MODAL -- */
   .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;padding:1rem;}
   .modal-overlay.open{display:flex;}
   .modal{background:var(--card);border-radius:12px;padding:1.5rem;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;}
@@ -117,12 +117,12 @@
   .tab{padding:.5rem 1rem;font-size:.875rem;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;}
   .tab.active{color:var(--blue);border-bottom-color:var(--blue);}
 
-  /* ââ UPLOAD PROGRESS ââ */
+  /* -- UPLOAD PROGRESS -- */
   .upload-progress{background:var(--bg);border-radius:8px;padding:.75rem;margin-top:.75rem;}
   .progress-bar-wrap{background:#e2e6ed;border-radius:999px;height:6px;margin:.4rem 0;}
   .progress-bar{background:var(--blue);height:6px;border-radius:999px;transition:width .2s;}
 
-  /* ââ OVERLAY SUGGESTIONS ââ */
+  /* -- OVERLAY SUGGESTIONS -- */
   .suggestion-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.1rem;margin-bottom:1rem;}
   .suggestion-card h4{font-size:.9rem;margin-bottom:.5rem;color:var(--muted);}
   .overlay-lines{display:flex;flex-direction:column;gap:.25rem;margin-bottom:.5rem;}
@@ -131,7 +131,7 @@
   .suggestion-rationale{font-size:.8125rem;margin-bottom:.75rem;}
   .suggestion-actions{display:flex;gap:.5rem;flex-wrap:wrap;}
 
-  /* ââ MISC ââ */
+  /* -- MISC -- */
   .empty-state{text-align:center;padding:3rem 1rem;color:var(--muted);}
   .empty-state svg{width:40px;height:40px;margin:0 auto .75rem;display:block;opacity:.35;}
   .search-row{display:flex;gap:.6rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap;}
@@ -153,12 +153,11 @@
 <div id="toast" class="toast"></div>
 
 <!-- AUTH -->
-<div id="auth-screen">
-  <div class="auth-card" id="login-card">
+<div id="class="auth-card" id="login-card">
     <h1>Social1</h1>
-    <p>Affiliate Editor â sign in to continue</p>
+    <p>Affiliate Editor -- sign in to continue</p>
     <div class="form-row"><label>Email</label><input type="email" id="login-email" placeholder="you@example.com"/></div>
-    <div class="form-row"><label>Password</label><input type="password" id="login-pass" placeholder="â¢â¢â¢â¢â¢â¢â¢â¢"/></div>
+    <div class="form-row"><label>Password</label><input type="password" id="login-pass" placeholder="********"/></div>
     <div id="login-err" class="error-msg"></div>
     <button class="btn btn-primary btn-full" style="margin-top:.5rem" onclick="doLogin()">Sign in</button>
     <div class="auth-toggle">No account? <a onclick="showSignup()">Sign up</a></div>
@@ -224,7 +223,7 @@
     <div class="form-row">
       <label>Product</label>
       <select id="scrape-product-sel" style="width:100%;padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;font-size:.9rem;outline:none;">
-        <option value="">â select product â</option>
+        <option value="">-- select product --</option>
       </select>
     </div>
     <div class="form-row">
@@ -280,7 +279,7 @@
   <div class="modal" style="max-width:420px">
     <h3 id="reason-title">Feedback</h3>
     <p id="reason-prompt" style="font-size:.875rem;color:var(--muted);margin-bottom:.75rem"></p>
-    <textarea id="reason-input" class="reason-area" rows="3" placeholder="Optional â why?"></textarea>
+    <textarea id="reason-input" class="reason-area" rows="3" placeholder="Optional -- why?"></textarea>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('reason-modal')">Cancel</button>
       <button class="btn btn-primary" id="reason-confirm-btn">Confirm</button>
@@ -289,7 +288,7 @@
 </div>
 
 <script>
-// ââ CONSTANTS ââ
+// -- CONSTANTS --
 const SUPABASE_URL = 'https://vcrforlyuhapvkewsogq.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjcmZvcmx5dWhhcHZrZXdzb2dxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzODk4NzAsImV4cCI6MjA5NTk2NTg3MH0.lcFC5aJFUGYrj4iw8oJ8R1bci4y_-aYKyQg8v9zrMqQ';
 const BUCKET = 'videos';
@@ -298,10 +297,10 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null, currentProfile = null, activeSection = 'dashboard';
 let openDropdown = null;
 
-// ââ TOAST ââ
+// -- TOAST --
 function toast(msg, ms=2800){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),ms);}
 
-// ââ MODAL ââ
+// -- MODAL --
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.addEventListener('mousedown',e=>{
@@ -309,7 +308,7 @@ document.addEventListener('mousedown',e=>{
   if(openDropdown&&!openDropdown.contains(e.target)){openDropdown.remove();openDropdown=null;}
 });
 
-// ââ AUTH ââ
+// -- AUTH --
 function showLogin(){document.getElementById('signup-card').style.display='none';document.getElementById('login-card').style.display='';}
 function showSignup(){document.getElementById('login-card').style.display='none';document.getElementById('signup-card').style.display='';}
 
@@ -363,7 +362,7 @@ function showApp(){
   navigate(activeSection);
 }
 
-// ââ NAV ââ
+// -- NAV --
 const NAV=[
   {id:'dashboard',label:'Dashboard',icon:'<path d="M3 12L12 3l9 9M5 10v9h5v-5h4v5h5v-9"/>'},
   {id:'videos',label:'Video bank',icon:'<rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/>'},
@@ -377,7 +376,7 @@ function buildNav(){
   const svg=(icon,cls='')=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls}">${icon}</svg>`;
   document.getElementById('sidebar-nav').innerHTML=items.map(i=>`<div class="nav-item${activeSection===i.id?' active':''}" onclick="navigate('${i.id}')">${svg(i.icon)}${i.label}</div>`).join('');
   document.getElementById('tab-bar-inner').innerHTML=items.map(i=>`<button class="tab-btn${activeSection===i.id?' active':''}" onclick="navigate('${i.id}')">${svg(i.icon,'tab-icon')}<span>${i.label}</span></button>`).join('');
-  document.getElementById('sidebar-user').innerHTML<`<strong>${currentProfile?.first_name||currentProfile?.email||'User'}</strong><a href="#" onclick="supabase.auth.signOut()" style="color:var(--muted)">Sign out</a>`;
+  document.getElementById('sidebar-user').innerHTML=`<strong>${currentProfile?.first_name||currentProfile?.email||'User'}</strong><a href="#" onclick="supabase.auth.signOut()" style="color:var(--muted)">Sign out</a>`;
 }
 
 function navigate(id){
@@ -388,18 +387,18 @@ function navigate(id){
   ({dashboard:renderDashboard,videos:renderVideos,editor:renderEditor,overlays:renderOverlays,team:renderTeam})[id]?.();
 }
 
-// ââ DASHBOARD ââ
+// -- DASHBOARD --
 async function renderDashboard(){
   const main=document.getElementById('main-content');
   main.innerHTML=`
-    <div class="main-header"><h2>Dashboard</h2><button class="btn btn-primary btn-sm" onclick="openScrapeModal()">ï¼ Scrape</button></div>
+    <div class="main-header"><h2>Dashboard</h2><button class="btn btn-primary btn-sm" onclick="openScrapeModal()">+ Scrape</button></div>
     <div class="stats-grid" id="stats-grid"><div class="stat-card"><div class="inline-loader"></div></div></div>
     <div class="card"><div class="card-header"><h3>Competitor videos</h3>
       <div style="display:flex;gap:.5rem">
         <button class="btn btn-ghost btn-sm" id="view-toggle" onclick="toggleView()">Cards</button>
         <button class="btn btn-ghost btn-sm" onclick="exportTSV()">Export TSV</button>
       </div></div>
-      <div class="search-row"><input id="comp-search" placeholder="Search handle, overlay, captionâ¦" oninput="filterCompTable()"/><select id="comp-product-filter" style="padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;font-size:.875rem;outline:none;" onchange="filterCompTable()"><option value="">All products</option></select></div>
+      <div class="search-row"><input id="comp-search" placeholder="Search handle, overlay, caption..." oninput="filterCompTable()"/><select id="comp-product-filter" style="padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;font-size:.875rem;outline:none;" onchange="filterCompTable()"><option value="">All products</option></select></div>
       <div id="comp-view"></div>
     </div>`;
   loadStats();
@@ -457,22 +456,22 @@ function toggleView(){compView=compView==='table'?'cards':'table';document.getEl
 
 function renderCompView(rows){
   const c=document.getElementById('comp-view');
-  if(!rows.length){c.innerHTML='<div class="empty-state">No competitor videos yet. Hit ï¼ Scrape to start.</div>';return;}
+  if(!rows.length){c.innerHTML='<div class="empty-state">No competitor videos yet. Hit + Scrape to start.</div>';return;}
   if(compView==='table'){
-    c.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Handle</th><th>Views</th><th>Likes</th><th>GMV</th><th>Overlays</th><th>Caption</th><th>Scraped</th></tr></thead><tbody>${
+    c.innerHTML<`<div class="table-wrap"><table><thead><tr><th>Handle</th><th>Views</th><th>Likes</th><th>GMV</th><th>Overlays</th><th>Caption</th><th>Scraped</th></tr></thead><tbody>${
       rows.map(r=>`<tr>
-        <td><a href="${r.tiktok_url||'#'}" target="_blank" style="color:var(--blue)">${r.handle||'â'}</a></td>
-        <td>${r.views||'â'}</td><td>${r.likes||'â'}</td><td>${r.creator_gmv||'â'}</td>
-        <td style="max-width:180px;cursor:pointer" onclick="copyText('${encodeURIComponent(r.text_overlays||'')}')" title="Click to copy">${r.text_overlays?r.text_overlays.substring(0,80)+'â¦':'â'}</td>
-        <td style="max-width:180px;cursor:pointer" onclick="copyText('${encodeURIComponent(r.caption||'')}')" title="Click to copy">${r.caption?r.caption.substring(0,80)+'â¦':'â'}</td>
+        <td><a href="${r.tiktok_url||'#'}" target="_blank" style="color:var(--blue)">${r.handle||'--'}</a></td>
+        <td>${r.views||'--'}</td><td>${r.likes||'--'}</td><td>${r.creator_gmv||'--'}</td>
+        <td style="max-width:180px;cursor:pointer" onclick="copyText('${encodeURIComponent(r.text_overlays||'')}')" title="Click to copy">${r.text_overlays?r.text_overlays.substring(0,80)+'...':'--'}</td>
+        <td style="max-width:180px;cursor:pointer" onclick="copyText('${encodeURIComponent(r.caption||'')}')" title="Click to copy">${r.caption?r.caption.substring(0,80)+'...':'--'}</td>
         <td style="white-space:nowrap;font-size:.75rem;color:var(--muted)">${new Date(r.last_scraped_at).toLocaleDateString()}</td>
       </tr>`).join('')
     }</tbody></table></div>`;
   } else {
-    c.innerHTML<`<div class="video-grid">${rows.map(r=>`
+    c.innerHTML=`<div class="video-grid">${rows.map(r=>`
       <div class="card" style="padding:.75rem">
-        <div style="font-weight:500;font-size:.875rem">${r.handle||'â'}</div>
-        <div style="font-size:.75rem;color:var(--muted);margin:.2rem 0 .5rem">${r.views||'â'} views Â· ${r.creator_gmv||'â'} GMV</div>
+        <div style="font-weight:500;font-size:.875rem">${r.handle||'--'}</div>
+        <div style="font-size:.75rem;color:var(--muted);margin:.2rem 0 .5rem">${r.views||'--'} views . ${r.creator_gmv||'--'} GMV</div>
         ${r.text_overlays?`<div class="overlay-line" style="margin-bottom:.4rem;cursor:pointer" onclick="copyText('${encodeURIComponent(r.text_overlays)}')" title="Click to copy">${r.text_overlays.substring(0,80)}</div>`:''}
         ${r.caption?`<div style="font-size:.8rem;color:var(--muted);cursor:pointer" onclick="copyText('${encodeURIComponent(r.caption)}')" title="Click to copy">${r.caption.substring(0,100)}</div>`:''}
       </div>`).join('')}</div>`;
@@ -486,7 +485,7 @@ function exportTSV(){
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([tsv],{type:'text/tab-separated-values'}));a.download='competitor_videos.tsv';a.click();
 }
 
-// ââ SCRAPE MODAL ââ
+// -- SCRAPE MODAL --
 async function openScrapeModal(){
   openModal('scrape-modal');
   document.getElementById('scrape-err').textContent='';
@@ -495,7 +494,7 @@ async function openScrapeModal(){
   };
   const{data:prods}=await supabase.from('products').select('*').order('name');
   const sel=document.getElementById('scrape-product-sel');
-  sel.innerHTML='<option value="">â select product â</option>'+(prods||[]).map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  sel.innerHTML='<option value="">-- select product --</option>'+(prods||[]).map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
   loadScrapeJobsList();loadScrapeSchedulesList();
 }
 async function loadScrapeJobsList(){
@@ -503,8 +502,8 @@ async function loadScrapeJobsList(){
   const el=document.getElementById('scrape-jobs-list');
   if(!data?.length){el.innerHTML='<div style="color:var(--muted)">No jobs yet.</div>';return;}
   el.innerHTML=data.map(j=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border)">
-    <span>${j.products?.name||j.product_url||'â'} Â· <span class="badge badge-${j.status==='done'?'green':j.status==='error'?'red':j.status==='running'?'blue':'gray'}">${j.status}</span></span>
-    <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="deleteScrapeJob('${j.id}','${j.product_uid||''}')">ð</button>
+    <span>${j.products?.name||j.product_url||'--'} . <span class="badge badge-${j.status==='done'?'green':j.status==='error'?'red':j.status==='running'?'blue':'gray'}">${j.status}</span></span>
+    <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="deleteScrapeJob('${j.id}','${j.product_uid||''}')">[trash]</button>
   </div>`).join('');
 }
 async function loadScrapeSchedulesList(){
@@ -512,7 +511,7 @@ async function loadScrapeSchedulesList(){
   const el=document.getElementById('scrape-schedules-list');
   if(!data?.length){el.innerHTML='<div style="color:var(--muted)">No active schedules.</div>';return;}
   el.innerHTML=data.map(s=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border)">
-    <span>${s.products?.name||s.product_url||'â'} Â· every ${s.every_minutes<60?s.every_minutes+'m':s.every_minutes/60+'h'}</span>
+    <span>${s.products?.name||s.product_url||'--'} . every ${s.every_minutes<60?s.every_minutes+'m':s.every_minutes/60+'h'}</span>
     <button class="btn btn-ghost btn-sm" onclick="stopSchedule('${s.id}')">Stop</button>
   </div>`).join('');
 }
@@ -549,7 +548,7 @@ async function submitScrape(){
   loadScrapeJobsList();loadScrapeSchedulesList();
 }
 
-// ââ VIDEO BANK ââ
+// -- VIDEO BANK --
 let videoTab='new',viewingAs=null;
 async function renderVideos(){
   const main=document.getElementById('main-content');
@@ -588,19 +587,19 @@ async function loadVideoBankTab(){
   }
   if(!vids.length){el.innerHTML='<div class="empty-state">No videos here yet.</div>';return;}
   const{data:prods}=await supabase.from('products').select('*').order('name');
-  el.innerHTML<`<div class="video-grid">${vids.map(v=>videoCard(v,prods||[])).join('')}</div>`;
+  el.innerHTML=`<div class="video-grid">${vids.map(v=>videoCard(v,prods||[])).join('')}</div>`;
 }
 function videoCard(v,prods){
   return`<div class="video-card" id="vc-${v.id}">
-    <div class="video-thumb"><span>ð¬</span></div>
-    <button class="video-menu-btn" onclick="openVideoMenu(event,'${v.id}')">â¯</button>
+    <div class="video-thumb"><span>[video]</span></div>
+    <button class="video-menu-btn" onclick="openVideoMenu(event,'${v.id}')">...</button>
     <div class="video-info">
       <div class="name">${v.title||v.filename}</div>
-      <div class="meta">${v.products?.name||'â'} Â· ${fmtBytes(v.size_bytes)}</div>
+      <div class="meta">${v.products?.name||'--'} . ${fmtBytes(v.size_bytes)}</div>
     </div>
   </div>`;
 }
-function fmtBytes(b){if(!b)return'â';if(b>1e9)return(b/1e9).toFixed(1)+'GB';if(b>1e6)return(b/1e6).toFixed(1)+'MB';return(b/1e3).toFixed(0)+'KB';}
+function fmtBytes(b){if(!b)return'--';if(b>1e9)return(b/1e9).toFixed(1)+'GB';if(b>1e6)return(b/1e6).toFixed(1)+'MB';return(b/1e3).toFixed(0)+'KB';}
 
 async function openVideoMenu(e,videoId){
   e.stopPropagation();
@@ -614,7 +613,7 @@ async function openVideoMenu(e,videoId){
     <button onclick="downloadVideo('${v.id}','${v.storage_path}','${v.filename}',${isMobile})">Download</button>
     ${v.status!=='posted'?`<button onclick="markPosted('${v.id}')">Mark as posted</button>`:`<button onclick="markUnposted('${v.id}')">Unpost</button>`}
     <button onclick="queueEdit('${v.id}','${v.storage_path}','${v.filename}')">Edit video</button>
-    <button onclick="suggestOverlays('${v.id}')">â¨ Suggest overlays</button>
+    <button onclick="suggestOverlays('${v.id}')">[sparkles] Suggest overlays</button>
     <button onclick="changeProduct('${v.id}',${JSON.stringify(prods).replace(/"/g,'&quot;')})">Change product</button>
     <button class="danger" onclick="deleteVideo('${v.id}','${v.storage_path}')">Delete</button>`;
   const r=e.currentTarget.getBoundingClientRect();
@@ -653,7 +652,7 @@ async function queueEdit(videoId,storagePath,filename){
 async function suggestOverlays(videoId){
   const{data:v}=await supabase.from('videos').select('product_uid').eq('id',videoId).single();
   await supabase.from('ai_jobs').insert({video_id:videoId,product_uid:v?.product_uid,requested_by:currentUser.email});
-  toast('AI job queued â check Overlays tab');
+  toast('AI job queued -- check Overlays tab');
 }
 async function deleteVideo(id,path){
   if(!confirm('Delete this video?'))return;
@@ -664,7 +663,7 @@ async function deleteVideo(id,path){
 function changeProduct(videoId,prods){
   const sel=prods.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
   const d=document.createElement('div');d.className='modal-overlay open';
-  d.innerHTML<`<div class="modal" style="max-width:360px"><h3>Change product</h3><select id="_cp_sel" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:8px;margin-bottom:1rem;outline:none;">${sel}</select><div class="modal-footer"><button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancel</button><button class="btn btn-primary" onclick="doChangeProduct('${videoId}',document.getElementById('_cp_sel').value,this.closest('.modal-overlay'))">Save</button></div></div>`;
+  d.innerHTML=`<div class="modal" style="max-width:360px"><h3>Change product</h3><select id="_cp_sel" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:8px;margin-bottom:1rem;outline:none;">${sel}</select><div class="modal-footer"><button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancel</button><button class="btn btn-primary" onclick="doChangeProduct('${videoId}',document.getElementById('_cp_sel').value,this.closest('.modal-overlay'))">Save</button></div></div>`;
   document.body.appendChild(d);
 }
 async function doChangeProduct(videoId,productUid,overlay){
@@ -672,12 +671,12 @@ async function doChangeProduct(videoId,productUid,overlay){
   overlay.remove();toast('Product updated');loadVideoBankTab();
 }
 
-// ââ UPLOAD ââ
+// -- UPLOAD --
 async function openUploadModal(){
   openModal('upload-modal');
   const{data:prods}=await supabase.from('products').select('*').order('name');
   const sel=document.getElementById('upload-product-sel');
-  sel.innerHTML='<option value="">â no product â</option>'+(prods||[]).map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  sel.innerHTML='<option value="">-- no product --</option>'+(prods||[]).map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
   document.getElementById('upload-progress-list').innerHTML='';
 }
 
@@ -689,7 +688,7 @@ async function startUpload(){
   for(const file of files){
     const id=crypto.randomUUID();
     const path=`${currentUser.id}/${id}_${file.name}`;
-    list.insertAdjacentHTML('beforeend',`<div class="upload-progress" id="up-${id}"><strong>${file.name}</strong><div class="progress-bar-wrap"><div class="progress-bar" id="pb-${id}" style="width:0%"></div></div><div id="ps-${id}" style="font-size:.75rem;color:var(--muted)">Startingâ¦</div></div>`);
+    list.insertAdjacentHTML('beforeend',`<div class="upload-progress" id="up-${id}"><strong>${file.name}</strong><div class="progress-bar-wrap"><div class="progress-bar" id="pb-${id}" style="width:0%"></div></div><div id="ps-${id}" style="font-size:.75rem;color:var(--muted)">Starting...</div></div>`);
     const upload=new tus.Upload(file,{
       endpoint:`${SUPABASE_URL}/storage/v1/upload/resumable`,
       retryDelays:[0,3000,5000,10000],
@@ -700,7 +699,7 @@ async function startUpload(){
       chunkSize:6*1024*1024,
       onProgress:(up,total)=>{const pct=Math.round(up/total*100);document.getElementById('pb-'+id).style.width=pct+'%';document.getElementById('ps-'+id).textContent=pct+'%'},
       onSuccess:async()=>{
-        document.getElementById('ps-'+id).textContent='Done â';
+        document.getElementById('ps-'+id).textContent='Done v';
         await supabase.from('videos').insert({storage_path:path,filename:file.name,size_bytes:file.size,content_type:file.type,product_uid:productUid,uploaded_by:currentUser.email,kind:'raw'});
         toast(file.name+' uploaded');
       },
@@ -710,7 +709,7 @@ async function startUpload(){
   }
 }
 
-// ââ EDITOR PAGE ââ
+// -- EDITOR PAGE --
 async function renderEditor(){
   const main=document.getElementById('main-content');
   main.innerHTML<`<div class="main-header"><h2>Editor approvals</h2></div><div id="editor-content"><div class="inline-loader"></div></div>`;
@@ -719,10 +718,10 @@ async function renderEditor(){
   if(!vids?.length){el.innerHTML='<div class="empty-state">No videos pending approval.</div>';return;}
   el.innerHTML=`<div class="video-grid">${vids.map(v=>`
     <div class="video-card" id="ec-${v.id}">
-      <div class="video-thumb"><span>âï¸</span></div>
+      <div class="video-thumb"><span>[scissors]</span></div>
       <div class="video-info">
         <div class="name">${v.title||v.filename}</div>
-        <div class="meta">${v.products?.name||'â'}</div>
+        <div class="meta">${v.products?.name||'--'}</div>
         <div style="display:flex;gap:.4rem;margin-top:.5rem">
           <button class="btn btn-green btn-sm" onclick="approveEdit('${v.id}')">Approve</button>
           <button class="btn btn-danger btn-sm" onclick="rejectEdit('${v.id}','${v.storage_path}')">Reject</button>
@@ -732,7 +731,7 @@ async function renderEditor(){
 }
 async function approveEdit(id){
   await supabase.from('videos').update({pending_approval:false}).eq('id',id);
-  toast('Approved â video in bank');renderEditor();
+  toast('Approved -- video in bank');renderEditor();
 }
 async function rejectEdit(id,path){
   await supabase.storage.from(BUCKET).remove([path]);
@@ -740,7 +739,7 @@ async function rejectEdit(id,path){
   toast('Rejected & deleted');renderEditor();
 }
 
-// ââ OVERLAY GENERATOR ââ
+// -- OVERLAY GENERATOR --
 async function renderOverlays(){
   const main=document.getElementById('main-content');
   main.innerHTML=`<div class="main-header"><h2>Overlay generator</h2></div><div id="overlay-content"><div class="inline-loader"></div></div>`;
@@ -750,20 +749,20 @@ async function renderOverlays(){
   ]);
   const el=document.getElementById('overlay-content');
   let html='';
-  if(jobs?.length)html+=`<div class="card" style="margin-bottom:1rem"><h3 style="margin-bottom:.75rem">In progress</h3>${jobs.map(j=>`<div style="padding:.4rem 0;font-size:.875rem;border-bottom:1px solid var(--border)"><span class="inline-loader"></span> ${j.videos?.filename||j.video_id} â AI generatingâ¦</div>`).join('')}</div>`;
-  if(!suggs?.length&&!jobs?.length){el.innerHTML='<div class="empty-state">No pending suggestions. Use â¨ Suggest overlays from the Video bank.</div>';return;}
+  if(jobs?.length)html+=`<div class="card" style="margin-bottom:1rem"><h3 style="margin-bottom:.75rem">In progress</h3>${jobs.map(j=>`<div style="padding:.4rem 0;font-size:.875rem;border-bottom:1px solid var(--border)"><span class="inline-loader"></span> ${j.videos?.filename||j.video_id} -- AI generating...</div>`).join('')}</div>`;
+  if(!suggs?.length&&!jobs?.length){el.innerHTML='<div class="empty-state">No pending suggestions. Use [sparkles] Suggest overlays from the Video bank.</div>';return;}
   if(suggs?.length){
     html+=suggs.map(s=>{
       const opts=s.options||[];
-      return`<div class="card"><div style="font-size:.8125rem;color:var(--muted);margin-bottom:.5rem">${s.videos?.filename||s.video_id} Â· ${s.videos?.products?.name||'â'}</div>
+      return`<div class="card"><div style="font-size:.8125rem;color:var(--muted);margin-bottom:.5rem">${s.videos?.filename||s.video_id} . ${s.videos?.products?.name||'--'}</div>
         ${opts.map((opt,i)=>`<div class="suggestion-card">
           <h4>Option ${i+1} ${opt.inspired_by?`<span style="font-size:.75rem;color:var(--muted)">inspired by ${opt.inspired_by}</span>`:''}</h4>
           <div class="overlay-lines">${(opt.overlay||[]).map(l=>`<div class="overlay-line">${l}</div>`).join('')}</div>
           <div class="suggestion-desc">"${opt.description||''}"</div>
           <div class="suggestion-rationale">${opt.rationale||''}</div>
           <div class="suggestion-actions">
-            <button class="btn btn-green btn-sm" onclick="approveOverlay('${s.id}','${s.video_id}','${s.product_uid||''}',${i})">â Use this</button>
-            <button class="btn btn-ghost btn-sm" onclick="rejectOverlay('${s.id}','${s.video_id}','${s.product_uid||''}',${i})">â Not this</button>
+            <button class="btn btn-green btn-sm" onclick="approveOverlay('${s.id}','${s.video_id}','${s.product_uid||''}',${i})">v Use this</button>
+            <button class="btn btn-ghost btn-sm" onclick="rejectOverlay('${s.id}','${s.video_id}','${s.product_uid||''}',${i})">x Not this</button>
             <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(${JSON.stringify(JSON.stringify(opt))});toast('Copied!')">Copy</button>
           </div>
         </div>`).join('')}
@@ -799,21 +798,21 @@ async function rejectOverlay(suggId,videoId,productUid,optIdx){
 async function regenerateSuggestion(suggId,videoId,productUid){
   await supabase.from('caption_suggestions').update({status:'decided'}).eq('id',suggId);
   await supabase.from('ai_jobs').insert({video_id:videoId,product_uid:productUid||null,requested_by:currentUser.email});
-  toast('Regeneratingâ¦');renderOverlays();
+  toast('Regenerating...');renderOverlays();
 }
 
-// ââ TEAM & ACCESS ââ
+// -- TEAM & ACCESS --
 async function renderTeam(){
   if(currentProfile?.role!=='admin'){document.getElementById('main-content').innerHTML='<div class="empty-state">Admins only.</div>';return;}
   const main=document.getElementById('main-content');
-  main.innerHTML=`<div class="main-header"><h2>Team & Access</h2></div><div id="team-content"><div class="inline-loader"></div></div>`;
+  main.innerHTML<`<div class="main-header"><h2>Team & Access</h2></div><div id="team-content"><div class="inline-loader"></div></div>`;
   const{data:users}=await supabase.from('profiles').select('*').order('status').order('email');
   const el=document.getElementById('team-content');
   if(!users?.length){el.innerHTML='<div class="empty-state">No users yet.</div>';return;}
-  el.innerHTML=`<div class="card"><div class="table-wrap"><table><thead><tr><th>Email</th><th>Name</th><th>Status</th><th>Role</th><th>Actions</th></tr></thead><tbody>${
+  el.innerHTML<`<div class="card"><div class="table-wrap"><table><thead><tr><th>Email</th><th>Name</th><th>Status</th><th>Role</th><th>Actions</th></tr></thead><tbody>${
     users.map(u=>`<tr>
       <td>${u.email}</td>
-      <td>${u.first_name||'â'}</td>
+      <td>${u.first_name||'--'}</td>
       <td><span class="badge badge-${u.status==='approved'?'green':u.status==='pending'?'yellow':'red'}">${u.status}</span></td>
       <td>${u.role}</td>
       <td style="display:flex;gap:.4rem;flex-wrap:wrap">
