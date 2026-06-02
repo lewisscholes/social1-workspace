@@ -381,6 +381,13 @@
           </div>
           <!-- RIGHT: text controls -->
           <div class="ep-right" id="epRight">
+            <div class="ep-ctrl" style="margin-bottom:1.1rem">
+              <div class="ep-ctrl-lbl" style="font-size:.875rem;font-weight:600;margin-bottom:.5rem">Text</div>
+              <textarea id="epTextInput" rows="3" placeholder="Type your overlay text…"
+                style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:.55rem .7rem;font-size:.9375rem;line-height:1.45;resize:vertical;outline:none;font-family:inherit"
+                oninput="epTextChanged(this.value)"></textarea>
+            </div>
+            <hr class="ep-divider">
             <div class="ep-ctrl">
               <div class="ep-ctrl-lbl">Weight <span id="epWeightLbl">Medium</span></div>
               <input type="range" class="ep-slider" id="epWeight" min="100" max="900" step="100" value="500" oninput="epUpdateText()">
@@ -1003,7 +1010,9 @@ function swEdit(){
   // Set overlay text
   const txt=v.caption_suggested||'';
   const drag=document.getElementById('epDragText');
-  if(drag){drag.textContent=txt;drag.style.left=epTextPos.x+'%';drag.style.bottom=(100-epTextPos.y)+'%';drag.style.transform='translateX(-50%)';}
+  if(drag){drag.textContent=txt;drag.style.left=epTextPos.x+'%';drag.style.bottom=(100-epTextPos.y)+'%';drag.style.transform='translateX(-50%)';drag.style.display=txt.trim()?'block':'none';}
+  const ta=document.getElementById('epTextInput');
+  if(ta){ta.value=txt;ta.focus();}
   epUpdateText();
   epSetBg(epBg);
   // Init drag on text
@@ -1019,8 +1028,8 @@ function epClose(){
 async function epDone(){
   // Save text settings back to video record
   if(epCurrentId){
-    const drag=document.getElementById('epDragText');
-    const newCaption=drag?drag.textContent:'';
+    const ta=document.getElementById('epTextInput');
+    const newCaption=ta?ta.value:document.getElementById('epDragText')?.textContent||'';
     await sb.from('videos').update({caption_suggested:newCaption}).eq('id',epCurrentId);
     // Update the swipe card overlay
     const sc=document.querySelector(`.sw-card.is-top .sw-text`);
@@ -1054,6 +1063,13 @@ function epSetBg(bg){
   else if(bg==='white'){drag.style.background='rgba(255,255,255,0.92)';drag.style.color=document.getElementById('epColor')?.value||'#000';drag.style.padding='5px 10px';drag.style.borderRadius='5px';document.getElementById('epBgWhite').classList.add('sel');}
   else if(bg==='snap'){drag.style.background='rgba(0,0,0,0.7)';drag.style.padding='5px 10px';drag.style.borderRadius='5px';document.getElementById('epBgSnap').classList.add('sel');}
   epUpdateText();
+}
+
+function epTextChanged(val){
+  const drag=document.getElementById('epDragText');
+  if(drag){ drag.textContent=val; }
+  // also keep hidden if empty
+  if(drag) drag.style.display=val.trim()?'block':'none';
 }
 
 function epColorSync(inputId,hexId){
