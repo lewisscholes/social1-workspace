@@ -153,7 +153,8 @@
 <div id="toast" class="toast"></div>
 
 <!-- AUTH -->
-<div id="class="auth-card" id="login-card">
+<div id="auth-screen">
+  <div class="auth-card" id="login-card">
     <h1>Social1</h1>
     <p>Affiliate Editor -- sign in to continue</p>
     <div class="form-row"><label>Email</label><input type="email" id="login-email" placeholder="you@example.com"/></div>
@@ -458,7 +459,7 @@ function renderCompView(rows){
   const c=document.getElementById('comp-view');
   if(!rows.length){c.innerHTML='<div class="empty-state">No competitor videos yet. Hit + Scrape to start.</div>';return;}
   if(compView==='table'){
-    c.innerHTML<`<div class="table-wrap"><table><thead><tr><th>Handle</th><th>Views</th><th>Likes</th><th>GMV</th><th>Overlays</th><th>Caption</th><th>Scraped</th></tr></thead><tbody>${
+    c.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Handle</th><th>Views</th><th>Likes</th><th>GMV</th><th>Overlays</th><th>Caption</th><th>Scraped</th></tr></thead><tbody>${
       rows.map(r=>`<tr>
         <td><a href="${r.tiktok_url||'#'}" target="_blank" style="color:var(--blue)">${r.handle||'--'}</a></td>
         <td>${r.views||'--'}</td><td>${r.likes||'--'}</td><td>${r.creator_gmv||'--'}</td>
@@ -712,7 +713,7 @@ async function startUpload(){
 // -- EDITOR PAGE --
 async function renderEditor(){
   const main=document.getElementById('main-content');
-  main.innerHTML<`<div class="main-header"><h2>Editor approvals</h2></div><div id="editor-content"><div class="inline-loader"></div></div>`;
+  main.innerHTML=`<div class="main-header"><h2>Editor approvals</h2></div><div id="editor-content"><div class="inline-loader"></div></div>`;
   const{data:vids}=await supabase.from('videos').select('*,products(name)').eq('pending_approval',true).order('created_at',{ascending:false});
   const el=document.getElementById('editor-content');
   if(!vids?.length){el.innerHTML='<div class="empty-state">No videos pending approval.</div>';return;}
@@ -805,11 +806,11 @@ async function regenerateSuggestion(suggId,videoId,productUid){
 async function renderTeam(){
   if(currentProfile?.role!=='admin'){document.getElementById('main-content').innerHTML='<div class="empty-state">Admins only.</div>';return;}
   const main=document.getElementById('main-content');
-  main.innerHTML<`<div class="main-header"><h2>Team & Access</h2></div><div id="team-content"><div class="inline-loader"></div></div>`;
+  main.innerHTML=`<div class="main-header"><h2>Team & Access</h2></div><div id="team-content"><div class="inline-loader"></div></div>`;
   const{data:users}=await supabase.from('profiles').select('*').order('status').order('email');
   const el=document.getElementById('team-content');
   if(!users?.length){el.innerHTML='<div class="empty-state">No users yet.</div>';return;}
-  el.innerHTML<`<div class="card"><div class="table-wrap"><table><thead><tr><th>Email</th><th>Name</th><th>Status</th><th>Role</th><th>Actions</th></tr></thead><tbody>${
+  el.innerHTML=`<div class="card"><div class="table-wrap"><table><thead><tr><th>Email</th><th>Name</th><th>Status</th><th>Role</th><th>Actions</th></tr></thead><tbody>${
     users.map(u=>`<tr>
       <td>${u.email}</td>
       <td>${u.first_name||'--'}</td>
@@ -838,6 +839,21 @@ async function toggleAdmin(id,role){
   await supabase.from('profiles').update({role:role==='admin'?'user':'admin'}).eq('id',id);
   toast('Role updated');renderTeam();
 }
+
+// Expose all functions globally for onclick handlers
+Object.assign(window, {
+  doLogin, doSignup, showLogin, showSignup,
+  openScrapeModal, filterCompTable, toggleView, exportTSV,
+  submitScrape, stopSchedule, deleteScrapeJob,
+  switchVideoTab, changeViewAs, openVideoMenu,
+  downloadVideo, markPosted, markUnposted,
+  queueEdit, suggestOverlays, deleteVideo, changeProduct, doChangeProduct,
+  openUploadModal, startUpload,
+  approveEdit, rejectEdit,
+  approveOverlay, rejectOverlay, regenerateSuggestion,
+  approveUser, rejectUser, revokeUser, toggleAdmin,
+  closeModal, openModal, navigate, copyText, toast
+});
 </script>
 </body>
 </html>
