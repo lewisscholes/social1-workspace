@@ -1303,6 +1303,21 @@ let mteCurColor='#ffffff', mteCurSize=28, mteCurFont='classic', mteCurOutline=tr
 
 function mteV(){ return document.getElementById('mteVideo'); }
 
+async function mteAutoSuggest(id){
+  toast('Loading overlay ideas...','ok');
+  try{
+    const {data,error}=await sb.functions.invoke('suggest-overlays',{body:{video_id:id}});
+    if(error||(data&&data.error)) return; // no data / not configured -- user can tap Suggest overlays
+    const {data:vr}=await sb.from('videos').select('caption_suggested').eq('id',id).single();
+    if(vr&&vr.caption_suggested&&mteId===id&&!mteTexts.length){
+      mteTexts.push({id:++mteOvSeq,text:vr.caption_suggested,x:50,y:74,color:'#ffffff',size:24,font:'classic',outline:true});
+      mteRenderOverlays();
+      const sv=swVids.find(x=>x.id===id); if(sv)sv.caption_suggested=vr.caption_suggested;
+      toast('Overlay idea added','ok');
+    }
+  }catch(e){}
+}
+
 async function mteOpen(id){
   const v=swVids.find(x=>x.id===id); if(!v) return;
   mteId=id; mteSelSeg=-1; mteThumbs=[]; mtePlaying=false; mteTexts=[]; mteSegments=[]; mtePps=0; mteMuted=false;
@@ -1311,6 +1326,7 @@ async function mteOpen(id){
   const es=v.edit_state;
   if(es&&es.overlays&&es.overlays.length){ mteTexts=es.overlays.map(o=>({id:++mteOvSeq,text:o.text,x:o.x,y:o.y,color:o.color,size:o.size||24,font:(o.font==='TikTok Sans'?'classic':(o.font||'classic')),outline:(o.outline!==false)})); }
   else if(v.caption_suggested){ mteTexts.push({id:++mteOvSeq,text:v.caption_suggested,x:50,y:74,color:'#ffffff',size:24,font:'classic',outline:true}); }
+  if(!mteTexts.length && v.product_uid){ mteAutoSuggest(id); }
   const vid=mteV(); vid.muted=false;
   vid.onloadedmetadata=()=>{
     mteDuration=vid.duration||0;
@@ -1637,7 +1653,7 @@ async function regenSuggestions(sid,vid,prod){ await sb.from('caption_suggestion
 // ---------- UPLOAD (per-video manager, background) ----------
 function tusUpload(file,objectPath,onProgress){ return new Promise(async(res,rej)=>{ if(!window.tus)return rej(new Error('tus')); let token; try{const{data}=await sb.auth.getSession();token=data.session&&data.session.access_token;}catch(e){} if(!token)return rej(new Error('no-session')); const up=new tus.Upload(file,{endpoint:SUPABASE_URL+'/storage/v1/upload/resumable',retryDelays:[0,1000,3000,5000,10000],headers:{authorization:'Bearer '+token,apikey:SUPABASE_KEY,'x-upsert':'true'},uploadDataDuringCreation:false,removeFingerprintOnSuccess:true,chunkSize:1*1024*1024,metadata:{bucketName:BUCKET,objectName:objectPath,contentType:'video/mp4',cacheControl:'3600'},onError:rej,onProgress:(s,t)=>{if(onProgress)onProgress(s,t);},onSuccess:res}); up.findPreviousUploads().then(p=>{if(p&&p.length)up.resumeFromPreviousUpload(p[0]);up.start();}).catch(()=>up.start()); }); }
 async function runPool(items,worker,c){ let i=0; const next=async()=>{ while(i<items.length){ const idx=i++; await worker(items[idx],idx); } }; await Promise.all(Array.from({length:Math.min(c,items.length||1)},next)); }
-async function uploadOne(file,prodId,onProgress){ const safe=file.name.replace(/[^\w.\-]+/g,'_'); const path=(prodId||'root')+'/'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'_'+safe; await tusUpload(file,path,onProgress); if(onProgress)onProgress(file.size||0,file.size||0); const{error:ie}=await sb.from('videos').insert({product_uid:prodId,kind:'raw',title:file.name,filename:file.name,storage_path:path,size_bytes:file.size,content_type:'video/mp4'}); if(ie)throw ie; }
+async function uploadOne(file,prodId,onProgress){ const safe=file.name.replace(/[^\w.\-]+/g,'_'); const path=(prodId||'root')+'/'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'_'+safe; await tusUpload(file,path,onProgress); if(onProgress)onProgress(file.size||0,file.size||0); const{data:vrow,error:ie}=await sb.from('videos').insert({product_uid:prodId,kind:'raw',title:file.name,filename:file.name,storage_path:path,size_bytes:file.size,content_type:'video/mp4'}).select('id').single(); if(ie)throw ie; if(prodId&&vrow&&vrow.id){ sb.functions.invoke('suggest-overlays',{body:{video_id:vrow.id}}).catch(()=>{}); } }
 let __bgD=0,__bgF=0,__bgT=0,__bgA=0;
 function bgEl(){ let e=document.getElementById('upStatus'); if(!e){e=document.createElement('div');e.id='upStatus';e.className='upstatus hide';document.body.appendChild(e);} return e; }
 function drawBg(){ const e=bgEl(); if(__bgT===0){e.classList.add('hide');return;} e.classList.remove('hide'); const f=__bgD+__bgF; if(__bgA>0||f<__bgT) e.innerHTML=`<span class="spin"></span> Uploading… ${f}/${__bgT}`; else { e.innerHTML=`✓ ${__bgD} uploaded${__bgF?(' · '+__bgF+' failed'):''}`; setTimeout(()=>{if(__bgA===0){__bgT=0;__bgD=0;__bgF=0;bgEl().classList.add('hide');}},4000); } }
