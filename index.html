@@ -1352,8 +1352,10 @@ function mteRenderTL(){
   mtePpsFit=scrollW/total;
   if(!mtePps||mtePps<mtePpsFit) mtePps=mtePpsFit;
   const W=total*mtePps, pad=scrollW/2;
-  content.style.paddingLeft=pad+'px'; content.style.paddingRight=pad+'px';
-  tl.style.width=W+'px'; ruler.style.width=W+'px';
+  content.style.paddingLeft='0px'; content.style.paddingRight='0px';
+  content.style.width=(W+2*pad)+'px';
+  ruler.style.width=W+'px'; ruler.style.marginLeft=pad+'px';
+  tl.style.width=W+'px'; tl.style.marginLeft=pad+'px';
   let html='';
   mteSegments.forEach((s,i)=>{
     const w=(s.end-s.start)*mtePps; let inner='';
