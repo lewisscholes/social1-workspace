@@ -399,6 +399,7 @@
       </div>
       <div class="tabs">
         <button class="tab active" id="tab-new" onclick="setBankTab('new')">🆕 New <span class="cnt" id="cnt-new">0</span></button>
+        <button class="tab" id="tab-edited" onclick="setBankTab('edited')">✂️ Edited <span class="cnt" id="cnt-edited">0</span></button>
         <button class="tab" id="tab-downloaded" onclick="setBankTab('downloaded')">⬇️ Downloaded <span class="cnt" id="cnt-downloaded">0</span></button>
         <button class="tab" id="tab-posted" onclick="setBankTab('posted')">✅ Posted <span class="cnt" id="cnt-posted">0</span></button>
       </div>
@@ -900,22 +901,43 @@ function isPosted(v){ return !!v.posted_at; }
 function downloadedBy(vid,uid){ return state.downloads.some(d=>d.video_id===vid&&d.user_id===uid); }
 function setBankTab(t){ state.bankTab=t; renderBank(); }
 function bankBuckets(){
-  const uid=viewUser(); const b={new:[],downloaded:[],posted:[]};
-  state.videos.filter(v=>!v.pending_approval).forEach(v=>{ if(isPosted(v)||v.status==='scheduled') b.posted.push(v); else if(downloadedBy(v.id,uid)) b.downloaded.push(v); else b.new.push(v); });
+  const uid=viewUser(); const b={new:[],edited:[],downloaded:[],posted:[]};
+  state.videos.filter(v=>!v.pending_approval).forEach(v=>{
+    if(v.kind==='edited'){ if(downloadedBy(v.id,uid)) b.downloaded.push(v); else b.edited.push(v); return; }
+    if(v.status==='edited') return; // raw clip already sent to Edited -- represented by its rendered version
+    if(isPosted(v)||v.status==='scheduled') b.posted.push(v);
+    else if(downloadedBy(v.id,uid)) b.downloaded.push(v);
+    else b.new.push(v);
+  });
   return b;
 }
 function renderBank(){
   const b=bankBuckets();
   document.getElementById('cnt-new').textContent=b.new.length;
+  const ce=document.getElementById('cnt-edited'); if(ce)ce.textContent=b.edited.length;
   document.getElementById('cnt-downloaded').textContent=b.downloaded.length;
   document.getElementById('cnt-posted').textContent=b.posted.length;
-  ['new','downloaded','posted'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('active',t===state.bankTab));
+  ['new','edited','downloaded','posted'].forEach(t=>{const el=document.getElementById('tab-'+t); if(el)el.classList.toggle('active',t===state.bankTab);});
   const list=b[state.bankTab];
   const wrap=document.getElementById('bankCards'); const empty=document.getElementById('bankEmpty');
   empty.classList.toggle('hide', list.length>0);
-  if(!list.length){ document.getElementById('bankEmptyMsg').textContent = state.bankTab==='new'?'No new videos. Upload some, or they arrive from the Drive relay.':state.bankTab==='downloaded'?'Nothing downloaded yet.':'Nothing posted yet.'; wrap.innerHTML=''; return; }
-  wrap.innerHTML=''; list.forEach(v=>wrap.appendChild(bankCard(v)));
+  if(!list.length){ const msgs={new:'No new videos. Upload some, or they arrive from the Drive relay.',edited:'No edited videos yet. Edit a clip and tap the tick -- it renders here, ready to download.',downloaded:'Nothing downloaded yet.',posted:'Nothing posted yet.'}; document.getElementById('bankEmptyMsg').textContent=msgs[state.bankTab]||'Nothing here yet.'; wrap.innerHTML=''; return; }
+  wrap.innerHTML='';
+  if(state.bankTab==='edited'){ const bar=document.createElement('div'); bar.style.cssText='grid-column:1/-1;margin-bottom:4px'; bar.innerHTML='<button class="btn" onclick="downloadAllEdited()">&#8595; Download all ('+list.length+')</button>'; wrap.appendChild(bar); }
+  list.forEach(v=>wrap.appendChild(bankCard(v)));
   hydrateBankUrls();
+}
+async function downloadAllEdited(){
+  const list=bankBuckets().edited.slice(); if(!list.length){ toast('Nothing to download','err'); return; }
+  toast('Downloading '+list.length+' video'+(list.length!==1?'s':'')+'...','ok');
+  for(const v of list){
+    try{ const {data}=await sb.storage.from(BUCKET).createSignedUrl(v.storage_path,300,{download:v.filename}); if(data&&data.signedUrl){ const a=document.createElement('a'); a.href=data.signedUrl; a.download=v.filename||'video.mp4'; document.body.appendChild(a); a.click(); a.remove(); } }catch(e){}
+    await new Promise(r=>setTimeout(r,1500));
+  }
+  const rows=list.filter(v=>!downloadedBy(v.id,state.user.id)).map(v=>({video_id:v.id,user_id:state.user.id,user_email:state.user.email}));
+  if(rows.length){ try{ await sb.from('video_downloads').insert(rows); }catch(e){} }
+  await loadBank();
+  toast('Done -- moved to Downloaded','ok');
 }
 const signed={};
 function bankCard(v){
@@ -1012,7 +1034,7 @@ async function loadEditor(){
   root.innerHTML='<div class="sw-empty"><div class="inline-loader"></div></div>';
   // Load ALL approved (non-posted) videos from the bank
   const {data:vids}=await sb.from('videos').select('*').neq('status','posted').neq('status','scheduled').eq('pending_approval',false).order('created_at',{ascending:false});
-  let list=vids||[];
+  let list=(vids||[]).filter(v=>v.kind!=='edited' && v.status!=='edited');
   try{ const {data:dls}=await sb.from('video_downloads').select('video_id').eq('user_id',state.user.id); const dset=new Set((dls||[]).map(d=>d.video_id)); list=list.filter(v=>!dset.has(v.id)); }catch(e){}
   swVids=list; swIdx=0;
   // Preload signed URLs for first 3
@@ -1089,7 +1111,7 @@ function swInitDrag(){
   const onUp=()=>{
     if(!swDragging)return; swDragging=false; card.classList.remove('dragging');
     const threshold=90;
-    if(swCurX>threshold){ card.classList.add('snap-back'); card.style.transform=''; setTimeout(()=>card.classList.remove('snap-back'),400); openScheduler(card.dataset.id); }
+    if(swCurX>threshold){ swFly('right'); }
     else if(swCurX<-threshold){swFly('left');}
     else{card.classList.add('snap-back');card.style.transform='';setTimeout(()=>card.classList.remove('snap-back'),400);}
   };
@@ -1106,7 +1128,7 @@ function swFly(dir){
   card.classList.add('fly-'+dir);
   setTimeout(async()=>{
     if(dir==='left') await swBackToUploads(card.dataset.id);
-    else if(dir==='right') await swDoApprove(card.dataset.id);
+    else if(dir==='right') await swApproveEdited(card.dataset.id);
     swAdvance();
   },420);
 }
@@ -1131,9 +1153,11 @@ async function swDelete(){
   setTimeout(()=>swAdvance(),420);
 }
 
-function swApprove(){
-  const card=document.querySelector('.sw-card.is-top'); if(!card) return;
-  openScheduler(card.dataset.id);
+function swApprove(){ const card=document.querySelector('.sw-card.is-top'); if(card) swFly('right'); }
+async function swApproveEdited(id){
+  const {error}=await sb.from('videos').update({status:'edited'}).eq('id',id);
+  if(error){ toast('Failed: '+error.message,'err'); return; }
+  toast('Sent to Edited -- rendering in the background','ok');
 }
 
 async function swDoApprove(id){
