@@ -1298,7 +1298,7 @@ function epInitTextDrag(){
 // keep old refs for other parts of the app
 // ---------- MOBILE TIKTOK-STYLE EDITOR ----------
 let mteId=null, mteDuration=0, mteSegments=[], mteSelSeg=-1, mteThumbs=[], mtePlaying=false, mteTexts=[], mteEditingOv=null, mteOvSeq=0;
-let mtePps=0, mtePpsFit=0, mteProgScroll=false, mteProgT=0, mteRaf=0, mteMuted=false, mteBound=false;
+let mtePps=0, mtePpsFit=0, mteProgScroll=false, mteProgT=0, mteRaf=0, mteMuted=false, mteBound=false, mteSeekTarget=null, mteSeekRaf=0;
 let mteCurColor='#ffffff', mteCurSize=28, mteCurFont='classic', mteCurOutline=true, mtePinchBase=0, mtePinchPps=0;
 
 function mteV(){ return document.getElementById('mteVideo'); }
@@ -1384,17 +1384,20 @@ function mteBindTl(){
   const scroll=document.getElementById('mteTlScroll');
   // any finger on the timeline pauses playback so the user can scrub the full length
   scroll.addEventListener('touchstart',(e)=>{
+    mteProgScroll=false;
     if(mtePlaying){ mteV().pause(); mtePlaying=false; mteStopTick(); mteSyncPlay(); }
     if(e.touches.length===2){ mtePinchBase=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); mtePinchPps=mtePps; }
   },{passive:true});
   scroll.addEventListener('touchmove',(e)=>{ if(e.touches.length===2&&mtePinchBase){ e.preventDefault(); const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); mtePps=Math.min(320,Math.max(mtePpsFit,mtePinchPps*d/mtePinchBase)); mteRenderTL(); } },{passive:false});
   scroll.addEventListener('touchend',()=>{ mtePinchBase=0; },{passive:true});
-  scroll.addEventListener('scroll',()=>{ if(mtePlaying||mteProgScroll)return; const keptT=Math.max(0,Math.min(mteTotalKept(),scroll.scrollLeft/mtePps)); const src=mteKeptToSrc(keptT); const vid=mteV(); if(Math.abs(vid.currentTime-src)>0.015){ vid.currentTime=src; } mteUpdTime(); });
+  scroll.addEventListener('scroll',()=>{ if(mtePlaying||mteProgScroll)return; mteSeekTarget=Math.max(0,Math.min(mteTotalKept(),scroll.scrollLeft/mtePps)); if(!mteSeekRaf)mteSeekRaf=requestAnimationFrame(mteApplySeek); });
 }
+function mteApplySeek(){ mteSeekRaf=0; if(mteSeekTarget==null)return; const src=mteKeptToSrc(mteSeekTarget); const vid=mteV(); if(Math.abs(vid.currentTime-src)>0.01){ if(vid.fastSeek){ try{vid.fastSeek(src);}catch(e){ vid.currentTime=src; } } else { vid.currentTime=src; } } mteUpdTime(); }
 
 function mteZoom(dir){ if(!mtePpsFit)return; mtePps=Math.min(320,Math.max(mtePpsFit,mtePps*(dir>0?1.5:1/1.5))); mteRenderTL(); }
 
 function mteOnTimeUpdate(){
+  if(!mtePlaying){ mteUpdTime(); return; }
   const vid=mteV(); const t=vid.currentTime;
   let inSeg=null;
   for(const s of mteSegments){ if(t>=s.start-0.03&&t<s.end){inSeg=s;break;} }
