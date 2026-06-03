@@ -1578,9 +1578,15 @@ async function swResolveEdited(id){
 }
 async function swDownload(id){
   const v=swVids.find(x=>x.id===id); if(!v) return;
+  const edited=await swResolveEdited(id);   // the worker-rendered edit, if ready
+  if(!edited){
+    // No rendered edit yet -- is one still processing? If so, don't quietly hand back the original.
+    let pending=false;
+    try{ const {data}=await sb.from('edit_jobs').select('id').eq('video_id',id).in('status',['queued','rendering']).limit(1); pending=!!(data&&data.length); }catch(e){}
+    if(pending){ toast('Your edit is still rendering -- try Download again in a few seconds','err'); return; }
+  }
   closeModal();
-  const edited=await swResolveEdited(id);   // prefer the rendered edit; fall back to the original
-  await fileDownload(edited||v, id);        // downloads the file + records it as Downloaded
+  await fileDownload(edited||v, id);        // edited file if ready, else original; records as Downloaded
   const card=document.querySelector('.sw-card.is-top');
   if(card&&card.dataset.id===id){ card.classList.add('fly-left'); setTimeout(()=>swAdvance(),420); } else { swRender(); }
 }
