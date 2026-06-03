@@ -1559,10 +1559,15 @@ async function rejectEdit(id){ await sb.storage.from(BUCKET).remove([(await sb.f
 
 // ---------- OVERLAY GENERATOR (AI caption & overlay suggestions) ----------
 async function suggestOverlays(id){
-  const v=(state.videos||[]).find(x=>x.id===id);
-  const {error}=await sb.from('ai_jobs').insert({video_id:id, product_uid:v?v.product_uid:null, status:'queued', requested_by:displayName(state.user)});
-  if(error){ toast('Failed: '+error.message,'err'); return; }
-  toast('Queued — open the Overlay generator tab to see it','ok');
+  toast('Finding winning overlays...','ok');
+  try{
+    const {data,error}=await sb.functions.invoke('suggest-overlays',{body:{video_id:id}});
+    if(error){ toast('Failed: '+(error.message||error),'err'); return; }
+    if(data&&data.error){ toast(data.error,'err'); return; }
+    const n=(data&&data.count)||0;
+    toast(n+' overlay idea'+(n!==1?'s':'')+' ready'+(data&&data.used_transcript?'':' (no transcript yet)'),'ok');
+    if(state.currentView==='overlays') loadOverlays();
+  }catch(e){ toast('Failed: '+(e.message||e),'err'); }
 }
 async function loadOverlays(){
   const [{data:sugg},{data:jobs},{data:fb},{data:vids}]=await Promise.all([
