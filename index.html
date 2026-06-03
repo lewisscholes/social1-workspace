@@ -252,7 +252,7 @@
   .mte-pv{position:relative;height:100%;max-width:100%;aspect-ratio:9/16;border-radius:14px;overflow:hidden;background:#000}
   .mte-pv video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
   .mte-ovs{position:absolute;inset:0;overflow:hidden;pointer-events:none}
-  .mte-ov{position:absolute;pointer-events:auto;cursor:move;font-family:var(--ovfont);text-align:center;line-height:1.2;letter-spacing:-0.01em;max-width:94%;word-break:break-word;padding:1px 5px;white-space:pre-wrap}
+  .mte-ov{position:absolute;pointer-events:auto;cursor:move;font-family:var(--ovfont);text-align:center;line-height:1.2;letter-spacing:-0.01em;width:max-content;max-width:84%;overflow-wrap:break-word;word-break:normal;padding:1px 5px;white-space:pre-wrap}
   .mte-guide-v,.mte-guide-h{position:absolute;background:#fe2c55;opacity:0;transition:opacity .08s;pointer-events:none;z-index:6}
   .mte-guide-v{top:5%;bottom:5%;left:50%;width:1.5px;transform:translateX(-50%)}
   .mte-guide-h{left:5%;right:5%;top:50%;height:1.5px;transform:translateY(-50%)}
@@ -289,7 +289,7 @@
   .mte-sheet-top .wheel{width:24px;height:24px;border-radius:50%;border:2px solid #fff;background:conic-gradient(red,#ff0,#0f0,#0ff,#00f,#f0f,red)}
   .mte-sheet-top .mte-done{margin-left:auto;font-size:16px;font-weight:700}
   .mte-sheet-body{flex:1;display:flex;align-items:center;justify-content:center;position:relative;padding:0 60px 0 22px}
-  .mte-ta{width:100%;background:transparent;border:0;outline:0;color:#fff;font-family:var(--ovfont);font-weight:700;font-size:28px;text-align:center;resize:none;-webkit-text-stroke:2px #000;paint-order:stroke fill;line-height:1.2;overflow:hidden}
+  .mte-ta{width:100%;box-sizing:border-box;padding:0;background:transparent;border:0;outline:0;color:#fff;font-family:var(--ovfont);font-weight:700;font-size:28px;text-align:center;resize:none;-webkit-text-stroke:2px #000;paint-order:stroke fill;line-height:1.2;overflow:hidden;word-break:normal;overflow-wrap:break-word}
   .mte-sizewrap{position:absolute;right:16px;top:50%;transform:translateY(-50%);height:44%;display:flex;align-items:center}
   .mte-size{-webkit-appearance:slider-vertical;appearance:slider-vertical;writing-mode:vertical-lr;direction:rtl;width:24px;height:100%;background:transparent;accent-color:#fff;cursor:pointer}
   .mte-fonts{display:flex;gap:8px;overflow-x:auto;padding:8px 14px;scrollbar-width:none}
@@ -1062,7 +1062,7 @@ function swOverlayHtml(v){
       const fst=(o.font==='retro')?'italic':'normal';
       const fw=(o.font==='elegance')?'600':'700';
       const sh=(o.font==='neon')?('text-shadow:0 0 6px '+o.color+',0 0 13px '+o.color+';'):'';
-      return '<div class="sw-text" style="left:'+o.x+'%;top:'+o.y+'%;transform:translate(-50%,-50%);font-family:'+fam+';font-weight:'+fw+';font-style:'+fst+';font-size:'+(o.size||24)+'px;color:'+o.color+';'+out+sh+'text-align:center;max-width:88%;letter-spacing:-0.01em;line-height:1.2">'+esc(o.text)+'</div>';
+      return '<div class="sw-text" style="left:'+o.x+'%;top:'+o.y+'%;transform:translate(-50%,-50%);font-family:'+fam+';font-weight:'+fw+';font-style:'+fst+';font-size:'+(o.size||24)+'px;color:'+o.color+';'+out+sh+'text-align:center;width:max-content;max-width:84%;overflow-wrap:break-word;word-break:normal;letter-spacing:-0.01em;line-height:1.2">'+esc(o.text)+'</div>';
     }).join('');
   }
   const txt=v.caption_suggested||'';
@@ -1473,6 +1473,9 @@ function mteApplyTaStyle(){
   ta.style.fontStyle=(mteCurFont==='retro')?'italic':'normal'; ta.style.fontWeight=(mteCurFont==='elegance')?'600':'700';
   ta.style.webkitTextStroke=mteCurOutline?'2px #000':'0';
   ta.style.textShadow=(mteCurFont==='neon')?('0 0 6px '+mteCurColor+',0 0 13px '+mteCurColor):'none';
+  // Match the edit box width to the on-video overlay's wrap width so editor == saved result
+  const pv=document.getElementById('mtePv');
+  if(pv&&pv.clientWidth){ const w=Math.round(pv.clientWidth*0.84); ta.style.width=w+'px'; ta.style.maxWidth=w+'px'; }
 }
 function mteSelFontBtn(key){ document.querySelectorAll('#mteFonts .mte-fbtn').forEach(b=>b.classList.toggle('sel',b.dataset.font===key)); }
 function mteAddText(){ mteOpenTextSheet(null); }
