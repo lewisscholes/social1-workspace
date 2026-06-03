@@ -540,7 +540,7 @@
           <button class="mte-done" onclick="mteTextDone()">Done</button>
         </div>
         <div class="mte-sheet-body">
-          <textarea class="mte-ta" id="mteTa" rows="2" placeholder="Add text"></textarea>
+          <textarea class="mte-ta" id="mteTa" rows="2" placeholder="Add text" oninput="mteLiveApply()"></textarea>
           <div class="mte-sizewrap"><input type="range" class="mte-size" id="mteSize" min="14" max="72" value="28" oninput="mteSizeChange(this.value)"></div>
         </div>
         <div class="mte-fonts" id="mteFonts">
@@ -1477,23 +1477,30 @@ function mteApplyTaStyle(){
 function mteSelFontBtn(key){ document.querySelectorAll('#mteFonts .mte-fbtn').forEach(b=>b.classList.toggle('sel',b.dataset.font===key)); }
 function mteAddText(){ mteOpenTextSheet(null); }
 function mteOpenTextSheet(ov){
+  if(!ov){ ov={id:++mteOvSeq,text:'',x:50,y:50,color:'#ffffff',size:28,font:'classic',outline:true}; mteTexts.push(ov); }
   mteEditingOv=ov;
-  mteCurColor=ov?ov.color:'#ffffff'; mteCurSize=ov?(ov.size||28):28; mteCurFont=ov?(ov.font||'classic'):'classic'; mteCurOutline=ov?(ov.outline!==false):true;
-  const ta=document.getElementById('mteTa'); ta.value=ov?ov.text:'';
+  mteCurColor=ov.color||'#ffffff'; mteCurSize=ov.size||28; mteCurFont=ov.font||'classic'; mteCurOutline=(ov.outline!==false);
+  const ta=document.getElementById('mteTa'); ta.value=ov.text||'';
   const sz=document.getElementById('mteSize'); if(sz)sz.value=mteCurSize;
   const cw=document.getElementById('mteColorWheel'); if(cw)cw.value=(/^#[0-9a-fA-F]{6}$/.test(mteCurColor)?mteCurColor:'#ffffff');
-  mteSelFontBtn(mteCurFont); mteApplyTaStyle();
+  mteSelFontBtn(mteCurFont); mteApplyTaStyle(); mteRenderOverlays();
   document.getElementById('mteSheet').classList.add('open');
   setTimeout(()=>{ta.focus();},60);
 }
-function mteSetColor(c){ mteCurColor=c; mteApplyTaStyle(); }
-function mteSizeChange(v){ mteCurSize=parseInt(v)||28; mteApplyTaStyle(); }
-function mteSetFont(key,btn){ mteCurFont=key; mteSelFontBtn(key); mteApplyTaStyle(); }
-function mteToggleOutline(){ mteCurOutline=!mteCurOutline; const b=document.getElementById('mteOutlineBtn'); if(b)b.style.opacity=mteCurOutline?'1':'0.5'; mteApplyTaStyle(); }
+// Apply the current control values live to the overlay being edited, so changes show on the video instantly
+function mteLiveApply(){
+  if(!mteEditingOv)return;
+  const ta=document.getElementById('mteTa'); if(ta)mteEditingOv.text=ta.value;
+  mteEditingOv.color=mteCurColor; mteEditingOv.size=mteCurSize; mteEditingOv.font=mteCurFont; mteEditingOv.outline=mteCurOutline;
+  mteRenderOverlays();
+}
+function mteSetColor(c){ mteCurColor=c; mteApplyTaStyle(); mteLiveApply(); }
+function mteSizeChange(v){ mteCurSize=parseInt(v)||28; mteApplyTaStyle(); mteLiveApply(); }
+function mteSetFont(key,btn){ mteCurFont=key; mteSelFontBtn(key); mteApplyTaStyle(); mteLiveApply(); }
+function mteToggleOutline(){ mteCurOutline=!mteCurOutline; const b=document.getElementById('mteOutlineBtn'); if(b)b.style.opacity=mteCurOutline?'1':'0.5'; mteApplyTaStyle(); mteLiveApply(); }
 function mteTextDone(){
-  const ta=document.getElementById('mteTa'); const txt=ta.value.trim();
+  const ta=document.getElementById('mteTa'); const txt=(ta?ta.value:'').trim();
   if(mteEditingOv){ if(!txt){ mteTexts=mteTexts.filter(o=>o!==mteEditingOv); } else { Object.assign(mteEditingOv,{text:txt,color:mteCurColor,size:mteCurSize,font:mteCurFont,outline:mteCurOutline}); } }
-  else if(txt){ mteTexts.push({id:++mteOvSeq,text:txt,x:50,y:50,color:mteCurColor,size:mteCurSize,font:mteCurFont,outline:mteCurOutline}); }
   document.getElementById('mteSheet').classList.remove('open'); mteEditingOv=null; mteRenderOverlays();
 }
 
@@ -1517,7 +1524,7 @@ function mteOvDrag(el,o){
   const pv=document.getElementById('mtePv'); const gv=document.getElementById('mteGuideV'); const gh=document.getElementById('mteGuideH');
   let sx=0,sy=0,ox=0,oy=0,moved=false;
   const move=(e)=>{ const p=e.touches?e.touches[0]:e; const r=pv.getBoundingClientRect(); const dx=p.clientX-sx, dy=p.clientY-sy; if(Math.abs(dx)+Math.abs(dy)>6)moved=true;
-    let nx=Math.min(98,Math.max(2,ox+dx/r.width*100)), ny=Math.min(98,Math.max(2,oy+dy/r.height*100));
+    let nx=Math.min(125,Math.max(-25,ox+dx/r.width*100)), ny=Math.min(118,Math.max(-18,oy+dy/r.height*100));
     if(Math.abs(nx-50)<3.5){ nx=50; if(gv)gv.classList.add('on'); } else if(gv)gv.classList.remove('on');
     if(Math.abs(ny-50)<3.5){ ny=50; if(gh)gh.classList.add('on'); } else if(gh)gh.classList.remove('on');
     o.x=nx; o.y=ny; el.style.left=nx+'%'; el.style.top=ny+'%'; if(e.cancelable)e.preventDefault(); };
