@@ -245,40 +245,65 @@
   /* Mobile TikTok-style editor */
   .mte{position:fixed;inset:0;z-index:300;background:#000;color:#fff;display:none;flex-direction:column;-webkit-user-select:none;user-select:none;overscroll-behavior:contain}
   .mte.open{display:flex}
-  .mte-top{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 14px}
-  .mte-back{background:rgba(255,255,255,.16);border:0;color:#fff;width:38px;height:38px;border-radius:50%;font-size:22px;line-height:1;cursor:pointer}
+  .mte-top{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:max(10px,env(safe-area-inset-top)) 14px 6px}
+  .mte-back{background:rgba(120,120,128,.5);border:0;color:#fff;width:38px;height:38px;border-radius:50%;font-size:22px;line-height:1;cursor:pointer}
   .mte-next{background:#fe2c55;border:0;color:#fff;width:44px;height:44px;border-radius:50%;font-size:21px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
-  .mte-stage{position:relative;flex:1 1 auto;min-height:0;overflow:hidden;background:#000}
-  .mte-pv{position:absolute;inset:0}
-  .mte-pv video{width:100%;height:100%;object-fit:contain;background:#000}
+  .mte-stage{position:relative;flex:1 1 auto;min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:2px 10px}
+  .mte-pv{position:relative;height:100%;max-width:100%;aspect-ratio:9/16;border-radius:14px;overflow:hidden;background:#000}
+  .mte-pv video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
   .mte-ovs{position:absolute;inset:0;overflow:hidden;pointer-events:none}
-  .mte-ov{position:absolute;pointer-events:auto;cursor:move;font-family:var(--ovfont);text-align:center;line-height:1.2;letter-spacing:-0.01em;max-width:90%;word-break:break-word;padding:2px 6px;white-space:pre-wrap}
-  .mte-side{position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:18px}
-  .mte-side button{background:transparent;border:0;color:#fff;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:600;cursor:pointer;text-shadow:0 1px 4px rgba(0,0,0,.7)}
-  .mte-side .mi{font-size:23px;font-weight:800}
-  .mte-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:62px;height:62px;border-radius:50%;background:rgba(0,0,0,.45);border:0;color:#fff;font-size:25px;cursor:pointer;display:none;align-items:center;justify-content:center}
-  .mte-play.show{display:flex}
-  .mte-tl-wrap{flex:0 0 auto;padding:10px 12px 2px}
-  .mte-time{font-size:12px;color:#d0d0d2;text-align:center;margin-bottom:7px;font-variant-numeric:tabular-nums}
-  .mte-tl{position:relative;height:56px;border-radius:8px;background:#1c1c1e;display:flex;overflow:hidden}
-  .mte-seg{position:relative;height:100%;border-right:2px solid #000;box-sizing:border-box;overflow:hidden;min-width:6px}
+  .mte-ov{position:absolute;pointer-events:auto;cursor:move;font-family:var(--ovfont);text-align:center;line-height:1.2;letter-spacing:-0.01em;max-width:94%;word-break:break-word;padding:1px 5px;white-space:pre-wrap}
+  .mte-guide-v,.mte-guide-h{position:absolute;background:#fe2c55;opacity:0;transition:opacity .08s;pointer-events:none;z-index:6}
+  .mte-guide-v{top:5%;bottom:5%;left:50%;width:1.5px;transform:translateX(-50%)}
+  .mte-guide-h{left:5%;right:5%;top:50%;height:1.5px;transform:translateY(-50%)}
+  .mte-guide-v.on,.mte-guide-h.on{opacity:.95}
+  .mte-transport{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:7px 16px 3px;font-size:13px;color:#cfcfd2}
+  .mte-time{font-variant-numeric:tabular-nums;min-width:88px}
+  .mte-time b{color:#fff;font-weight:600}
+  .mte-playc{background:transparent;border:0;color:#fff;font-size:17px;cursor:pointer;width:40px;text-align:center}
+  .mte-tr-ic{display:flex;gap:17px;align-items:center;justify-content:flex-end;min-width:88px}
+  .mte-tr-ic button{background:transparent;border:0;color:#cfcfd2;font-size:15px;cursor:pointer;padding:0}
+  .mte-tlrow{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:2px 10px 0}
+  .mte-vol{flex:0 0 auto;width:24px;text-align:center;color:#fff;font-size:15px;background:transparent;border:0;cursor:pointer}
+  .mte-tlwrap{position:relative;flex:1 1 auto;min-width:0}
+  .mte-tlscroll{position:relative;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-x}
+  .mte-tlscroll::-webkit-scrollbar{display:none}
+  .mte-tlcontent{position:relative}
+  .mte-ruler{position:relative;height:15px;color:#8e8e93;font-size:10px}
+  .mte-ruler span{position:absolute;transform:translateX(-50%);white-space:nowrap;font-variant-numeric:tabular-nums;top:1px}
+  .mte-tl{position:relative;height:50px;display:flex;border-radius:7px;overflow:hidden;background:#1c1c1e}
+  .mte-seg{position:relative;height:100%;border-right:2px solid #000;box-sizing:border-box;overflow:hidden;flex:0 0 auto}
   .mte-seg:last-child{border-right:0}
-  .mte-seg.sel{outline:2px solid #fe2c55;outline-offset:-2px}
+  .mte-seg.sel{outline:2px solid #fe2c55;outline-offset:-2px;border-radius:4px}
   .mte-seg-th{position:absolute;inset:0;display:flex}
-  .mte-seg-th div{flex:1;background-size:cover;background-position:center;min-width:0}
-  .mte-ph{position:absolute;top:-3px;bottom:-3px;width:2px;background:#fff;box-shadow:0 0 5px rgba(0,0,0,.9);pointer-events:none;z-index:5;border-radius:2px}
-  .mte-bar{flex:0 0 auto;display:flex;justify-content:space-around;align-items:flex-end;padding:12px 6px calc(14px + env(safe-area-inset-bottom));gap:2px}
-  .mte-bar button{background:transparent;border:0;color:#fff;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;font-weight:600;cursor:pointer;flex:1;min-width:0}
-  .mte-bar .mi{font-size:21px;line-height:1}
-  .mte-bar button:disabled{opacity:.35}
-  .mte-sheet{position:absolute;inset:0;z-index:12;display:none;flex-direction:column;background:rgba(0,0,0,.6)}
+  .mte-seg-th div{height:100%;background-size:cover;background-position:center;flex:0 0 auto}
+  .mte-add{flex:0 0 auto;width:32px;height:50px;border-radius:7px;background:#2a2a2e;border:0;color:#fff;font-size:21px;cursor:pointer;align-self:flex-end}
+  .mte-phfix{position:absolute;left:50%;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 5px rgba(0,0,0,.9);transform:translateX(-50%);pointer-events:none;z-index:8;border-radius:2px}
+  .mte-bar{flex:0 0 auto;display:flex;justify-content:flex-start;align-items:center;gap:8px;padding:14px 12px calc(16px + env(safe-area-inset-bottom));overflow-x:auto;scrollbar-width:none}
+  .mte-bar::-webkit-scrollbar{display:none}
+  .mte-bar button{background:#1c1c1e;border:0;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:500;cursor:pointer;flex:0 0 auto;min-width:62px;height:56px;border-radius:11px}
+  .mte-bar .mi{font-size:19px;line-height:1}
+  .mte-bar.cut{justify-content:space-around}
+  .mte-bar.cut button{background:transparent;min-width:0;flex:1;height:auto}
+  .mte-sheet{position:absolute;inset:0;z-index:12;display:none;flex-direction:column;background:rgba(0,0,0,.55)}
   .mte-sheet.open{display:flex}
-  .mte-sheet-top{display:flex;justify-content:flex-end;padding:14px 18px}
-  .mte-sheet-top button{background:transparent;border:0;color:#fff;font-size:16px;font-weight:700;cursor:pointer}
-  .mte-sheet-mid{flex:1;display:flex;align-items:center;justify-content:center;padding:0 20px}
-  .mte-ta{width:100%;background:transparent;border:0;outline:0;color:#fff;font-family:var(--ovfont);font-weight:700;font-size:27px;text-align:center;resize:none;-webkit-text-stroke:2px #000;paint-order:stroke fill;line-height:1.2}
-  .mte-colors{display:flex;gap:14px;justify-content:center;padding:16px 0 calc(18px + env(safe-area-inset-bottom))}
-  .mte-colors button{width:30px;height:30px;border-radius:50%;border:2px solid #fff;cursor:pointer;padding:0}
+  .mte-sheet-top{display:flex;align-items:center;gap:20px;padding:max(12px,env(safe-area-inset-top)) 18px 6px}
+  .mte-sheet-top button{background:transparent;border:0;color:#fff;font-size:19px;cursor:pointer;line-height:1}
+  .mte-sheet-top .wheel{width:24px;height:24px;border-radius:50%;border:2px solid #fff;background:conic-gradient(red,#ff0,#0f0,#0ff,#00f,#f0f,red)}
+  .mte-sheet-top .mte-done{margin-left:auto;font-size:16px;font-weight:700}
+  .mte-sheet-body{flex:1;display:flex;align-items:center;justify-content:center;position:relative;padding:0 60px 0 22px}
+  .mte-ta{width:100%;background:transparent;border:0;outline:0;color:#fff;font-family:var(--ovfont);font-weight:700;font-size:28px;text-align:center;resize:none;-webkit-text-stroke:2px #000;paint-order:stroke fill;line-height:1.2;overflow:hidden}
+  .mte-sizewrap{position:absolute;right:16px;top:50%;transform:translateY(-50%);height:44%;display:flex;align-items:center}
+  .mte-size{-webkit-appearance:slider-vertical;appearance:slider-vertical;writing-mode:vertical-lr;direction:rtl;width:24px;height:100%;background:transparent;accent-color:#fff;cursor:pointer}
+  .mte-fonts{display:flex;gap:8px;overflow-x:auto;padding:8px 14px;scrollbar-width:none}
+  .mte-fonts::-webkit-scrollbar{display:none}
+  .mte-fbtn{flex:0 0 auto;background:transparent;border:1.5px solid rgba(255,255,255,.55);color:#fff;border-radius:18px;padding:6px 16px;font-size:14px;cursor:pointer;white-space:nowrap}
+  .mte-fbtn.sel{border-color:#fff;background:rgba(255,255,255,.14)}
+  .mte-colors{display:flex;gap:14px;justify-content:flex-start;overflow-x:auto;padding:8px 16px calc(14px + env(safe-area-inset-bottom));scrollbar-width:none}
+  .mte-colors::-webkit-scrollbar{display:none}
+  .mte-colors button{flex:0 0 auto;width:28px;height:28px;border-radius:50%;border:2px solid #fff;cursor:pointer;padding:0}
+  .mte-colors .wheel{background:conic-gradient(red,#ff0,#0f0,#0ff,#00f,#f0f,red);position:relative;overflow:hidden}
+  .mte-colors .wheel input{position:absolute;inset:-6px;opacity:0;width:200%;height:200%;cursor:pointer}
 </style>
 </head>
 <body>
@@ -473,37 +498,76 @@
     <!-- MOBILE TIKTOK-STYLE EDITOR -->
     <div class="mte" id="mte">
       <div class="mte-top">
-        <button class="mte-back" onclick="mteClose()" aria-label="Close" title="Back">&#8249;</button>
-        <button class="mte-next" onclick="mteSave()" aria-label="Save edits" title="Save">&#8594;</button>
+        <button class="mte-back" onclick="mteClose()" aria-label="Back">&#8249;</button>
+        <button class="mte-next" onclick="mteSave()" aria-label="Save edits">&#8594;</button>
       </div>
       <div class="mte-stage" id="mteStage">
-        <div class="mte-pv"><video id="mteVideo" playsinline webkit-playsinline></video></div>
-        <div class="mte-ovs" id="mteOvs"></div>
-        <button class="mte-play" id="mtePlayBig" onclick="mtePlayToggle()" aria-label="Play">&#9658;</button>
-        <div class="mte-side">
-          <button onclick="mteAddText()"><span class="mi">Aa</span>Text</button>
+        <div class="mte-pv" id="mtePv">
+          <video id="mteVideo" playsinline webkit-playsinline></video>
+          <div class="mte-ovs" id="mteOvs"></div>
+          <div class="mte-guide-v" id="mteGuideV"></div>
+          <div class="mte-guide-h" id="mteGuideH"></div>
         </div>
       </div>
-      <div class="mte-tl-wrap">
-        <div class="mte-time" id="mteTime">0:00 / 0:00</div>
-        <div class="mte-tl" id="mteTl"></div>
+      <div class="mte-transport">
+        <span class="mte-time" id="mteTime"><b>0:00</b> / 0:00</span>
+        <button class="mte-playc" id="mtePlayc" onclick="mtePlayToggle()" aria-label="Play">&#9658;</button>
+        <span class="mte-tr-ic">
+          <button onclick="mteZoom(-1)" aria-label="Zoom out">&#8722;</button>
+          <button onclick="mteZoom(1)" aria-label="Zoom in">&#43;</button>
+        </span>
       </div>
-      <div class="mte-bar">
-        <button onclick="mtePlayToggle()"><span class="mi">&#9658;</span><span id="mtePlayBtn">Play</span></button>
+      <div class="mte-tlrow">
+        <button class="mte-vol" id="mteVol" onclick="mteToggleMute()" aria-label="Mute">&#128266;</button>
+        <div class="mte-tlwrap" id="mteTlWrap">
+          <div class="mte-tlscroll" id="mteTlScroll">
+            <div class="mte-tlcontent" id="mteTlContent">
+              <div class="mte-ruler" id="mteRuler"></div>
+              <div class="mte-tl" id="mteTl"></div>
+            </div>
+          </div>
+          <div class="mte-phfix" id="mtePhFix"></div>
+        </div>
+        <button class="mte-add" onclick="mteSoon('Add clip')" aria-label="Add clip">&#43;</button>
+      </div>
+      <div class="mte-bar" id="mteBar">
+        <button onclick="mteCutMode(true)"><span class="mi">&#9986;</span>Edit</button>
+        <button onclick="mteSoon('Sound')"><span class="mi">&#9835;</span>Sound</button>
+        <button onclick="mteAddText()"><span class="mi">Aa</span>Text</button>
+        <button onclick="mteSoon('Effects')"><span class="mi">&#10022;</span>Effects</button>
+        <button onclick="mteSoon('Magic')"><span class="mi">&#10024;</span>Magic</button>
+      </div>
+      <div class="mte-bar cut" id="mteCutBar" style="display:none">
         <button onclick="mteSplit()"><span class="mi">&#9986;</span>Split</button>
         <button onclick="mteDeleteSeg()"><span class="mi">&#128465;</span>Delete</button>
-        <button onclick="mteAddText()"><span class="mi">Aa</span>Text</button>
+        <button onclick="mteCutMode(false)"><span class="mi">&#10003;</span>Done</button>
       </div>
       <div class="mte-sheet" id="mteSheet">
-        <div class="mte-sheet-top"><button onclick="mteTextDone()">Done</button></div>
-        <div class="mte-sheet-mid"><textarea class="mte-ta" id="mteTa" rows="2" placeholder="Add text"></textarea></div>
+        <div class="mte-sheet-top">
+          <span class="wheel" aria-label="Colour"><input type="color" id="mteColorWheel" oninput="mteSetColor(this.value)"></span>
+          <button onclick="mteToggleOutline()" aria-label="Outline" id="mteOutlineBtn">&#9398;</button>
+          <button class="mte-done" onclick="mteTextDone()">Done</button>
+        </div>
+        <div class="mte-sheet-body">
+          <textarea class="mte-ta" id="mteTa" rows="2" placeholder="Add text"></textarea>
+          <div class="mte-sizewrap"><input type="range" class="mte-size" id="mteSize" min="14" max="72" value="28" oninput="mteSizeChange(this.value)"></div>
+        </div>
+        <div class="mte-fonts" id="mteFonts">
+          <button class="mte-fbtn sel" data-font="classic" onclick="mteSetFont('classic',this)">Classic</button>
+          <button class="mte-fbtn" data-font="elegance" onclick="mteSetFont('elegance',this)" style="font-family:Georgia,serif">Elegance</button>
+          <button class="mte-fbtn" data-font="neon" onclick="mteSetFont('neon',this)">Neon</button>
+          <button class="mte-fbtn" data-font="retro" onclick="mteSetFont('retro',this)" style="font-style:italic">Retro</button>
+          <button class="mte-fbtn" data-font="comic" onclick="mteSetFont('comic',this)" style="font-family:'Comic Sans MS',cursive">Comic Sans</button>
+        </div>
         <div class="mte-colors">
+          <span class="wheel" aria-label="Colour wheel"><input type="color" oninput="mteSetColor(this.value)"></span>
           <button style="background:#ffffff" onclick="mteSetColor('#ffffff')" aria-label="White"></button>
           <button style="background:#000000" onclick="mteSetColor('#000000')" aria-label="Black"></button>
           <button style="background:#fe2c55" onclick="mteSetColor('#fe2c55')" aria-label="Red"></button>
           <button style="background:#ffd400" onclick="mteSetColor('#ffd400')" aria-label="Yellow"></button>
           <button style="background:#27c2a0" onclick="mteSetColor('#27c2a0')" aria-label="Teal"></button>
           <button style="background:#3a86ff" onclick="mteSetColor('#3a86ff')" aria-label="Blue"></button>
+          <button style="background:#8b5cf6" onclick="mteSetColor('#8b5cf6')" aria-label="Purple"></button>
         </div>
       </div>
     </div>
@@ -1232,15 +1296,19 @@ function epInitTextDrag(){
 // keep old refs for other parts of the app
 // ---------- MOBILE TIKTOK-STYLE EDITOR ----------
 let mteId=null, mteDuration=0, mteSegments=[], mteSelSeg=-1, mteThumbs=[], mtePlaying=false, mteTexts=[], mteEditingOv=null, mteOvSeq=0;
+let mtePps=0, mtePpsFit=0, mteProgScroll=false, mteMuted=false, mteBound=false;
+let mteCurColor='#ffffff', mteCurSize=28, mteCurFont='classic', mteCurOutline=true, mtePinchBase=0, mtePinchPps=0;
+
+function mteV(){ return document.getElementById('mteVideo'); }
 
 async function mteOpen(id){
   const v=swVids.find(x=>x.id===id); if(!v) return;
-  mteId=id; mteSelSeg=-1; mteThumbs=[]; mtePlaying=false; mteTexts=[];
+  mteId=id; mteSelSeg=-1; mteThumbs=[]; mtePlaying=false; mteTexts=[]; mtePps=0; mteMuted=false;
   let url=signed[id];
   if(!url){ const {data:s}=await sb.storage.from(BUCKET).createSignedUrl(v.storage_path,3600); url=s&&s.signedUrl; if(url)signed[id]=url; }
-  if(v.caption_suggested){ mteTexts.push({id:++mteOvSeq,text:v.caption_suggested,x:50,y:74,color:'#ffffff'}); }
-  const vid=document.getElementById('mteVideo');
-  vid.muted=false;
+  if(v.caption_suggested){ mteTexts.push({id:++mteOvSeq,text:v.caption_suggested,x:50,y:74,color:'#ffffff',size:24,font:'classic',outline:true}); }
+  mteCutMode(false);
+  const vid=mteV(); vid.muted=false;
   vid.onloadedmetadata=()=>{
     mteDuration=vid.duration||0;
     mteSegments=[{start:0,end:mteDuration}];
@@ -1248,14 +1316,15 @@ async function mteOpen(id){
   };
   vid.ontimeupdate=mteOnTimeUpdate;
   vid.onended=()=>{ if(mteSegments.length){ vid.currentTime=mteSegments[0].start; if(mtePlaying)vid.play(); } };
-  vid.src=url||'';
   document.getElementById('mteSheet').classList.remove('open');
   document.getElementById('mte').classList.add('open');
-  vid.play().then(()=>{mtePlaying=true;mteSyncPlayBtn();}).catch(()=>{mtePlaying=false;mteSyncPlayBtn();});
+  mteBindTl();
+  vid.src=url||'';
+  vid.play().then(()=>{mtePlaying=true;mteSyncPlay();}).catch(()=>{mtePlaying=false;mteSyncPlay();});
 }
 
 function mteClose(){
-  const vid=document.getElementById('mteVideo');
+  const vid=mteV();
   if(vid){ vid.pause(); vid.removeAttribute('src'); try{vid.load();}catch(e){} }
   document.getElementById('mte').classList.remove('open');
   document.getElementById('mteSheet').classList.remove('open');
@@ -1264,40 +1333,57 @@ function mteClose(){
 function mteFmt(s){ s=Math.max(0,Math.round(s||0)); const m=Math.floor(s/60); const ss=s%60; return m+':'+(ss<10?'0':'')+ss; }
 function mteTotalKept(){ return mteSegments.reduce((a,s)=>a+(s.end-s.start),0); }
 function mteSrcToKept(t){ let k=0; for(const s of mteSegments){ if(t>=s.end){k+=s.end-s.start;} else if(t>=s.start){k+=t-s.start;break;} else break; } return k; }
+function mteKeptToSrc(k){ for(const s of mteSegments){ const len=s.end-s.start; if(k<=len) return s.start+k; k-=len; } const last=mteSegments[mteSegments.length-1]; return last?last.end:0; }
 
-function mteUpdTime(){ const el=document.getElementById('mteTime'); if(!el)return; const vid=document.getElementById('mteVideo'); el.textContent=mteFmt(mteSrcToKept(vid.currentTime))+' / '+mteFmt(mteTotalKept()); }
-function mteUpdPh(){ const ph=document.getElementById('mtePh'); if(!ph)return; const total=mteTotalKept()||1; const vid=document.getElementById('mteVideo'); ph.style.left=(mteSrcToKept(vid.currentTime)/total*100)+'%'; }
+function mteUpdTime(){ const el=document.getElementById('mteTime'); if(!el)return; el.innerHTML='<b>'+mteFmt(mteSrcToKept(mteV().currentTime))+'</b> / '+mteFmt(mteTotalKept()); }
 
 function mteRenderTL(){
-  const tl=document.getElementById('mteTl'); if(!tl)return;
-  const total=mteTotalKept()||1;
+  const tl=document.getElementById('mteTl'); const ruler=document.getElementById('mteRuler'); const content=document.getElementById('mteTlContent'); const scroll=document.getElementById('mteTlScroll');
+  if(!tl||!scroll||!content)return;
+  const total=mteTotalKept()||0.001;
+  const scrollW=scroll.clientWidth||320;
+  mtePpsFit=scrollW/total;
+  if(!mtePps||mtePps<mtePpsFit) mtePps=mtePpsFit;
+  const W=total*mtePps, pad=scrollW/2;
+  content.style.paddingLeft=pad+'px'; content.style.paddingRight=pad+'px';
+  tl.style.width=W+'px'; ruler.style.width=W+'px';
   let html='';
   mteSegments.forEach((s,i)=>{
-    const w=(s.end-s.start)/total*100;
-    let inner='';
-    if(mteThumbs.length){
-      let th=mteThumbs.filter(t=>t.t>=s.start&&t.t<s.end);
-      if(!th.length){ const idx=Math.min(mteThumbs.length-1,Math.max(0,Math.floor((s.start+s.end)/2/mteDuration*mteThumbs.length))); th=[mteThumbs[idx]]; }
-      inner='<div class="mte-seg-th">'+th.map(t=>'<div style="background-image:url('+t.url+')"></div>').join('')+'</div>';
+    const w=(s.end-s.start)*mtePps; let inner='';
+    if(mteThumbs.length&&mteDuration){
+      const cnt=Math.max(1,Math.round(w/46)); let cells='';
+      for(let c=0;c<cnt;c++){ const tt=s.start+(c+0.5)/cnt*(s.end-s.start); let th=mteThumbs[0]; for(const x of mteThumbs){ if(Math.abs(x.t-tt)<Math.abs(th.t-tt))th=x; } cells+='<div style="width:'+(w/cnt)+'px;background-image:url('+th.url+')"></div>'; }
+      inner='<div class="mte-seg-th">'+cells+'</div>';
     }
-    html+='<div class="mte-seg'+(i===mteSelSeg?' sel':'')+'" data-i="'+i+'" style="width:'+w+'%">'+inner+'</div>';
+    html+='<div class="mte-seg'+(i===mteSelSeg?' sel':'')+'" data-i="'+i+'" style="width:'+w+'px">'+inner+'</div>';
   });
-  html+='<div class="mte-ph" id="mtePh" style="left:0%"></div>';
   tl.innerHTML=html;
-  tl.querySelectorAll('.mte-seg').forEach(el=>{
-    el.onpointerdown=(e)=>{
-      const i=parseInt(el.dataset.i); const s=mteSegments[i]; const r=el.getBoundingClientRect();
-      const frac=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));
-      mteSelSeg=i; mteSeekSrc(s.start+frac*(s.end-s.start)); mteRenderTL();
-    };
-  });
-  mteUpdPh();
+  tl.querySelectorAll('.mte-seg').forEach(el=>{ el.onclick=()=>{ const i=parseInt(el.dataset.i); mteSelSeg=(mteSelSeg===i?-1:i); mteRenderTL(); }; });
+  mteRenderRuler(total);
+  mteUpdScroll();
 }
 
-function mteSeekSrc(t){ const vid=document.getElementById('mteVideo'); vid.currentTime=Math.min(Math.max(0,t),Math.max(0,mteDuration-0.03)); mteUpdPh(); mteUpdTime(); }
+function mteRenderRuler(total){
+  const ruler=document.getElementById('mteRuler'); if(!ruler)return;
+  const want=70/mtePps; const nice=[1,2,5,10,15,30,60,120]; let step=nice.find(n=>n>=want)||120;
+  let html=''; for(let t=0;t<=total+0.001;t+=step){ html+='<span style="left:'+(t*mtePps)+'px">'+mteFmt(t)+'</span>'; }
+  ruler.innerHTML=html;
+}
+
+function mteUpdScroll(){ const scroll=document.getElementById('mteTlScroll'); if(!scroll)return; mteProgScroll=true; scroll.scrollLeft=mteSrcToKept(mteV().currentTime)*mtePps; requestAnimationFrame(()=>{mteProgScroll=false;}); }
+
+function mteBindTl(){
+  if(mteBound)return; mteBound=true;
+  const scroll=document.getElementById('mteTlScroll');
+  scroll.addEventListener('scroll',()=>{ if(mteProgScroll||mtePlaying)return; const keptT=Math.max(0,scroll.scrollLeft/mtePps); const src=mteKeptToSrc(keptT); const vid=mteV(); if(Math.abs(vid.currentTime-src)>0.02){ vid.currentTime=src; } mteUpdTime(); });
+  scroll.addEventListener('touchstart',(e)=>{ if(e.touches.length===2){ mtePinchBase=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); mtePinchPps=mtePps; } },{passive:true});
+  scroll.addEventListener('touchmove',(e)=>{ if(e.touches.length===2&&mtePinchBase){ e.preventDefault(); const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); mtePps=Math.min(320,Math.max(mtePpsFit,mtePinchPps*d/mtePinchBase)); mteRenderTL(); } },{passive:false});
+}
+
+function mteZoom(dir){ if(!mtePpsFit)return; mtePps=Math.min(320,Math.max(mtePpsFit,mtePps*(dir>0?1.5:1/1.5))); mteRenderTL(); }
 
 function mteOnTimeUpdate(){
-  const vid=document.getElementById('mteVideo'); const t=vid.currentTime;
+  const vid=mteV(); const t=vid.currentTime;
   let inSeg=null;
   for(const s of mteSegments){ if(t>=s.start-0.03&&t<s.end){inSeg=s;break;} }
   if(!inSeg){
@@ -1307,14 +1393,24 @@ function mteOnTimeUpdate(){
     const idx=mteSegments.indexOf(inSeg); const next=mteSegments[idx+1];
     vid.currentTime=next?next.start:mteSegments[0].start;
   }
-  mteUpdPh(); mteUpdTime();
+  if(mtePlaying)mteUpdScroll();
+  mteUpdTime();
 }
 
-function mtePlayToggle(){ const vid=document.getElementById('mteVideo'); if(vid.paused){ vid.play(); mtePlaying=true; } else { vid.pause(); mtePlaying=false; } mteSyncPlayBtn(); }
-function mteSyncPlayBtn(){ const b=document.getElementById('mtePlayBtn'); if(b)b.textContent=mtePlaying?'Pause':'Play'; const big=document.getElementById('mtePlayBig'); if(big)big.classList.toggle('show',!mtePlaying); }
+function mtePlayToggle(){ const vid=mteV(); if(vid.paused){ vid.play(); mtePlaying=true; } else { vid.pause(); mtePlaying=false; } mteSyncPlay(); }
+function mteSyncPlay(){ const b=document.getElementById('mtePlayc'); if(b)b.innerHTML=mtePlaying?'&#10074;&#10074;':'&#9658;'; }
+function mteToggleMute(){ const vid=mteV(); mteMuted=!mteMuted; vid.muted=mteMuted; const b=document.getElementById('mteVol'); if(b)b.innerHTML=mteMuted?'&#128263;':'&#128266;'; }
+function mteSoon(name){ toast(name+' is coming soon','ok'); }
+
+function mteCutMode(on){
+  const bar=document.getElementById('mteBar'); const cut=document.getElementById('mteCutBar');
+  if(bar)bar.style.display=on?'none':'flex';
+  if(cut)cut.style.display=on?'flex':'none';
+  if(!on)mteSelSeg=-1, mteRenderTL&&mteSegments.length&&mteRenderTL();
+}
 
 function mteSplit(){
-  const vid=document.getElementById('mteVideo'); const t=vid.currentTime;
+  const t=mteV().currentTime;
   for(let i=0;i<mteSegments.length;i++){ const s=mteSegments[i];
     if(t>s.start+0.1&&t<s.end-0.1){ const ns={start:t,end:s.end}; s.end=t; mteSegments.splice(i+1,0,ns); mteSelSeg=i+1; mteRenderTL(); mteUpdTime(); toast('Split','ok'); return; }
   }
@@ -1325,7 +1421,7 @@ function mteDeleteSeg(){
   if(mteSelSeg<0){ toast('Tap a clip on the timeline first','err'); return; }
   if(mteSegments.length<=1){ toast('Cannot delete the only clip','err'); return; }
   mteSegments.splice(mteSelSeg,1); mteSelSeg=-1;
-  const vid=document.getElementById('mteVideo'); if(mteSegments.length)vid.currentTime=mteSegments[0].start;
+  const vid=mteV(); if(mteSegments.length)vid.currentTime=mteSegments[0].start;
   mteRenderTL(); mteUpdTime(); toast('Deleted','ok');
 }
 
@@ -1334,7 +1430,7 @@ async function mteBuildThumbs(){
     const url=signed[mteId]; if(!url||!mteDuration)return;
     const tv=document.createElement('video'); tv.crossOrigin='anonymous'; tv.muted=true; tv.preload='auto'; tv.src=url;
     await new Promise((res,rej)=>{ tv.onloadedmetadata=()=>res(); tv.onerror=()=>rej(); setTimeout(()=>rej(),9000); });
-    const N=10, cv=document.createElement('canvas'); cv.width=64; cv.height=112; const ctx=cv.getContext('2d'); const out=[];
+    const N=12, cv=document.createElement('canvas'); cv.width=60; cv.height=104; const ctx=cv.getContext('2d'); const out=[];
     for(let i=0;i<N;i++){
       const t=mteDuration*(i+0.5)/N;
       await new Promise((res)=>{ tv.onseeked=()=>res(); try{tv.currentTime=Math.min(t,Math.max(0,mteDuration-0.05));}catch(e){res();} setTimeout(()=>res(),1500); });
@@ -1344,19 +1440,35 @@ async function mteBuildThumbs(){
   }catch(e){ /* thumbnails unavailable -- plain timeline */ }
 }
 
+// ---- text overlays ----
+function mteFontCss(key){ if(key==='elegance')return "Georgia,'Times New Roman',serif"; if(key==='comic')return "'Comic Sans MS','Chalkboard SE',cursive"; return "var(--ovfont)"; }
+function mteApplyTaStyle(){
+  const ta=document.getElementById('mteTa'); if(!ta)return;
+  ta.style.color=mteCurColor; ta.style.fontSize=mteCurSize+'px'; ta.style.fontFamily=mteFontCss(mteCurFont);
+  ta.style.fontStyle=(mteCurFont==='retro')?'italic':'normal'; ta.style.fontWeight=(mteCurFont==='elegance')?'600':'700';
+  ta.style.webkitTextStroke=mteCurOutline?'2px #000':'0';
+  ta.style.textShadow=(mteCurFont==='neon')?('0 0 6px '+mteCurColor+',0 0 13px '+mteCurColor):'none';
+}
+function mteSelFontBtn(key){ document.querySelectorAll('#mteFonts .mte-fbtn').forEach(b=>b.classList.toggle('sel',b.dataset.font===key)); }
 function mteAddText(){ mteOpenTextSheet(null); }
 function mteOpenTextSheet(ov){
   mteEditingOv=ov;
-  const ta=document.getElementById('mteTa');
-  ta.value=ov?ov.text:''; ta.style.color=ov?ov.color:'#ffffff';
+  mteCurColor=ov?ov.color:'#ffffff'; mteCurSize=ov?(ov.size||28):28; mteCurFont=ov?(ov.font||'classic'):'classic'; mteCurOutline=ov?(ov.outline!==false):true;
+  const ta=document.getElementById('mteTa'); ta.value=ov?ov.text:'';
+  const sz=document.getElementById('mteSize'); if(sz)sz.value=mteCurSize;
+  const cw=document.getElementById('mteColorWheel'); if(cw)cw.value=(/^#[0-9a-fA-F]{6}$/.test(mteCurColor)?mteCurColor:'#ffffff');
+  mteSelFontBtn(mteCurFont); mteApplyTaStyle();
   document.getElementById('mteSheet').classList.add('open');
   setTimeout(()=>{ta.focus();},60);
 }
-function mteSetColor(c){ document.getElementById('mteTa').style.color=c; }
+function mteSetColor(c){ mteCurColor=c; mteApplyTaStyle(); }
+function mteSizeChange(v){ mteCurSize=parseInt(v)||28; mteApplyTaStyle(); }
+function mteSetFont(key,btn){ mteCurFont=key; mteSelFontBtn(key); mteApplyTaStyle(); }
+function mteToggleOutline(){ mteCurOutline=!mteCurOutline; const b=document.getElementById('mteOutlineBtn'); if(b)b.style.opacity=mteCurOutline?'1':'0.5'; mteApplyTaStyle(); }
 function mteTextDone(){
-  const ta=document.getElementById('mteTa'); const txt=ta.value.trim(); const color=ta.style.color||'#ffffff';
-  if(mteEditingOv){ if(!txt){ mteTexts=mteTexts.filter(o=>o!==mteEditingOv); } else { mteEditingOv.text=txt; mteEditingOv.color=color; } }
-  else if(txt){ mteTexts.push({id:++mteOvSeq,text:txt,x:50,y:50,color:color}); }
+  const ta=document.getElementById('mteTa'); const txt=ta.value.trim();
+  if(mteEditingOv){ if(!txt){ mteTexts=mteTexts.filter(o=>o!==mteEditingOv); } else { Object.assign(mteEditingOv,{text:txt,color:mteCurColor,size:mteCurSize,font:mteCurFont,outline:mteCurOutline}); } }
+  else if(txt){ mteTexts.push({id:++mteOvSeq,text:txt,x:50,y:50,color:mteCurColor,size:mteCurSize,font:mteCurFont,outline:mteCurOutline}); }
   document.getElementById('mteSheet').classList.remove('open'); mteEditingOv=null; mteRenderOverlays();
 }
 
@@ -1365,8 +1477,11 @@ function mteRenderOverlays(){
   mteTexts.forEach(o=>{
     const d=document.createElement('div'); d.className='mte-ov';
     d.style.left=o.x+'%'; d.style.top=o.y+'%'; d.style.transform='translate(-50%,-50%)';
-    d.style.color=o.color; d.style.fontWeight='700'; d.style.fontSize='22px';
-    d.style.webkitTextStroke='2px #000'; d.style.paintOrder='stroke fill';
+    d.style.color=o.color; d.style.fontFamily=mteFontCss(o.font||'classic');
+    d.style.fontWeight=((o.font==='elegance')?'600':'700'); d.style.fontStyle=(o.font==='retro')?'italic':'normal';
+    d.style.fontSize=(o.size||24)+'px';
+    d.style.webkitTextStroke=(o.outline!==false)?'2px #000':'0'; d.style.paintOrder='stroke fill';
+    d.style.textShadow=(o.font==='neon')?('0 0 6px '+o.color+',0 0 13px '+o.color):'none';
     d.textContent=o.text;
     mteOvDrag(d,o);
     wrap.appendChild(d);
@@ -1374,9 +1489,14 @@ function mteRenderOverlays(){
 }
 
 function mteOvDrag(el,o){
-  const stage=document.getElementById('mteStage'); let sx=0,sy=0,ox=0,oy=0,moved=false;
-  const move=(e)=>{ const p=e.touches?e.touches[0]:e; const r=stage.getBoundingClientRect(); const dx=p.clientX-sx, dy=p.clientY-sy; if(Math.abs(dx)+Math.abs(dy)>6)moved=true; o.x=Math.min(98,Math.max(2,ox+dx/r.width*100)); o.y=Math.min(98,Math.max(2,oy+dy/r.height*100)); el.style.left=o.x+'%'; el.style.top=o.y+'%'; if(e.cancelable)e.preventDefault(); };
-  const up=()=>{ document.removeEventListener('mousemove',move); document.removeEventListener('touchmove',move); document.removeEventListener('mouseup',up); document.removeEventListener('touchend',up); if(!moved)mteOpenTextSheet(o); };
+  const pv=document.getElementById('mtePv'); const gv=document.getElementById('mteGuideV'); const gh=document.getElementById('mteGuideH');
+  let sx=0,sy=0,ox=0,oy=0,moved=false;
+  const move=(e)=>{ const p=e.touches?e.touches[0]:e; const r=pv.getBoundingClientRect(); const dx=p.clientX-sx, dy=p.clientY-sy; if(Math.abs(dx)+Math.abs(dy)>6)moved=true;
+    let nx=Math.min(98,Math.max(2,ox+dx/r.width*100)), ny=Math.min(98,Math.max(2,oy+dy/r.height*100));
+    if(Math.abs(nx-50)<3.5){ nx=50; if(gv)gv.classList.add('on'); } else if(gv)gv.classList.remove('on');
+    if(Math.abs(ny-50)<3.5){ ny=50; if(gh)gh.classList.add('on'); } else if(gh)gh.classList.remove('on');
+    o.x=nx; o.y=ny; el.style.left=nx+'%'; el.style.top=ny+'%'; if(e.cancelable)e.preventDefault(); };
+  const up=()=>{ document.removeEventListener('mousemove',move); document.removeEventListener('touchmove',move); document.removeEventListener('mouseup',up); document.removeEventListener('touchend',up); if(gv)gv.classList.remove('on'); if(gh)gh.classList.remove('on'); if(!moved)mteOpenTextSheet(o); };
   const down=(e)=>{ const p=e.touches?e.touches[0]:e; sx=p.clientX; sy=p.clientY; ox=o.x; oy=o.y; moved=false; document.addEventListener('mousemove',move); document.addEventListener('touchmove',move,{passive:false}); document.addEventListener('mouseup',up); document.addEventListener('touchend',up); if(e.cancelable)e.preventDefault(); };
   el.addEventListener('mousedown',down); el.addEventListener('touchstart',down,{passive:false});
 }
@@ -1384,7 +1504,7 @@ function mteOvDrag(el,o){
 async function mteSave(){
   const v=swVids.find(x=>x.id===mteId); if(!v){ mteClose(); return; }
   const segs=mteSegments.map(s=>({start:Math.round(s.start*100)/100,end:Math.round(s.end*100)/100}));
-  const overlays=mteTexts.map(o=>({text:o.text,x:Math.round(o.x*10)/10,y:Math.round(o.y*10)/10,color:o.color,font:'TikTok Sans',weight:700,stroke:2.5}));
+  const overlays=mteTexts.map(o=>({text:o.text,x:Math.round(o.x*10)/10,y:Math.round(o.y*10)/10,color:o.color,size:o.size||24,font:(o.font==='classic'?'TikTok Sans':o.font),outline:(o.outline!==false),weight:700,stroke:(o.outline!==false)?2.5:0}));
   const options={segments:segs,source_duration:Math.round(mteDuration*100)/100,overlays:overlays,edited_at:new Date().toISOString()};
   const job={video_id:mteId,storage_path:v.storage_path,filename:v.filename,folder_id:v.folder_id,product_uid:v.product_uid,options:options,status:'queued',requested_by:displayName(state.user)};
   const {error}=await sb.from('edit_jobs').insert(job);
