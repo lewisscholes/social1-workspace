@@ -1568,10 +1568,19 @@ function openScheduler(id){
     +'<div class="actions" style="display:flex;gap:8px;margin-top:16px"><button class="btn ghost" style="flex:1;justify-content:center" onclick="closeModal()">Cancel</button><button class="btn" style="flex:1;justify-content:center" onclick="confirmSchedule(\''+id+'\')">Schedule</button></div>'
     +'<button class="btn ghost" style="width:100%;justify-content:center;margin-top:8px" onclick="swDownload(\''+id+'\')">&#8595; Download edited video</button>');
 }
+async function swResolveEdited(id){
+  // Returns the worker-rendered (edited) clip for this source video if it exists, else null.
+  try{
+    const {data}=await sb.from('videos').select('id,storage_path,filename').eq('source_video_id',id).eq('kind','edited').order('created_at',{ascending:false}).limit(1);
+    if(data&&data.length&&data[0].storage_path) return data[0];
+  }catch(e){}
+  return null;
+}
 async function swDownload(id){
   const v=swVids.find(x=>x.id===id); if(!v) return;
   closeModal();
-  await fileDownload(v,id);   // downloads the clip + records it as Downloaded (moves it along the pipeline)
+  const edited=await swResolveEdited(id);   // prefer the rendered edit; fall back to the original
+  await fileDownload(edited||v, id);        // downloads the file + records it as Downloaded
   const card=document.querySelector('.sw-card.is-top');
   if(card&&card.dataset.id===id){ card.classList.add('fly-left'); setTimeout(()=>swAdvance(),420); } else { swRender(); }
 }
