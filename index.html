@@ -279,12 +279,9 @@
   .mte-seg-th div{height:100%;background-size:cover;background-position:center;flex:0 0 auto}
   .mte-add{flex:0 0 auto;width:32px;height:50px;border-radius:7px;background:#2a2a2e;border:0;color:#fff;font-size:21px;cursor:pointer;align-self:flex-end}
   .mte-phfix{position:absolute;left:50%;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 5px rgba(0,0,0,.9);transform:translateX(-50%);pointer-events:none;z-index:8;border-radius:2px}
-  .mte-bar{flex:0 0 auto;display:flex;justify-content:flex-start;align-items:center;gap:8px;padding:14px 12px calc(16px + env(safe-area-inset-bottom));overflow-x:auto;scrollbar-width:none}
-  .mte-bar::-webkit-scrollbar{display:none}
-  .mte-bar button{background:#1c1c1e;border:0;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:500;cursor:pointer;flex:0 0 auto;min-width:62px;height:56px;border-radius:11px}
+  .mte-bar{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px calc(16px + env(safe-area-inset-bottom))}
+  .mte-bar button{background:#1c1c1e;border:0;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:500;cursor:pointer;flex:1 1 0;min-width:0;height:56px;border-radius:11px}
   .mte-bar .mi{font-size:19px;line-height:1}
-  .mte-bar.cut{justify-content:space-around}
-  .mte-bar.cut button{background:transparent;min-width:0;flex:1;height:auto}
   .mte-sheet{position:absolute;inset:0;z-index:12;display:none;flex-direction:column;background:rgba(0,0,0,.55)}
   .mte-sheet.open{display:flex}
   .mte-sheet-top{display:flex;align-items:center;gap:20px;padding:max(12px,env(safe-area-inset-top)) 18px 6px}
@@ -531,16 +528,10 @@
         <button class="mte-add" onclick="mteSoon('Add clip')" aria-label="Add clip">&#43;</button>
       </div>
       <div class="mte-bar" id="mteBar">
-        <button onclick="mteCutMode(true)"><span class="mi">&#9986;</span>Edit</button>
         <button onclick="mteSoon('Sound')"><span class="mi">&#9835;</span>Sound</button>
         <button onclick="mteAddText()"><span class="mi">Aa</span>Text</button>
-        <button onclick="mteSoon('Effects')"><span class="mi">&#10022;</span>Effects</button>
-        <button onclick="mteSoon('Magic')"><span class="mi">&#10024;</span>Magic</button>
-      </div>
-      <div class="mte-bar cut" id="mteCutBar" style="display:none">
         <button onclick="mteSplit()"><span class="mi">&#9986;</span>Split</button>
         <button onclick="mteDeleteSeg()"><span class="mi">&#128465;</span>Delete</button>
-        <button onclick="mteCutMode(false)"><span class="mi">&#10003;</span>Done</button>
       </div>
       <div class="mte-sheet" id="mteSheet">
         <div class="mte-sheet-top">
@@ -1063,6 +1054,17 @@ function swRender(){
 }
 
 function swOverlayHtml(v){
+  const es=v.edit_state;
+  if(es&&es.overlays&&es.overlays.length){
+    return es.overlays.map(o=>{
+      const out=(o.outline!==false)?'-webkit-text-stroke:2px #000;paint-order:stroke fill;':'';
+      const fam=(o.font&&o.font!=='classic'&&o.font!=='TikTok Sans')?mteFontCss(o.font):'var(--ovfont)';
+      const fst=(o.font==='retro')?'italic':'normal';
+      const fw=(o.font==='elegance')?'600':'700';
+      const sh=(o.font==='neon')?('text-shadow:0 0 6px '+o.color+',0 0 13px '+o.color+';'):'';
+      return '<div class="sw-text" style="left:'+o.x+'%;top:'+o.y+'%;transform:translate(-50%,-50%);font-family:'+fam+';font-weight:'+fw+';font-style:'+fst+';font-size:'+(o.size||24)+'px;color:'+o.color+';'+out+sh+'text-align:center;max-width:88%;letter-spacing:-0.01em;line-height:1.2">'+esc(o.text)+'</div>';
+    }).join('');
+  }
   const txt=v.caption_suggested||'';
   if(!txt)return '';
   return `<div class="sw-text" style="bottom:24%;left:50%;transform:translateX(-50%);font-family:var(--ovfont);font-size:18px;font-weight:700;color:#fff;-webkit-text-stroke:2.5px #000;paint-order:stroke fill;text-align:center;max-width:85%;padding:4px 8px;letter-spacing:-0.01em;line-height:1.25">${esc(txt)}</div>`;
@@ -1296,22 +1298,24 @@ function epInitTextDrag(){
 // keep old refs for other parts of the app
 // ---------- MOBILE TIKTOK-STYLE EDITOR ----------
 let mteId=null, mteDuration=0, mteSegments=[], mteSelSeg=-1, mteThumbs=[], mtePlaying=false, mteTexts=[], mteEditingOv=null, mteOvSeq=0;
-let mtePps=0, mtePpsFit=0, mteProgScroll=false, mteMuted=false, mteBound=false;
+let mtePps=0, mtePpsFit=0, mteProgScroll=false, mteProgT=0, mteRaf=0, mteMuted=false, mteBound=false;
 let mteCurColor='#ffffff', mteCurSize=28, mteCurFont='classic', mteCurOutline=true, mtePinchBase=0, mtePinchPps=0;
 
 function mteV(){ return document.getElementById('mteVideo'); }
 
 async function mteOpen(id){
   const v=swVids.find(x=>x.id===id); if(!v) return;
-  mteId=id; mteSelSeg=-1; mteThumbs=[]; mtePlaying=false; mteTexts=[]; mtePps=0; mteMuted=false;
+  mteId=id; mteSelSeg=-1; mteThumbs=[]; mtePlaying=false; mteTexts=[]; mteSegments=[]; mtePps=0; mteMuted=false;
   let url=signed[id];
   if(!url){ const {data:s}=await sb.storage.from(BUCKET).createSignedUrl(v.storage_path,3600); url=s&&s.signedUrl; if(url)signed[id]=url; }
-  if(v.caption_suggested){ mteTexts.push({id:++mteOvSeq,text:v.caption_suggested,x:50,y:74,color:'#ffffff',size:24,font:'classic',outline:true}); }
-  mteCutMode(false);
+  const es=v.edit_state;
+  if(es&&es.overlays&&es.overlays.length){ mteTexts=es.overlays.map(o=>({id:++mteOvSeq,text:o.text,x:o.x,y:o.y,color:o.color,size:o.size||24,font:(o.font==='TikTok Sans'?'classic':(o.font||'classic')),outline:(o.outline!==false)})); }
+  else if(v.caption_suggested){ mteTexts.push({id:++mteOvSeq,text:v.caption_suggested,x:50,y:74,color:'#ffffff',size:24,font:'classic',outline:true}); }
   const vid=mteV(); vid.muted=false;
   vid.onloadedmetadata=()=>{
     mteDuration=vid.duration||0;
-    mteSegments=[{start:0,end:mteDuration}];
+    if(es&&es.segments&&es.segments.length){ mteSegments=es.segments.map(s=>({start:Math.max(0,s.start),end:Math.min(mteDuration,s.end)})).filter(s=>s.end-s.start>0.05); }
+    if(!mteSegments.length) mteSegments=[{start:0,end:mteDuration}];
     mteRenderTL(); mteRenderOverlays(); mteUpdTime(); mteBuildThumbs();
   };
   vid.ontimeupdate=mteOnTimeUpdate;
@@ -1320,15 +1324,18 @@ async function mteOpen(id){
   document.getElementById('mte').classList.add('open');
   mteBindTl();
   vid.src=url||'';
-  vid.play().then(()=>{mtePlaying=true;mteSyncPlay();}).catch(()=>{mtePlaying=false;mteSyncPlay();});
+  vid.play().then(()=>{mtePlaying=true;mteSyncPlay();mteStartTick();}).catch(()=>{mtePlaying=false;mteSyncPlay();});
 }
 
 function mteClose(){
+  mteStopTick();
   const vid=mteV();
   if(vid){ vid.pause(); vid.removeAttribute('src'); try{vid.load();}catch(e){} }
   document.getElementById('mte').classList.remove('open');
   document.getElementById('mteSheet').classList.remove('open');
 }
+function mteStartTick(){ if(mteRaf)return; const loop=()=>{ if(!mtePlaying){ mteRaf=0; return; } mteUpdScroll(); mteUpdTime(); mteRaf=requestAnimationFrame(loop); }; mteRaf=requestAnimationFrame(loop); }
+function mteStopTick(){ if(mteRaf){ cancelAnimationFrame(mteRaf); mteRaf=0; } }
 
 function mteFmt(s){ s=Math.max(0,Math.round(s||0)); const m=Math.floor(s/60); const ss=s%60; return m+':'+(ss<10?'0':'')+ss; }
 function mteTotalKept(){ return mteSegments.reduce((a,s)=>a+(s.end-s.start),0); }
@@ -1370,14 +1377,19 @@ function mteRenderRuler(total){
   ruler.innerHTML=html;
 }
 
-function mteUpdScroll(){ const scroll=document.getElementById('mteTlScroll'); if(!scroll)return; mteProgScroll=true; scroll.scrollLeft=mteSrcToKept(mteV().currentTime)*mtePps; requestAnimationFrame(()=>{mteProgScroll=false;}); }
+function mteUpdScroll(){ const scroll=document.getElementById('mteTlScroll'); if(!scroll||!mtePps)return; mteProgScroll=true; scroll.scrollLeft=mteSrcToKept(mteV().currentTime)*mtePps; clearTimeout(mteProgT); mteProgT=setTimeout(()=>{mteProgScroll=false;},90); }
 
 function mteBindTl(){
   if(mteBound)return; mteBound=true;
   const scroll=document.getElementById('mteTlScroll');
-  scroll.addEventListener('scroll',()=>{ if(mteProgScroll||mtePlaying)return; const keptT=Math.max(0,scroll.scrollLeft/mtePps); const src=mteKeptToSrc(keptT); const vid=mteV(); if(Math.abs(vid.currentTime-src)>0.02){ vid.currentTime=src; } mteUpdTime(); });
-  scroll.addEventListener('touchstart',(e)=>{ if(e.touches.length===2){ mtePinchBase=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); mtePinchPps=mtePps; } },{passive:true});
+  // any finger on the timeline pauses playback so the user can scrub the full length
+  scroll.addEventListener('touchstart',(e)=>{
+    if(mtePlaying){ mteV().pause(); mtePlaying=false; mteStopTick(); mteSyncPlay(); }
+    if(e.touches.length===2){ mtePinchBase=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); mtePinchPps=mtePps; }
+  },{passive:true});
   scroll.addEventListener('touchmove',(e)=>{ if(e.touches.length===2&&mtePinchBase){ e.preventDefault(); const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); mtePps=Math.min(320,Math.max(mtePpsFit,mtePinchPps*d/mtePinchBase)); mteRenderTL(); } },{passive:false});
+  scroll.addEventListener('touchend',()=>{ mtePinchBase=0; },{passive:true});
+  scroll.addEventListener('scroll',()=>{ if(mtePlaying||mteProgScroll)return; const keptT=Math.max(0,Math.min(mteTotalKept(),scroll.scrollLeft/mtePps)); const src=mteKeptToSrc(keptT); const vid=mteV(); if(Math.abs(vid.currentTime-src)>0.015){ vid.currentTime=src; } mteUpdTime(); });
 }
 
 function mteZoom(dir){ if(!mtePpsFit)return; mtePps=Math.min(320,Math.max(mtePpsFit,mtePps*(dir>0?1.5:1/1.5))); mteRenderTL(); }
@@ -1393,21 +1405,13 @@ function mteOnTimeUpdate(){
     const idx=mteSegments.indexOf(inSeg); const next=mteSegments[idx+1];
     vid.currentTime=next?next.start:mteSegments[0].start;
   }
-  if(mtePlaying)mteUpdScroll();
   mteUpdTime();
 }
 
-function mtePlayToggle(){ const vid=mteV(); if(vid.paused){ vid.play(); mtePlaying=true; } else { vid.pause(); mtePlaying=false; } mteSyncPlay(); }
+function mtePlayToggle(){ const vid=mteV(); if(vid.paused){ vid.play(); mtePlaying=true; mteStartTick(); } else { vid.pause(); mtePlaying=false; mteStopTick(); } mteSyncPlay(); }
 function mteSyncPlay(){ const b=document.getElementById('mtePlayc'); if(b)b.innerHTML=mtePlaying?'&#10074;&#10074;':'&#9658;'; }
 function mteToggleMute(){ const vid=mteV(); mteMuted=!mteMuted; vid.muted=mteMuted; const b=document.getElementById('mteVol'); if(b)b.innerHTML=mteMuted?'&#128263;':'&#128266;'; }
 function mteSoon(name){ toast(name+' is coming soon','ok'); }
-
-function mteCutMode(on){
-  const bar=document.getElementById('mteBar'); const cut=document.getElementById('mteCutBar');
-  if(bar)bar.style.display=on?'none':'flex';
-  if(cut)cut.style.display=on?'flex':'none';
-  if(!on)mteSelSeg=-1, mteRenderTL&&mteSegments.length&&mteRenderTL();
-}
 
 function mteSplit(){
   const t=mteV().currentTime;
@@ -1504,13 +1508,19 @@ function mteOvDrag(el,o){
 async function mteSave(){
   const v=swVids.find(x=>x.id===mteId); if(!v){ mteClose(); return; }
   const segs=mteSegments.map(s=>({start:Math.round(s.start*100)/100,end:Math.round(s.end*100)/100}));
-  const overlays=mteTexts.map(o=>({text:o.text,x:Math.round(o.x*10)/10,y:Math.round(o.y*10)/10,color:o.color,size:o.size||24,font:(o.font==='classic'?'TikTok Sans':o.font),outline:(o.outline!==false),weight:700,stroke:(o.outline!==false)?2.5:0}));
-  const options={segments:segs,source_duration:Math.round(mteDuration*100)/100,overlays:overlays,edited_at:new Date().toISOString()};
-  const job={video_id:mteId,storage_path:v.storage_path,filename:v.filename,folder_id:v.folder_id,product_uid:v.product_uid,options:options,status:'queued',requested_by:displayName(state.user)};
-  const {error}=await sb.from('edit_jobs').insert(job);
-  if(error){ toast('Could not save edit: '+error.message,'err'); return; }
-  if(overlays.length){ const cap=overlays[0].text; await sb.from('videos').update({caption_suggested:cap}).eq('id',mteId); const sc=document.querySelector('.sw-card.is-top .sw-text'); if(sc)sc.textContent=cap; }
-  toast('Sent for editing -- the trimmed version appears when the worker finishes','ok');
+  const overlays=mteTexts.map(o=>({text:o.text,x:Math.round(o.x*10)/10,y:Math.round(o.y*10)/10,color:o.color,size:o.size||24,font:(o.font||'classic'),outline:(o.outline!==false)}));
+  const editState={segments:segs,overlays:overlays,source_duration:Math.round(mteDuration*100)/100,edited_at:new Date().toISOString()};
+  const cap=overlays.length?overlays[0].text:(v.caption_suggested||null);
+  // 1) Persist the edit state to the video so it survives, restores on re-open, and shows on the swipe card
+  const {error:ue}=await sb.from('videos').update({edit_state:editState,caption_suggested:cap}).eq('id',mteId);
+  if(ue){ toast('Could not save: '+ue.message,'err'); return; }
+  v.edit_state=editState; v.caption_suggested=cap;
+  swRender();
+  // 2) Queue the worker to render the trimmed + captioned file (non-blocking)
+  const wOverlays=overlays.map(o=>({text:o.text,x:o.x,y:o.y,color:o.color,size:o.size,font:(o.font==='classic'?'TikTok Sans':o.font),weight:700,stroke:(o.outline!==false)?2.5:0,outline:(o.outline!==false)}));
+  const job={video_id:mteId,storage_path:v.storage_path,filename:v.filename,folder_id:v.folder_id,product_uid:v.product_uid,options:{segments:segs,source_duration:editState.source_duration,overlays:wOverlays,edited_at:editState.edited_at},status:'queued',requested_by:displayName(state.user)};
+  const {error:je}=await sb.from('edit_jobs').insert(job);
+  toast(je?'Edits saved (render queue pending)':'Edits saved','ok');
   mteClose();
 }
 
