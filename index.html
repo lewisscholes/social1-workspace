@@ -1012,7 +1012,9 @@ async function loadEditor(){
   root.innerHTML='<div class="sw-empty"><div class="inline-loader"></div></div>';
   // Load ALL approved (non-posted) videos from the bank
   const {data:vids}=await sb.from('videos').select('*').neq('status','posted').neq('status','scheduled').eq('pending_approval',false).order('created_at',{ascending:false});
-  swVids=vids||[]; swIdx=0;
+  let list=vids||[];
+  try{ const {data:dls}=await sb.from('video_downloads').select('video_id').eq('user_id',state.user.id); const dset=new Set((dls||[]).map(d=>d.video_id)); list=list.filter(v=>!dset.has(v.id)); }catch(e){}
+  swVids=list; swIdx=0;
   // Preload signed URLs for first 3
   for(let i=0;i<Math.min(3,swVids.length);i++){
     const v=swVids[i];
@@ -1563,7 +1565,15 @@ function openScheduler(id){
     +'<div class="h-sub" style="color:var(--muted);font-size:13px;margin:-4px 0 14px">Pick when this video should post to TikTok.</div>'
     +'<label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">Date and time</label>'
     +'<input id="schedWhen" type="datetime-local" value="'+def+'" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;background:#fff">'
-    +'<div class="actions" style="display:flex;gap:8px;margin-top:16px"><button class="btn ghost" style="flex:1;justify-content:center" onclick="closeModal()">Cancel</button><button class="btn" style="flex:1;justify-content:center" onclick="confirmSchedule(\''+id+'\')">Schedule</button></div>');
+    +'<div class="actions" style="display:flex;gap:8px;margin-top:16px"><button class="btn ghost" style="flex:1;justify-content:center" onclick="closeModal()">Cancel</button><button class="btn" style="flex:1;justify-content:center" onclick="confirmSchedule(\''+id+'\')">Schedule</button></div>'
+    +'<button class="btn ghost" style="width:100%;justify-content:center;margin-top:8px" onclick="swDownload(\''+id+'\')">&#8595; Download edited video</button>');
+}
+async function swDownload(id){
+  const v=swVids.find(x=>x.id===id); if(!v) return;
+  closeModal();
+  await fileDownload(v,id);   // downloads the clip + records it as Downloaded (moves it along the pipeline)
+  const card=document.querySelector('.sw-card.is-top');
+  if(card&&card.dataset.id===id){ card.classList.add('fly-left'); setTimeout(()=>swAdvance(),420); } else { swRender(); }
 }
 async function confirmSchedule(id){
   const when=val('schedWhen'); if(!when){ toast('Pick a date and time','err'); return; }
