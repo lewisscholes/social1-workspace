@@ -268,7 +268,7 @@
   .mte-tr-ic{display:flex;gap:17px;align-items:center;justify-content:flex-end;min-width:88px}
   .mte-tr-ic button{background:transparent;border:0;color:#cfcfd2;font-size:15px;cursor:pointer;padding:0}
   .mte-tlrow{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:2px 10px 0}
-  .mte-gap{flex:0 0 21vh}   /* black thumb-scroll space between the timeline and the bottom buttons (TikTok layout) */
+  .mte-gap{flex:0 0 13vh;touch-action:none}   /* black thumb-scroll space between the timeline and the bottom buttons (TikTok layout) */
   .mte-vol{flex:0 0 auto;width:24px;text-align:center;color:#fff;font-size:15px;background:transparent;border:0;cursor:pointer}
   .mte-tlwrap{position:relative;flex:1 1 auto;min-width:0}
   .mte-tlscroll{position:relative;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-x}
@@ -1590,6 +1590,14 @@ function mteBindTl(){
     if(!tapPinch&&!tapMoved&&(Date.now()-tapT)<350){ mteSelectAtClientX(tapX); }   // quick tap = select the clip
   },{passive:true});
   scroll.addEventListener('scroll',()=>{ if(mteTrimming)return; if(!mteThumbRaf)mteThumbRaf=requestAnimationFrame(()=>{ mteThumbRaf=0; mteRenderThumbs(); }); if(mtePlaying||mteProgScroll)return; mteSeekTarget=Math.max(0,Math.min(mteTotalKept(),scroll.scrollLeft/mtePps)); if(!mteSeekRaf)mteSeekRaf=requestAnimationFrame(mteApplySeek); });
+  // Scrubbing in the black gap below the timeline also scrolls the timeline (handy thumb area)
+  const gap=document.querySelector('.mte-gap');
+  if(gap){
+    let gx=0,gsl=0,gon=false;
+    gap.addEventListener('touchstart',(e)=>{ gon=true; gx=e.touches[0].clientX; gsl=scroll.scrollLeft; if(mtePlaying){ mteV().pause(); mtePlaying=false; mteStopTick(); mteSyncPlay(); } },{passive:true});
+    gap.addEventListener('touchmove',(e)=>{ if(!gon)return; if(e.cancelable)e.preventDefault(); scroll.scrollLeft=gsl-(e.touches[0].clientX-gx); },{passive:false});
+    gap.addEventListener('touchend',()=>{ gon=false; },{passive:true});
+  }
 }
 function mteApplySeek(){ mteSeekRaf=0; if(mteSeekTarget==null)return; const src=mteKeptToSrc(mteSeekTarget); const vid=mteV(); if(Math.abs(vid.currentTime-src)>0.01){ if(vid.fastSeek){ try{vid.fastSeek(src);}catch(e){ vid.currentTime=src; } } else { vid.currentTime=src; } } mteUpdTime(); }
 
@@ -1651,7 +1659,7 @@ async function mteBuildThumbs(){
 function mteFontCss(key){ if(key==='elegance')return "Georgia,'Times New Roman',serif"; if(key==='comic')return "'Comic Sans MS','Chalkboard SE',cursive"; return "var(--ovfont)"; }
 function mteApplyTaStyle(){
   const ta=document.getElementById('mteTa'); if(!ta)return;
-  ta.style.fontSize=mteCurSize+'px'; ta.style.fontFamily=mteFontCss(mteCurFont);
+  ta.style.fontSize=(mteCurSize*mteTextScale())+'px'; ta.style.fontFamily=mteFontCss(mteCurFont);
   ta.style.fontStyle=(mteCurFont==='retro')?'italic':'normal';
   if(mteCurStyle==='box'){
     ta.style.fontWeight='600';
@@ -1714,16 +1722,20 @@ function mteTextDone(){
   const wrap=document.getElementById('mteTaWrap'); if(wrap){ wrap.style.position=''; wrap.style.left=''; wrap.style.top=''; wrap.style.transform=''; }
 }
 
+// Overlay font is sized relative to a 640px-tall preview (same reference the render worker bakes against),
+// so the text stays locked to the footage at the same visual size no matter how big/small the preview is.
+function mteTextScale(){ const pv=document.getElementById('mtePv'); const h=(pv&&pv.clientHeight)?pv.clientHeight:640; return h/640; }
 function mteRenderOverlays(){
   const wrap=document.getElementById('mteOvs'); if(!wrap)return; wrap.innerHTML='';
   const editingNow=document.getElementById('mteSheet').classList.contains('open');
+  const tscale=mteTextScale();
   mteTexts.forEach(o=>{
     if(editingNow && o===mteEditingOv) return;   // hide the overlay being edited; the edit box is its live preview
     const d=document.createElement('div'); d.className='mte-ov';
     d.style.left=o.x+'%'; d.style.top=o.y+'%'; d.style.transform='translate(-50%,-50%)';
     d.style.fontFamily=mteFontCss(o.font||'classic');
     d.style.fontWeight=((o.font==='elegance')?'600':'700'); d.style.fontStyle=(o.font==='retro')?'italic':'normal';
-    d.style.fontSize=(o.size||24)+'px';
+    d.style.fontSize=((o.size||24)*tscale)+'px';
     const sty=o.style||((o.outline===false)?'outline':'outline');
     if(sty==='box'){
       d.style.color='transparent'; d.style.webkitTextStroke='0'; d.style.textShadow='none';
@@ -1743,7 +1755,7 @@ function mteOvDrag(el,o){
   let sx=0,sy=0,ox=0,oy=0,moved=false,mode=null,baseDist=0,baseSize=0;
   const dist=(t)=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
   const move=(e)=>{
-    if(e.touches&&e.touches.length>=2){ if(mode!=='pinch'){ mode='pinch'; baseDist=dist(e.touches)||1; baseSize=o.size||24; if(gv)gv.classList.remove('on'); if(gh)gh.classList.remove('on'); } if(e.cancelable)e.preventDefault(); const d=dist(e.touches); o.size=Math.min(200,Math.max(10,Math.round(baseSize*(d/(baseDist||1))))); el.style.fontSize=o.size+'px'; return; }
+    if(e.touches&&e.touches.length>=2){ if(mode!=='pinch'){ mode='pinch'; baseDist=dist(e.touches)||1; baseSize=o.size||24; if(gv)gv.classList.remove('on'); if(gh)gh.classList.remove('on'); } if(e.cancelable)e.preventDefault(); const d=dist(e.touches); o.size=Math.min(200,Math.max(10,Math.round(baseSize*(d/(baseDist||1))))); el.style.fontSize=(o.size*mteTextScale())+'px'; return; }
     if(mode==='pinch') return;
     const p=e.touches?e.touches[0]:e; const r=pv.getBoundingClientRect(); const dx=p.clientX-sx, dy=p.clientY-sy; if(Math.abs(dx)+Math.abs(dy)>6)moved=true;
     let nx=Math.min(125,Math.max(-25,ox+dx/r.width*100)), ny=Math.min(118,Math.max(-18,oy+dy/r.height*100));
