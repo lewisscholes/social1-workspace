@@ -289,7 +289,7 @@
   .mte-sheet-top .wheel{width:24px;height:24px;border-radius:50%;border:2px solid #fff;background:conic-gradient(red,#ff0,#0f0,#0ff,#00f,#f0f,red)}
   .mte-sheet-top .mte-done{margin-left:auto;font-size:16px;font-weight:700}
   .mte-sheet-body{flex:1;display:flex;align-items:center;justify-content:center;position:relative;padding:0 60px 0 22px}
-  .mte-ta{width:100%;box-sizing:border-box;padding:0;background:transparent;border:0;outline:0;color:#fff;font-family:var(--ovfont);font-weight:700;font-size:28px;text-align:center;resize:none;-webkit-text-stroke:2px #000;paint-order:stroke fill;line-height:1.2;overflow:hidden;word-break:normal;overflow-wrap:break-word}
+  .mte-ta{width:100%;box-sizing:border-box;padding:0;background:transparent;border:0;outline:0;color:#fff;font-family:var(--ovfont);font-weight:700;font-size:28px;text-align:center;resize:none;-webkit-text-stroke:2px #000;paint-order:stroke fill;line-height:1.2;overflow-y:auto;max-height:55vh;word-break:normal;overflow-wrap:break-word}
   .mte-sizewrap{position:absolute;right:16px;top:50%;transform:translateY(-50%);height:44%;display:flex;align-items:center}
   .mte-size{-webkit-appearance:slider-vertical;appearance:slider-vertical;writing-mode:vertical-lr;direction:rtl;width:24px;height:100%;background:transparent;accent-color:#fff;cursor:pointer;touch-action:none}
   .mte-fonts{display:flex;gap:8px;overflow-x:auto;padding:8px 14px;scrollbar-width:none}
@@ -1510,7 +1510,9 @@ function mteApplyTaStyle(){
   // Match the edit box width to the on-video overlay's wrap width so editor == saved result
   const pv=document.getElementById('mtePv');
   if(pv&&pv.clientWidth){ const w=Math.round(pv.clientWidth*0.84); ta.style.width=w+'px'; ta.style.maxWidth=w+'px'; }
+  mteAutoSizeTa();
 }
+function mteAutoSizeTa(){ const ta=document.getElementById('mteTa'); if(!ta)return; ta.style.height='auto'; ta.style.height=ta.scrollHeight+'px'; }
 function mteSelFontBtn(key){ document.querySelectorAll('#mteFonts .mte-fbtn').forEach(b=>b.classList.toggle('sel',b.dataset.font===key)); }
 function mteAddText(){ mteOpenTextSheet(null); }
 function mteOpenTextSheet(ov){
@@ -1522,10 +1524,11 @@ function mteOpenTextSheet(ov){
   const cw=document.getElementById('mteColorWheel'); if(cw)cw.value=(/^#[0-9a-fA-F]{6}$/.test(mteCurColor)?mteCurColor:'#ffffff');
   mteSelFontBtn(mteCurFont); mteApplyTaStyle(); mteRenderOverlays();
   document.getElementById('mteSheet').classList.add('open');
-  setTimeout(()=>{ta.focus();},60);
+  setTimeout(()=>{ta.focus(); mteAutoSizeTa();},60);
 }
 // Apply the current control values live to the overlay being edited, so changes show on the video instantly
 function mteLiveApply(){
+  mteAutoSizeTa();
   if(!mteEditingOv)return;
   const ta=document.getElementById('mteTa'); if(ta)mteEditingOv.text=ta.value;
   mteEditingOv.color=mteCurColor; mteEditingOv.size=mteCurSize; mteEditingOv.font=mteCurFont; mteEditingOv.outline=mteCurOutline;
