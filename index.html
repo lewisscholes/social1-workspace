@@ -1344,7 +1344,7 @@ function epInitTextDrag(){
 // ---------- MOBILE TIKTOK-STYLE EDITOR ----------
 let mteId=null, mteDuration=0, mteSegments=[], mteSelSeg=-1, mteThumbs=[], mtePlaying=false, mteTexts=[], mteEditingOv=null, mteOvSeq=0;
 let mtePps=0, mtePpsFit=0, mteProgScroll=false, mteProgT=0, mteRaf=0, mteMuted=false, mteBound=false, mteSeekTarget=null, mteSeekRaf=0;
-let mteCurColor='#ffffff', mteCurSize=28, mteCurFont='classic', mteCurStyle='outline', mtePinchBase=0, mtePinchPps=0, mtePinchRaf=0, mteThumbRaf=0, mteTrimming=false;
+let mteCurColor='#ffffff', mteCurSize=28, mteCurFont='classic', mteCurStyle='outline', mtePinchBase=0, mtePinchPps=0, mtePinchRaf=0, mteThumbRaf=0, mteTrimming=false, mteTrimContentW=0;
 function mteContrast(hex){ const m=/^#?([0-9a-f]{6})$/i.exec(hex||''); if(!m)return '#000'; const n=parseInt(m[1],16); const r=(n>>16)&255,g=(n>>8)&255,b=n&255; return (0.299*r+0.587*g+0.114*b)>150?'#000':'#fff'; }
 function mteSyncKb(){ const sh=document.getElementById('mteSheet'); if(!sh)return; const vv=window.visualViewport; if(vv){ sh.style.height=vv.height+'px'; sh.style.top=vv.offsetTop+'px'; } }
 function mteKbBind(){ if(window.visualViewport){ window.visualViewport.addEventListener('resize',mteSyncKb); window.visualViewport.addEventListener('scroll',mteSyncKb); } mteSyncKb(); }
@@ -1472,7 +1472,8 @@ function mteUpdTrim(){
   const tl=document.getElementById('mteTl'); const ruler=document.getElementById('mteRuler'); const content=document.getElementById('mteTlContent'); const scroll=document.getElementById('mteTlScroll');
   if(!tl||!scroll||!content)return;
   const total=mteTotalKept()||0.001; const scrollW=scroll.clientWidth||320; const pad=scrollW/2; const W=total*mtePps;
-  content.style.width=(W+2*pad)+'px'; ruler.style.width=W+'px'; ruler.style.marginLeft=pad+'px'; tl.style.width=W+'px'; tl.style.marginLeft=pad+'px';
+  // keep the scroll width frozen during a drag so shrinking the strip can't clamp-jump the scroll position
+  content.style.width=(mteTrimming?mteTrimContentW:(W+2*pad))+'px'; ruler.style.width=W+'px'; ruler.style.marginLeft=pad+'px'; tl.style.width=W+'px'; tl.style.marginLeft=pad+'px';
   let acc=0, selL=0, selW=0;
   tl.querySelectorAll('.mte-seg').forEach((el,i)=>{ const s=mteSegments[i]; if(!s)return; const w=(s.end-s.start)*mtePps; el.style.width=w+'px'; if(i===mteSelSeg){selL=acc;selW=w;} acc+=w; });
   const marks=tl.querySelectorAll('.mte-split'); let cum=0,mi=0;
@@ -1489,6 +1490,7 @@ function mteTrimBind(el,side){
     if(mtePlaying){ mteV().pause(); mtePlaying=false; mteStopTick(); mteSyncPlay(); }
     const scroll=document.getElementById('mteTlScroll');
     const p0=e.touches?e.touches[0]:e; const sx=p0.clientX, os=seg.start, oe=seg.end, osl=scroll.scrollLeft;
+    const pad=(scroll.clientWidth||320)/2; mteTrimContentW=(mteDuration||oe)*mtePps+2*pad; document.getElementById('mteTlContent').style.width=mteTrimContentW+'px';   // freeze scroll width
     const lower=(mteSelSeg>0?mteSegments[mteSelSeg-1].end:0);
     const upper=(mteSelSeg<mteSegments.length-1?mteSegments[mteSelSeg+1].start:(mteDuration||oe));
     const MIN=0.25;
@@ -1500,7 +1502,7 @@ function mteTrimBind(el,side){
       const vid=mteV(); const edge=(side==='l'?seg.start:Math.max(seg.start,seg.end-0.05)); if(vid.fastSeek){try{vid.fastSeek(edge);}catch(_){vid.currentTime=edge;}}else{vid.currentTime=edge;}
       mteUpdTrim(); mteUpdTime();
     };
-    const up=(ev)=>{ if(ev&&ev.touches&&ev.touches.length>0)return; document.removeEventListener('mousemove',move);document.removeEventListener('touchmove',move);document.removeEventListener('mouseup',up);document.removeEventListener('touchend',up); mteTrimming=false; mteUpdTime(); };
+    const up=(ev)=>{ if(ev&&ev.touches&&ev.touches.length>0)return; document.removeEventListener('mousemove',move);document.removeEventListener('touchmove',move);document.removeEventListener('mouseup',up);document.removeEventListener('touchend',up); mteTrimming=false; mteRenderTL(); mteUpdTime(); };   // commit: restore true width + re-centre on the trimmed edge
     document.addEventListener('mousemove',move);document.addEventListener('touchmove',move,{passive:false});document.addEventListener('mouseup',up);document.addEventListener('touchend',up);
   };
   el.addEventListener('mousedown',down); el.addEventListener('touchstart',down,{passive:false});
@@ -1566,7 +1568,7 @@ function mteBindTl(){
     if(mteTrimming)return;   // a trim-handle drag just ended; don't treat it as a tap
     if(!tapPinch&&!tapMoved&&(Date.now()-tapT)<350){ mteSelectAtClientX(tapX); }   // quick tap = select the clip
   },{passive:true});
-  scroll.addEventListener('scroll',()=>{ if(!mteThumbRaf)mteThumbRaf=requestAnimationFrame(()=>{ mteThumbRaf=0; mteRenderThumbs(); }); if(mtePlaying||mteProgScroll||mteTrimming)return; mteSeekTarget=Math.max(0,Math.min(mteTotalKept(),scroll.scrollLeft/mtePps)); if(!mteSeekRaf)mteSeekRaf=requestAnimationFrame(mteApplySeek); });
+  scroll.addEventListener('scroll',()=>{ if(mteTrimming)return; if(!mteThumbRaf)mteThumbRaf=requestAnimationFrame(()=>{ mteThumbRaf=0; mteRenderThumbs(); }); if(mtePlaying||mteProgScroll)return; mteSeekTarget=Math.max(0,Math.min(mteTotalKept(),scroll.scrollLeft/mtePps)); if(!mteSeekRaf)mteSeekRaf=requestAnimationFrame(mteApplySeek); });
 }
 function mteApplySeek(){ mteSeekRaf=0; if(mteSeekTarget==null)return; const src=mteKeptToSrc(mteSeekTarget); const vid=mteV(); if(Math.abs(vid.currentTime-src)>0.01){ if(vid.fastSeek){ try{vid.fastSeek(src);}catch(e){ vid.currentTime=src; } } else { vid.currentTime=src; } } mteUpdTime(); }
 
