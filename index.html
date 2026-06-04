@@ -352,7 +352,7 @@
     <button class="nav-btn" id="nav-editor" onclick="showView('editor')"><span class="ic">✂️</span> Editor</button>
     <div class="nav-sep"></div>
     <button class="nav-btn" id="nav-overlays" onclick="showView('overlays')"><span class="ic">🪄</span> Overlay generator</button>
-    <button class="nav-btn" disabled title="Coming soon"><span class="ic">🎓</span> Training</button>
+    <button class="nav-btn" id="nav-training" onclick="showView('training')"><span class="ic">🎓</span> Overlay Training</button>
     <button class="nav-btn" id="nav-team" onclick="showView('team')" style="display:none"><span class="ic">👥</span> Team &amp; Access</button>
     <div class="side-user">
       <div class="nm" id="sideName"></div>
@@ -597,6 +597,40 @@
       <div id="overlayCards" class="cards"></div>
     </section>
 
+    <!-- OVERLAY TRAINING -->
+    <section id="view-training" class="hide">
+      <div class="head">
+        <div>
+          <h2 class="h-title">Overlay Training</h2>
+          <div class="h-sub">Teach the overlay AI: set style rules, feed it winning examples, and see everything it has learned. Every video you edit is captured automatically.</div>
+        </div>
+        <button class="btn ghost" onclick="loadTraining()">↻ Refresh</button>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:6px">📏 Style rules</div>
+        <div class="h-sub" style="margin-bottom:8px">Plain-English rules the AI must follow for every overlay (tone, length, spelling, formatting, do's and don'ts).</div>
+        <textarea id="trGuidance" rows="5" placeholder="e.g. Keep hooks under 8 words. Start with 'me when...' or 'POV:'. British spelling. No hashtags. One emoji max." style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit;resize:vertical"></textarea>
+        <div style="margin-top:8px"><button class="btn" onclick="saveTrGuidance()">Save rules</button> <span id="trGuidanceMsg" class="h-sub"></span></div>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:6px">➕ Teach an example</div>
+        <div class="h-sub" style="margin-bottom:8px">Add an overlay that works and say when to use it. Taught examples get the highest priority when the AI suggests.</div>
+        <textarea id="trExOverlay" rows="2" placeholder="Overlay text (use new lines for multiple lines)" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit;resize:vertical"></textarea>
+        <input id="trExNote" placeholder="When to use it / why it works (context)" style="width:100%;box-sizing:border-box;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit"/>
+        <select id="trExProduct" style="width:100%;box-sizing:border-box;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit"><option value="">Any product</option></select>
+        <div style="margin-top:8px"><button class="btn" onclick="addTrExample()">Add to memory</button> <span id="trExMsg" class="h-sub"></span></div>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:6px">🧠 What it has learned <span class="cnt" id="trMemCount">0</span></div>
+        <div class="h-sub" style="margin-bottom:8px">Every overlay in the memory bank. <b>Taught</b> = you added it; <b>Edited</b> = captured from a video you edited.</div>
+        <div id="trMemList"></div>
+        <div id="trMemEmpty" class="h-sub hide">Nothing yet. Teach an example above, or edit a video with overlays.</div>
+      </div>
+    </section>
+
     <!-- TEAM -->
     <section id="view-team" class="hide">
       <div class="head"><div><h2 class="h-title">Team &amp; Access</h2><div class="h-sub">Approve access requests and set roles.</div></div><button class="btn ghost" onclick="loadTeam()">↻ Refresh</button></div>
@@ -610,6 +644,7 @@
     <button id="bnav-bank" onclick="showView('bank')"><span class="bi">🎬</span>Bank</button>
     <button id="bnav-editor" onclick="showView('editor')"><span class="bi">✂️</span>Editor</button>
     <button id="bnav-overlays" onclick="showView('overlays')"><span class="bi">🪄</span>Captions</button>
+    <button id="bnav-training" onclick="showView('training')"><span class="bi">🎓</span>Train</button>
   </nav>
 </div>
 
@@ -637,12 +672,60 @@ function prodName(id){ const p=state.products.find(x=>x.id===id); return p?p.nam
 // ---------- nav ----------
 function showView(v){
   state.currentView=v;
-  ['dashboard','bank','editor','overlays','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
+  ['dashboard','bank','editor','overlays','training','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
   if(v==='dashboard') loadDashboard();
   if(v==='bank') loadBank();
   if(v==='editor') loadEditor();
   if(v==='overlays') loadOverlays();
+  if(v==='training') loadTraining();
   if(v==='team') loadTeam();
+}
+
+// ---------- OVERLAY TRAINING ----------
+async function loadTraining(){
+  await loadProducts();
+  const psel=document.getElementById('trExProduct');
+  if(psel){ const cur=psel.value; psel.innerHTML='<option value="">Any product</option>'+state.products.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join(''); psel.value=cur; }
+  try{ const {data}=await sb.from('overlay_guidance').select('guidance').eq('id',1).maybeSingle(); const ta=document.getElementById('trGuidance'); if(ta&&document.activeElement!==ta) ta.value=(data&&data.guidance)||''; }catch(e){}
+  try{
+    const {data}=await sb.from('overlay_memory').select('id,overlay_text,note,transcript,source,product_uid,updated_at').order('updated_at',{ascending:false}).limit(120);
+    const rows=data||[]; const cnt=document.getElementById('trMemCount'); if(cnt)cnt.textContent=rows.length;
+    const list=document.getElementById('trMemList'); const empty=document.getElementById('trMemEmpty');
+    if(empty)empty.classList.toggle('hide',rows.length>0);
+    const pname=id=>{const p=state.products.find(x=>x.id===id);return p?p.name:'';};
+    list.innerHTML=rows.map(r=>{
+      const ctx=esc(r.note||r.transcript||'');
+      const badge=r.source==='manual'
+        ? '<span style="background:#ecebff;color:#4a3fb8;border-radius:5px;padding:1px 7px;font-size:11px;font-weight:700">Taught</span>'
+        : '<span style="background:#eef2f6;color:#5f6b76;border-radius:5px;padding:1px 7px;font-size:11px;font-weight:700">Edited</span>';
+      const prod=r.product_uid?(' · '+esc(pname(r.product_uid))):'';
+      const ctxShort=ctx?(' · '+(ctx.length>140?ctx.slice(0,140)+'…':ctx)):'';
+      return '<div style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div style="font-weight:700;white-space:pre-wrap">'+esc(r.overlay_text||'')+'</div><button class="btn ghost" style="flex:0 0 auto;padding:3px 8px" onclick="deleteTrMem(\''+r.id+'\')">Remove</button></div><div class="h-sub" style="margin-top:5px">'+badge+prod+ctxShort+'</div></div>';
+    }).join('');
+  }catch(e){ toast('Could not load memory: '+(e.message||e),'err'); }
+}
+async function saveTrGuidance(){
+  const ta=document.getElementById('trGuidance'); const msg=document.getElementById('trGuidanceMsg');
+  const {error}=await sb.from('overlay_guidance').upsert({id:1,guidance:ta.value,updated_at:new Date().toISOString(),updated_by:displayName(state.user)});
+  if(msg){ msg.textContent=error?('Error: '+error.message):'Saved ✓'; setTimeout(()=>{msg.textContent='';},2500); }
+}
+async function addTrExample(){
+  const ov=(document.getElementById('trExOverlay').value||'').trim();
+  const note=(document.getElementById('trExNote').value||'').trim();
+  const prod=document.getElementById('trExProduct').value||null;
+  const msg=document.getElementById('trExMsg');
+  if(!ov){ if(msg)msg.textContent='Add overlay text first'; return; }
+  const lines=ov.split('\n').map(s=>s.trim()).filter(Boolean);
+  const {error}=await sb.from('overlay_memory').insert({product_uid:prod,overlay_text:ov,overlay_lines:lines,note:note||null,source:'manual',created_by:displayName(state.user)});
+  if(error){ if(msg)msg.textContent='Error: '+error.message; return; }
+  document.getElementById('trExOverlay').value=''; document.getElementById('trExNote').value='';
+  if(msg){ msg.textContent='Added ✓'; setTimeout(()=>{msg.textContent='';},2500); }
+  loadTraining();
+}
+async function deleteTrMem(id){
+  const {error}=await sb.from('overlay_memory').delete().eq('id',id);
+  if(error){ toast('Could not remove: '+error.message,'err'); return; }
+  loadTraining();
 }
 
 // ---------- products ----------
