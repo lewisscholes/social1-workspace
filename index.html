@@ -282,12 +282,15 @@
   .mte-bar{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px calc(16px + env(safe-area-inset-bottom))}
   .mte-bar button{background:#1c1c1e;border:0;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:500;cursor:pointer;flex:1 1 0;min-width:0;height:56px;border-radius:11px}
   .mte-bar .mi{font-size:19px;line-height:1}
-  .mte-sheet{position:absolute;inset:0;z-index:12;display:none;flex-direction:column;background:rgba(0,0,0,.55)}
+  .mte-sheet{position:fixed;left:0;right:0;top:0;height:100%;z-index:12;display:none;flex-direction:column;background:rgba(0,0,0,.55)}
   .mte-sheet.open{display:flex}
-  .mte-sheet-top{display:flex;align-items:center;gap:20px;padding:max(12px,env(safe-area-inset-top)) 18px 6px}
-  .mte-sheet-top button{background:transparent;border:0;color:#fff;font-size:19px;cursor:pointer;line-height:1}
-  .mte-sheet-top .wheel{width:24px;height:24px;border-radius:50%;border:2px solid #fff;background:conic-gradient(red,#ff0,#0f0,#0ff,#00f,#f0f,red)}
-  .mte-sheet-top .mte-done{margin-left:auto;font-size:16px;font-weight:700}
+  .mte-sheet-top{display:flex;align-items:center;gap:12px;padding:max(12px,env(safe-area-inset-top)) 14px 6px}
+  .mte-sheet-top .mte-done{margin-left:0;font-size:16px;font-weight:700;background:transparent;border:0;color:#fff;cursor:pointer;flex:0 0 auto}
+  .mte-stybtn{flex:0 0 auto;background:transparent;border:1.5px solid #fff;color:#fff;width:34px;height:34px;border-radius:9px;font-weight:800;font-size:17px;cursor:pointer;line-height:1}
+  .mte-stybtn.on{background:#fff;color:#000}
+  .mte-csrow{flex:1 1 auto;display:flex;align-items:center;gap:11px;overflow-x:auto;scrollbar-width:none}
+  .mte-csrow::-webkit-scrollbar{display:none}
+  .mte-cs{flex:0 0 auto;width:26px;height:26px;border-radius:50%;border:2px solid #fff;padding:0;cursor:pointer}
   .mte-sheet-body{flex:1;display:flex;align-items:center;justify-content:center;position:relative;padding:0 60px 0 22px}
   .mte-ta{width:100%;box-sizing:border-box;padding:0;background:transparent;border:0;outline:0;color:#fff;font-family:var(--ovfont);font-weight:700;font-size:28px;text-align:center;resize:none;-webkit-text-stroke:2px #000;paint-order:stroke fill;line-height:1.2;overflow-y:auto;max-height:55vh;word-break:normal;overflow-wrap:break-word}
   .mte-sizewrap{position:absolute;right:16px;top:50%;transform:translateY(-50%);height:44%;display:flex;align-items:center}
@@ -536,12 +539,20 @@
       </div>
       <div class="mte-sheet" id="mteSheet">
         <div class="mte-sheet-top">
-          <span class="wheel" aria-label="Colour"><input type="color" id="mteColorWheel" oninput="mteSetColor(this.value)"></span>
-          <button onclick="mteToggleOutline()" aria-label="Outline" id="mteOutlineBtn">&#9398;</button>
+          <button class="mte-stybtn" onclick="mteToggleStyle()" id="mteStyBtn" aria-label="Text style">A</button>
+          <div class="mte-csrow">
+            <button class="mte-cs" style="background:#ffffff" onclick="mteSetColor('#ffffff')" aria-label="White"></button>
+            <button class="mte-cs" style="background:#000000" onclick="mteSetColor('#000000')" aria-label="Black"></button>
+            <button class="mte-cs" style="background:#fe2c55" onclick="mteSetColor('#fe2c55')" aria-label="Red"></button>
+            <button class="mte-cs" style="background:#ffd400" onclick="mteSetColor('#ffd400')" aria-label="Yellow"></button>
+            <button class="mte-cs" style="background:#27c2a0" onclick="mteSetColor('#27c2a0')" aria-label="Teal"></button>
+            <button class="mte-cs" style="background:#3a86ff" onclick="mteSetColor('#3a86ff')" aria-label="Blue"></button>
+            <button class="mte-cs" style="background:#8b5cf6" onclick="mteSetColor('#8b5cf6')" aria-label="Purple"></button>
+          </div>
           <button class="mte-done" onclick="mteTextDone()">Done</button>
         </div>
         <div class="mte-sheet-body">
-          <textarea class="mte-ta" id="mteTa" rows="2" placeholder="Add text" oninput="mteLiveApply()"></textarea>
+          <textarea class="mte-ta" id="mteTa" rows="1" placeholder="Add text" oninput="mteLiveApply()"></textarea>
           <div class="mte-sizewrap"><input type="range" class="mte-size" id="mteSize" min="14" max="72" value="28" oninput="mteSizeChange(this.value)"></div>
         </div>
         <div class="mte-fonts" id="mteFonts">
@@ -550,16 +561,6 @@
           <button class="mte-fbtn" data-font="neon" onclick="mteSetFont('neon',this)">Neon</button>
           <button class="mte-fbtn" data-font="retro" onclick="mteSetFont('retro',this)" style="font-style:italic">Retro</button>
           <button class="mte-fbtn" data-font="comic" onclick="mteSetFont('comic',this)" style="font-family:'Comic Sans MS',cursive">Comic Sans</button>
-        </div>
-        <div class="mte-colors">
-          <span class="wheel" aria-label="Colour wheel"><input type="color" oninput="mteSetColor(this.value)"></span>
-          <button style="background:#ffffff" onclick="mteSetColor('#ffffff')" aria-label="White"></button>
-          <button style="background:#000000" onclick="mteSetColor('#000000')" aria-label="Black"></button>
-          <button style="background:#fe2c55" onclick="mteSetColor('#fe2c55')" aria-label="Red"></button>
-          <button style="background:#ffd400" onclick="mteSetColor('#ffd400')" aria-label="Yellow"></button>
-          <button style="background:#27c2a0" onclick="mteSetColor('#27c2a0')" aria-label="Teal"></button>
-          <button style="background:#3a86ff" onclick="mteSetColor('#3a86ff')" aria-label="Blue"></button>
-          <button style="background:#8b5cf6" onclick="mteSetColor('#8b5cf6')" aria-label="Purple"></button>
         </div>
       </div>
     </div>
@@ -1081,12 +1082,17 @@ function swOverlayHtml(v){
   const es=v.edit_state;
   if(es&&es.overlays&&es.overlays.length){
     return es.overlays.map(o=>{
-      const out=(o.outline!==false)?'-webkit-text-stroke:2px #000;paint-order:stroke fill;':'';
+      const isBox=(o.style==='box');
       const fam=(o.font&&o.font!=='classic'&&o.font!=='TikTok Sans')?mteFontCss(o.font):'var(--ovfont)';
       const fst=(o.font==='retro')?'italic':'normal';
       const fw=(o.font==='elegance')?'600':'700';
+      const base='left:'+o.x+'%;top:'+o.y+'%;transform:translate(-50%,-50%);font-family:'+fam+';font-weight:'+fw+';font-style:'+fst+';font-size:'+(o.size||24)+'px;text-align:center;width:max-content;max-width:84%;overflow-wrap:break-word;word-break:normal;letter-spacing:-0.01em;';
+      if(isBox){
+        return '<div class="sw-text" style="'+base+'color:transparent;line-height:1.55"><span style="background:'+o.color+';color:'+mteContrast(o.color)+';padding:0.08em 0.32em;border-radius:0.18em;-webkit-box-decoration-break:clone;box-decoration-break:clone">'+esc(o.text)+'</span></div>';
+      }
+      const out=(o.outline!==false)?'-webkit-text-stroke:2px #000;paint-order:stroke fill;':'';
       const sh=(o.font==='neon')?('text-shadow:0 0 6px '+o.color+',0 0 13px '+o.color+';'):'';
-      return '<div class="sw-text" style="left:'+o.x+'%;top:'+o.y+'%;transform:translate(-50%,-50%);font-family:'+fam+';font-weight:'+fw+';font-style:'+fst+';font-size:'+(o.size||24)+'px;color:'+o.color+';'+out+sh+'text-align:center;width:max-content;max-width:84%;overflow-wrap:break-word;word-break:normal;letter-spacing:-0.01em;line-height:1.2">'+esc(o.text)+'</div>';
+      return '<div class="sw-text" style="'+base+'color:'+o.color+';'+out+sh+'line-height:1.2">'+esc(o.text)+'</div>';
     }).join('');
   }
   const txt=v.caption_suggested||'';
@@ -1325,7 +1331,11 @@ function epInitTextDrag(){
 // ---------- MOBILE TIKTOK-STYLE EDITOR ----------
 let mteId=null, mteDuration=0, mteSegments=[], mteSelSeg=-1, mteThumbs=[], mtePlaying=false, mteTexts=[], mteEditingOv=null, mteOvSeq=0;
 let mtePps=0, mtePpsFit=0, mteProgScroll=false, mteProgT=0, mteRaf=0, mteMuted=false, mteBound=false, mteSeekTarget=null, mteSeekRaf=0;
-let mteCurColor='#ffffff', mteCurSize=28, mteCurFont='classic', mteCurOutline=true, mtePinchBase=0, mtePinchPps=0;
+let mteCurColor='#ffffff', mteCurSize=28, mteCurFont='classic', mteCurStyle='outline', mtePinchBase=0, mtePinchPps=0;
+function mteContrast(hex){ const m=/^#?([0-9a-f]{6})$/i.exec(hex||''); if(!m)return '#000'; const n=parseInt(m[1],16); const r=(n>>16)&255,g=(n>>8)&255,b=n&255; return (0.299*r+0.587*g+0.114*b)>150?'#000':'#fff'; }
+function mteSyncKb(){ const sh=document.getElementById('mteSheet'); if(!sh)return; const vv=window.visualViewport; if(vv){ sh.style.height=vv.height+'px'; sh.style.top=vv.offsetTop+'px'; } }
+function mteKbBind(){ if(window.visualViewport){ window.visualViewport.addEventListener('resize',mteSyncKb); window.visualViewport.addEventListener('scroll',mteSyncKb); } mteSyncKb(); }
+function mteKbUnbind(){ if(window.visualViewport){ window.visualViewport.removeEventListener('resize',mteSyncKb); window.visualViewport.removeEventListener('scroll',mteSyncKb); } const sh=document.getElementById('mteSheet'); if(sh){ sh.style.height=''; sh.style.top=''; } }
 
 function mteV(){ return document.getElementById('mteVideo'); }
 
@@ -1342,7 +1352,7 @@ async function mteAutoSuggest(id){
     if(error||(data&&data.error)) return; // no data / not configured -- user can tap Suggest overlays
     const {data:vr}=await sb.from('videos').select('caption_suggested').eq('id',id).single();
     if(vr&&vr.caption_suggested&&mteId===id&&!mteTexts.length){
-      mteTexts.push({id:++mteOvSeq,text:vr.caption_suggested,x:50,y:74,color:'#ffffff',size:24,font:'classic',outline:true});
+      mteTexts.push({id:++mteOvSeq,text:vr.caption_suggested,x:50,y:74,color:'#ffffff',size:24,font:'classic',style:'outline'});
       mteRenderOverlays();
       const sv=swVids.find(x=>x.id===id); if(sv)sv.caption_suggested=vr.caption_suggested;
       toast('Overlay idea added','ok');
@@ -1356,8 +1366,8 @@ async function mteOpen(id){
   let url=signed[id];
   if(!url){ const {data:s}=await sb.storage.from(BUCKET).createSignedUrl(v.storage_path,3600); url=s&&s.signedUrl; if(url)signed[id]=url; }
   const es=v.edit_state;
-  if(es&&es.overlays&&es.overlays.length){ mteTexts=es.overlays.map(o=>({id:++mteOvSeq,text:o.text,x:o.x,y:o.y,color:o.color,size:o.size||24,font:(o.font==='TikTok Sans'?'classic':(o.font||'classic')),outline:(o.outline!==false)})); }
-  else if(v.caption_suggested){ mteTexts.push({id:++mteOvSeq,text:v.caption_suggested,x:50,y:74,color:'#ffffff',size:24,font:'classic',outline:true}); }
+  if(es&&es.overlays&&es.overlays.length){ mteTexts=es.overlays.map(o=>({id:++mteOvSeq,text:o.text,x:o.x,y:o.y,color:o.color,size:o.size||24,font:(o.font==='TikTok Sans'?'classic':(o.font||'classic')),style:(o.style||((o.outline===false)?'outline':'outline'))})); }
+  else if(v.caption_suggested){ mteTexts.push({id:++mteOvSeq,text:v.caption_suggested,x:50,y:74,color:'#ffffff',size:24,font:'classic',style:'outline'}); }
   if(!mteTexts.length && v.product_uid){ mteAutoSuggest(id); }
   const vid=mteV(); vid.muted=false;
   vid.onloadedmetadata=()=>{
@@ -1503,10 +1513,15 @@ async function mteBuildThumbs(){
 function mteFontCss(key){ if(key==='elegance')return "Georgia,'Times New Roman',serif"; if(key==='comic')return "'Comic Sans MS','Chalkboard SE',cursive"; return "var(--ovfont)"; }
 function mteApplyTaStyle(){
   const ta=document.getElementById('mteTa'); if(!ta)return;
-  ta.style.color=mteCurColor; ta.style.fontSize=mteCurSize+'px'; ta.style.fontFamily=mteFontCss(mteCurFont);
+  ta.style.fontSize=mteCurSize+'px'; ta.style.fontFamily=mteFontCss(mteCurFont);
   ta.style.fontStyle=(mteCurFont==='retro')?'italic':'normal'; ta.style.fontWeight=(mteCurFont==='elegance')?'600':'700';
-  ta.style.webkitTextStroke=mteCurOutline?'2px #000':'0';
-  ta.style.textShadow=(mteCurFont==='neon')?('0 0 6px '+mteCurColor+',0 0 13px '+mteCurColor):'none';
+  if(mteCurStyle==='box'){
+    ta.style.color=mteContrast(mteCurColor); ta.style.background=mteCurColor; ta.style.webkitTextStroke='0'; ta.style.textShadow='none'; ta.style.padding='0.06em 0.3em'; ta.style.borderRadius='0.18em';
+  } else {
+    ta.style.color=mteCurColor; ta.style.background='transparent'; ta.style.webkitTextStroke='2px #000'; ta.style.padding='0'; ta.style.borderRadius='0';
+    ta.style.textShadow=(mteCurFont==='neon')?('0 0 6px '+mteCurColor+',0 0 13px '+mteCurColor):'none';
+  }
+  const stb=document.getElementById('mteStyBtn'); if(stb)stb.classList.toggle('on',mteCurStyle==='box');
   // Match the edit box width to the on-video overlay's wrap width so editor == saved result
   const pv=document.getElementById('mtePv');
   if(pv&&pv.clientWidth){ const w=Math.round(pv.clientWidth*0.84); ta.style.width=w+'px'; ta.style.maxWidth=w+'px'; }
@@ -1516,32 +1531,31 @@ function mteAutoSizeTa(){ const ta=document.getElementById('mteTa'); if(!ta)retu
 function mteSelFontBtn(key){ document.querySelectorAll('#mteFonts .mte-fbtn').forEach(b=>b.classList.toggle('sel',b.dataset.font===key)); }
 function mteAddText(){ mteOpenTextSheet(null); }
 function mteOpenTextSheet(ov){
-  if(!ov){ ov={id:++mteOvSeq,text:'',x:50,y:50,color:'#ffffff',size:28,font:'classic',outline:true}; mteTexts.push(ov); }
+  if(!ov){ ov={id:++mteOvSeq,text:'',x:50,y:50,color:'#ffffff',size:28,font:'classic',style:'outline'}; mteTexts.push(ov); }
   mteEditingOv=ov;
-  mteCurColor=ov.color||'#ffffff'; mteCurSize=ov.size||28; mteCurFont=ov.font||'classic'; mteCurOutline=(ov.outline!==false);
+  mteCurColor=ov.color||'#ffffff'; mteCurSize=ov.size||28; mteCurFont=ov.font||'classic'; mteCurStyle=ov.style||((ov.outline===false)?'outline':'outline');
   const ta=document.getElementById('mteTa'); ta.value=ov.text||'';
   const sz=document.getElementById('mteSize'); if(sz)sz.value=mteCurSize;
-  const cw=document.getElementById('mteColorWheel'); if(cw)cw.value=(/^#[0-9a-fA-F]{6}$/.test(mteCurColor)?mteCurColor:'#ffffff');
   mteSelFontBtn(mteCurFont); mteApplyTaStyle(); mteRenderOverlays();
   document.getElementById('mteSheet').classList.add('open');
-  setTimeout(()=>{ta.focus(); mteAutoSizeTa();},60);
+  ta.focus(); mteAutoSizeTa(); mteKbBind();   // focus synchronously so the keyboard opens on the tap
 }
 // Apply the current control values live to the overlay being edited, so changes show on the video instantly
 function mteLiveApply(){
   mteAutoSizeTa();
   if(!mteEditingOv)return;
   const ta=document.getElementById('mteTa'); if(ta)mteEditingOv.text=ta.value;
-  mteEditingOv.color=mteCurColor; mteEditingOv.size=mteCurSize; mteEditingOv.font=mteCurFont; mteEditingOv.outline=mteCurOutline;
+  mteEditingOv.color=mteCurColor; mteEditingOv.size=mteCurSize; mteEditingOv.font=mteCurFont; mteEditingOv.style=mteCurStyle;
   mteRenderOverlays();
 }
 function mteSetColor(c){ mteCurColor=c; mteApplyTaStyle(); mteLiveApply(); }
 function mteSizeChange(v){ mteCurSize=parseInt(v)||28; mteApplyTaStyle(); mteLiveApply(); }
 function mteSetFont(key,btn){ mteCurFont=key; mteSelFontBtn(key); mteApplyTaStyle(); mteLiveApply(); }
-function mteToggleOutline(){ mteCurOutline=!mteCurOutline; const b=document.getElementById('mteOutlineBtn'); if(b)b.style.opacity=mteCurOutline?'1':'0.5'; mteApplyTaStyle(); mteLiveApply(); }
+function mteToggleStyle(){ mteCurStyle=(mteCurStyle==='box')?'outline':'box'; mteApplyTaStyle(); mteLiveApply(); }
 function mteTextDone(){
   const ta=document.getElementById('mteTa'); const txt=(ta?ta.value:'').trim();
-  if(mteEditingOv){ if(!txt){ mteTexts=mteTexts.filter(o=>o!==mteEditingOv); } else { Object.assign(mteEditingOv,{text:txt,color:mteCurColor,size:mteCurSize,font:mteCurFont,outline:mteCurOutline}); } }
-  document.getElementById('mteSheet').classList.remove('open'); mteEditingOv=null; mteRenderOverlays();
+  if(mteEditingOv){ if(!txt){ mteTexts=mteTexts.filter(o=>o!==mteEditingOv); } else { Object.assign(mteEditingOv,{text:txt,color:mteCurColor,size:mteCurSize,font:mteCurFont,style:mteCurStyle}); } }
+  document.getElementById('mteSheet').classList.remove('open'); mteEditingOv=null; mteKbUnbind(); mteRenderOverlays();
 }
 
 function mteRenderOverlays(){
@@ -1549,12 +1563,18 @@ function mteRenderOverlays(){
   mteTexts.forEach(o=>{
     const d=document.createElement('div'); d.className='mte-ov';
     d.style.left=o.x+'%'; d.style.top=o.y+'%'; d.style.transform='translate(-50%,-50%)';
-    d.style.color=o.color; d.style.fontFamily=mteFontCss(o.font||'classic');
+    d.style.fontFamily=mteFontCss(o.font||'classic');
     d.style.fontWeight=((o.font==='elegance')?'600':'700'); d.style.fontStyle=(o.font==='retro')?'italic':'normal';
     d.style.fontSize=(o.size||24)+'px';
-    d.style.webkitTextStroke=(o.outline!==false)?'2px #000':'0'; d.style.paintOrder='stroke fill';
-    d.style.textShadow=(o.font==='neon')?('0 0 6px '+o.color+',0 0 13px '+o.color):'none';
-    d.textContent=o.text;
+    const sty=o.style||((o.outline===false)?'outline':'outline');
+    if(sty==='box'){
+      d.style.color='transparent'; d.style.webkitTextStroke='0'; d.style.textShadow='none';
+      d.innerHTML='<span style="background:'+o.color+';color:'+mteContrast(o.color)+';padding:0.08em 0.32em;border-radius:0.18em;-webkit-box-decoration-break:clone;box-decoration-break:clone;line-height:1.55">'+esc(o.text)+'</span>';
+    } else {
+      d.style.color=o.color; d.style.webkitTextStroke='2px #000'; d.style.paintOrder='stroke fill';
+      d.style.textShadow=(o.font==='neon')?('0 0 6px '+o.color+',0 0 13px '+o.color):'none';
+      d.textContent=o.text;
+    }
     mteOvDrag(d,o);
     wrap.appendChild(d);
   });
@@ -1580,7 +1600,7 @@ function mteOvDrag(el,o){
 async function mteSave(){
   const v=swVids.find(x=>x.id===mteId); if(!v){ mteClose(); return; }
   const segs=mteSegments.map(s=>({start:Math.round(s.start*100)/100,end:Math.round(s.end*100)/100}));
-  const overlays=mteTexts.map(o=>({text:o.text,x:Math.round(o.x*10)/10,y:Math.round(o.y*10)/10,color:o.color,size:o.size||24,font:(o.font||'classic'),outline:(o.outline!==false)}));
+  const overlays=mteTexts.map(o=>({text:o.text,x:Math.round(o.x*10)/10,y:Math.round(o.y*10)/10,color:o.color,size:o.size||24,font:(o.font||'classic'),style:(o.style||'outline')}));
   const editState={segments:segs,overlays:overlays,source_duration:Math.round(mteDuration*100)/100,edited_at:new Date().toISOString()};
   const cap=overlays.length?overlays[0].text:(v.caption_suggested||null);
   // 1) Persist the edit state to the video so it survives, restores on re-open, and shows on the swipe card
@@ -1589,7 +1609,7 @@ async function mteSave(){
   v.edit_state=editState; v.caption_suggested=cap;
   swRender();
   // 2) Queue the worker to render the trimmed + captioned file (non-blocking)
-  const wOverlays=overlays.map(o=>({text:o.text,x:o.x,y:o.y,color:o.color,size:o.size,font:(o.font==='classic'?'TikTok Sans':o.font),weight:700,stroke:(o.outline!==false)?2.5:0,outline:(o.outline!==false)}));
+  const wOverlays=overlays.map(o=>({text:o.text,x:o.x,y:o.y,color:o.color,size:o.size,font:(o.font==='classic'?'TikTok Sans':o.font),weight:700,style:(o.style||'outline'),box:(o.style==='box'),stroke:(o.style==='box'?0:2.5),outline:(o.style!=='box')}));
   const job={video_id:mteId,storage_path:v.storage_path,filename:v.filename,folder_id:v.folder_id,product_uid:v.product_uid,options:{segments:segs,source_duration:editState.source_duration,overlays:wOverlays,edited_at:editState.edited_at},status:'queued',requested_by:displayName(state.user)};
   const {error:je}=await sb.from('edit_jobs').insert(job);
   toast(je?'Edits saved (render queue pending)':'Edits saved','ok');
