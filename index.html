@@ -1714,9 +1714,41 @@ function tusUpload(file,objectPath,onProgress){ return new Promise(async(res,rej
 async function runPool(items,worker,c){ let i=0; const next=async()=>{ while(i<items.length){ const idx=i++; await worker(items[idx],idx); } }; await Promise.all(Array.from({length:Math.min(c,items.length||1)},next)); }
 async function uploadOne(file,prodId,onProgress){ const safe=file.name.replace(/[^\w.\-]+/g,'_'); const path=(prodId||'root')+'/'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'_'+safe; await tusUpload(file,path,onProgress); if(onProgress)onProgress(file.size||0,file.size||0); const{data:vrow,error:ie}=await sb.from('videos').insert({product_uid:prodId,kind:'raw',title:file.name,filename:file.name,storage_path:path,size_bytes:file.size,content_type:'video/mp4'}).select('id').single(); if(ie)throw ie; if(prodId&&vrow&&vrow.id){ sb.functions.invoke('suggest-overlays',{body:{video_id:vrow.id}}).catch(()=>{}); } }
 let __bgD=0,__bgF=0,__bgT=0,__bgA=0;
+let __bgTotalBytes=0, __bgSent={}, __bgSeq=0, __spSamples=[];
+function __bgBytesDone(){ let s=0; for(const k in __bgSent) s+=(__bgSent[k]||0); return s; }
+function fmtMB(b){ return (Math.max(0,b)/1048576).toFixed(1)+' MB'; }
+function fmtETA(sec){ sec=Math.max(0,Math.round(sec)); const m=Math.floor(sec/60), s=sec%60; return m>0?(m+'m '+s+'s'):(s+'s'); }
+function etaText(done,total){ const now=Date.now(); if(!__spSamples.length||now-__spSamples[__spSamples.length-1].t>300){__spSamples.push({t:now,bytes:done});} __spSamples=__spSamples.filter(x=>now-x.t<=6000); if(__spSamples.length>=2){ const a=__spSamples[0],b=__spSamples[__spSamples.length-1]; const dt=(b.t-a.t)/1000,db=b.bytes-a.bytes,sp=dt>0?db/dt:0; if(sp>1000) return fmtETA((total-done)/sp); } return null; }
 function bgEl(){ let e=document.getElementById('upStatus'); if(!e){e=document.createElement('div');e.id='upStatus';e.className='upstatus hide';document.body.appendChild(e);} return e; }
-function drawBg(){ const e=bgEl(); if(__bgT===0){e.classList.add('hide');return;} e.classList.remove('hide'); const f=__bgD+__bgF; if(__bgA>0||f<__bgT) e.innerHTML=`<span class="spin"></span> Uploading… ${f}/${__bgT}`; else { e.innerHTML=`✓ ${__bgD} uploaded${__bgF?(' · '+__bgF+' failed'):''}`; setTimeout(()=>{if(__bgA===0){__bgT=0;__bgD=0;__bgF=0;bgEl().classList.add('hide');}},4000); } }
-async function bgUpload(jobs){ if(!jobs.length)return; __bgT+=jobs.length;__bgA++;drawBg(); await runPool(jobs,async j=>{ try{await uploadOne(j.file,j.prod);__bgD++;}catch(e){__bgF++;toast('Upload failed: '+j.file.name,'err');} drawBg(); },4); __bgA--; if(state.currentView==='bank'){await loadBank();} drawBg(); }
+function drawBg(){
+  const e=bgEl(); if(__bgT===0){e.classList.add('hide');return;} e.classList.remove('hide');
+  const f=__bgD+__bgF;
+  if(__bgA>0||f<__bgT){
+    const done=__bgBytesDone(), total=__bgTotalBytes||1, pct=Math.min(100,Math.round(done/total*100)), eta=etaText(done,total);
+    e.innerHTML='<div style="width:236px">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span class="spin"></span><span>Uploading '+f+'/'+__bgT+(eta?(' &middot; '+eta+' left'):'')+'</span></div>'
+      +'<div style="height:6px;background:rgba(255,255,255,.25);border-radius:999px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:#fff;border-radius:999px;transition:width .25s"></div></div>'
+      +'<div style="font-size:11px;font-weight:500;opacity:.85;margin-top:5px">'+fmtMB(done)+' of '+fmtMB(total)+' &middot; '+pct+'%</div>'
+      +'</div>';
+  } else {
+    e.innerHTML='&#10003; '+__bgD+' uploaded'+(__bgF?(' &middot; '+__bgF+' failed'):'');
+    setTimeout(()=>{ if(__bgA===0){ __bgT=0;__bgD=0;__bgF=0;__bgTotalBytes=0;__bgSent={};__spSamples=[]; bgEl().classList.add('hide'); } },4000);
+  }
+}
+async function bgUpload(jobs){
+  if(!jobs.length)return;
+  __bgT+=jobs.length; __bgA++;
+  jobs.forEach(j=>{ j.__id='u'+(++__bgSeq); __bgSent[j.__id]=0; __bgTotalBytes+=(j.file.size||0); });
+  drawBg();
+  await runPool(jobs,async j=>{
+    try{ await uploadOne(j.file,j.prod,(sent)=>{ __bgSent[j.__id]=sent; drawBg(); }); __bgD++; __bgSent[j.__id]=(j.file.size||__bgSent[j.__id]); }
+    catch(e){ __bgF++; toast('Upload failed: '+j.file.name,'err'); }
+    drawBg();
+  },4);
+  __bgA--;
+  if(state.currentView==='bank'){await loadBank();}
+  drawBg();
+}
 function openUploadManager(preFiles){
   if(!state.products.length){ toast('Create a product first (run a scrape, or it’s created on the fly)','err'); }
   window.__umFiles=(preFiles&&preFiles.length)?[...preFiles]:[];
