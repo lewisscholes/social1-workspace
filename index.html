@@ -1346,7 +1346,7 @@ function epInitTextDrag(){
 // ---------- MOBILE TIKTOK-STYLE EDITOR ----------
 let mteId=null, mteDuration=0, mteSegments=[], mteSelSeg=-1, mteThumbs=[], mtePlaying=false, mteTexts=[], mteEditingOv=null, mteOvSeq=0;
 let mtePps=0, mtePpsFit=0, mteProgScroll=false, mteProgT=0, mteRaf=0, mteMuted=false, mteBound=false, mteSeekTarget=null, mteSeekRaf=0;
-let mteCurColor='#ffffff', mteCurSize=28, mteCurFont='classic', mteCurStyle='outline', mtePinchBase=0, mtePinchPps=0, mtePinchRaf=0, mteThumbRaf=0, mteTrimming=false, mteTrimContentW=0;
+let mteCurColor='#ffffff', mteCurSize=28, mteCurFont='classic', mteCurStyle='outline', mtePinchBase=0, mtePinchPps=0, mtePinchRaf=0, mteThumbRaf=0, mteTrimming=false, mteTrimContentW=0, mteLastScrubSeek=0, mteScrubEndT=0;
 function mteContrast(hex){ const m=/^#?([0-9a-f]{6})$/i.exec(hex||''); if(!m)return '#000'; const n=parseInt(m[1],16); const r=(n>>16)&255,g=(n>>8)&255,b=n&255; return (0.299*r+0.587*g+0.114*b)>150?'#000':'#fff'; }
 function mteSyncKb(){ const sh=document.getElementById('mteSheet'); if(!sh)return; const vv=window.visualViewport; if(vv){ sh.style.height=vv.height+'px'; sh.style.top=vv.offsetTop+'px'; } }
 function mteKbBind(){ if(window.visualViewport){ window.visualViewport.addEventListener('resize',mteSyncKb); window.visualViewport.addEventListener('scroll',mteSyncKb); } mteSyncKb(); }
@@ -1495,7 +1495,7 @@ function mteTrimBind(el,side){
     const p0=e.touches?e.touches[0]:e; const sx=p0.clientX, os=seg.start, oe=seg.end, osl=scroll.scrollLeft;
     const lower=(mteSelSeg>0?mteSegments[mteSelSeg-1].end:0);
     const upper=(mteSelSeg<mteSegments.length-1?mteSegments[mteSelSeg+1].start:(mteDuration||oe));
-    const MIN=0.25, pad=(scroll.clientWidth||320)/2, SNAP=10/mtePps;
+    const MIN=0.25, pad=(scroll.clientWidth||320)/2, SNAP=20/mtePps;
     const phTime=mteV().currentTime;   // the playhead line's current position -> snap target for precise cuts
     content.style.width=((mteDuration||oe)*mtePps+2*pad+200)+'px';   // freeze scroll width so reflow can't clamp-jump the view
     let raf=0, pendingEdge=0, lastSeek=0;
@@ -1589,7 +1589,7 @@ function mteBindTl(){
     if(mteTrimming)return;   // a trim-handle drag just ended; don't treat it as a tap
     if(!tapPinch&&!tapMoved&&(Date.now()-tapT)<350){ mteSelectAtClientX(tapX); }   // quick tap = select the clip
   },{passive:true});
-  scroll.addEventListener('scroll',()=>{ if(mteTrimming)return; if(!mteThumbRaf)mteThumbRaf=requestAnimationFrame(()=>{ mteThumbRaf=0; mteRenderThumbs(); }); if(mtePlaying||mteProgScroll)return; mteSeekTarget=Math.max(0,Math.min(mteTotalKept(),scroll.scrollLeft/mtePps)); if(!mteSeekRaf)mteSeekRaf=requestAnimationFrame(mteApplySeek); });
+  scroll.addEventListener('scroll',()=>{ if(mteTrimming)return; if(!mteThumbRaf)mteThumbRaf=requestAnimationFrame(()=>{ mteThumbRaf=0; mteRenderThumbs(); }); if(mtePlaying||mteProgScroll)return; mteSeekTarget=Math.max(0,Math.min(mteTotalKept(),scroll.scrollLeft/mtePps)); const now=performance.now(); if(now-mteLastScrubSeek>70){ mteLastScrubSeek=now; if(!mteSeekRaf)mteSeekRaf=requestAnimationFrame(mteApplySeek); } clearTimeout(mteScrubEndT); mteScrubEndT=setTimeout(()=>{ if(!mteSeekRaf)mteSeekRaf=requestAnimationFrame(mteApplySeek); },90); });
   // Scrubbing in the black gap below the timeline also scrolls the timeline (handy thumb area)
   const gap=document.querySelector('.mte-gap');
   if(gap){
@@ -1634,8 +1634,10 @@ function mteSplit(){
 function mteDeleteSeg(){
   if(mteSelSeg<0){ toast('Tap a clip on the timeline first','err'); return; }
   if(mteSegments.length<=1){ toast('Cannot delete the only clip','err'); return; }
+  const vid=mteV(); const keptPos=mteSrcToKept(vid.currentTime);   // remember where the marker line is
   mteSegments.splice(mteSelSeg,1); mteSelSeg=-1;
-  const vid=mteV(); if(mteSegments.length)vid.currentTime=mteSegments[0].start;
+  const kp=Math.max(0,Math.min(keptPos, mteTotalKept()));          // keep the line at the same spot (clamped)
+  vid.currentTime=mteKeptToSrc(kp);
   mteRenderTL(); mteUpdTime(); toast('Deleted','ok');
 }
 
