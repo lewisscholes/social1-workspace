@@ -249,17 +249,42 @@
   .cm-row2{display:flex;gap:6px;margin:6px 0}
   @media (max-width:820px){
     .sidebar{display:none}
-    .main{padding:calc(16px + env(safe-area-inset-top)) 14px calc(86px + env(safe-area-inset-bottom))}
+    .sidebar.open{display:flex;position:fixed;top:0;left:0;bottom:0;width:82%;max-width:300px;z-index:80;box-shadow:0 24px 70px rgba(10,12,30,.4);animation:drawerin .22s ease}
+    .main{padding:calc(16px + env(safe-area-inset-top)) 14px calc(96px + env(safe-area-inset-bottom))}
+    .head{padding-left:46px}
+    .drawer-btn{display:flex;position:fixed;top:calc(12px + env(safe-area-inset-top));left:12px;z-index:70;width:38px;height:38px;border-radius:12px;background:#fff;box-shadow:var(--shadow);border:0;align-items:center;justify-content:center;font-size:19px;color:var(--ink);cursor:pointer}
     .metrics{grid-template-columns:1fr}
     .desktop-only{display:none!important}
     .cards{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
-    .bottomnav{display:flex!important}
+    .bottomnav{display:flex!important;align-items:center}
   }
+  @keyframes drawerin{from{transform:translateX(-100%)}to{transform:none}}
   .bottomnav{display:none;position:fixed;bottom:calc(10px + env(safe-area-inset-bottom));left:12px;right:12px;min-height:auto;padding:9px 6px;box-sizing:border-box;background:#fff;border-radius:22px;box-shadow:var(--shadow-lg);z-index:65}
   .bottomnav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:0;color:#a3a8bd;font-size:10px;font-weight:600;cursor:pointer;transition:color .12s ease}
   .bottomnav button .bi{font-size:19px;width:42px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:12px;transition:background .14s ease}
   .bottomnav button.active{color:var(--blue-d);font-weight:700}
   .bottomnav button.active .bi{background:var(--blue-soft)}
+  .bnav-plus{flex:0 0 auto;width:52px;height:52px;border-radius:17px;background:var(--grad);color:#fff;box-shadow:0 9px 22px rgba(108,92,231,.5);display:flex;align-items:center;justify-content:center;margin:-18px 6px 0;border:0;cursor:pointer;transition:transform .12s ease}
+  .bnav-plus:active{transform:scale(.93)}
+  .bnav-plus .plusic{font-size:28px;font-weight:300;line-height:1;margin-top:-2px}
+  /* mobile drawer (secondary tools) */
+  .drawer-btn{display:none}
+  .scrim{display:none;position:fixed;inset:0;background:rgba(10,12,30,.45);z-index:75}
+  .scrim.open{display:block}
+  /* content schedule calendar */
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .cal-title{font-weight:800;font-size:16px;color:var(--ink)}
+  .cal-nav{border:1px solid var(--line);background:#fff;width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:16px;color:var(--ink)}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .cal-dow{font-size:11px;color:var(--muted);text-align:center;font-weight:700;padding-bottom:4px}
+  .cal-cell{aspect-ratio:1;border-radius:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;font-size:13px;font-weight:600;color:var(--ink);background:#f5f6fc;border:1.5px solid transparent}
+  .cal-cell.empty{background:transparent;cursor:default}
+  .cal-cell.today{border-color:var(--blue)}
+  .cal-cell.sel{background:var(--grad);color:#fff;border-color:transparent}
+  .cal-cell .cdot{width:6px;height:6px;border-radius:50%;background:var(--blue)}
+  .cal-cell.sel .cdot{background:#fff}
+  .sch-item{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+  .sch-time{font-weight:800;font-size:14px;color:var(--blue-d);min-width:54px}
   /* Mobile TikTok-style editor */
   .mte{position:fixed;inset:0;z-index:300;background:#000;color:#fff;display:none;flex-direction:column;-webkit-user-select:none;user-select:none;overscroll-behavior:contain}
   .mte.open{display:flex}
@@ -359,16 +384,20 @@
 </div>
 
 <div id="app" class="hide">
+  <button class="drawer-btn" onclick="toggleDrawer()" aria-label="Menu">&#9776;</button>
+  <div class="scrim" id="scrim" onclick="closeDrawer()"></div>
   <aside class="sidebar">
     <div class="brand"><span class="logo">▶</span> Affiliate Editor</div>
     <button class="nav-btn active" id="nav-dashboard" onclick="showView('dashboard')"><span class="ic">🏠</span> Dashboard</button>
     <button class="nav-btn" id="nav-bank" onclick="showView('bank')"><span class="ic">🎬</span> Video bank</button>
     <button class="nav-btn" id="nav-editor" onclick="showView('editor')"><span class="ic">✂️</span> Editor</button>
-    <div class="nav-sep"></div>
+    <button class="nav-btn" id="nav-schedule" onclick="showView('schedule')"><span class="ic">📅</span> Content Schedule</button>
+    <div class="nav-sep" style="margin-top:14px"></div>
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:8px 10px 4px">Tools</div>
     <button class="nav-btn" id="nav-overlays" onclick="showView('overlays')"><span class="ic">🪄</span> Overlay generator</button>
     <button class="nav-btn" id="nav-training" onclick="showView('training')"><span class="ic">🎓</span> Overlay Training</button>
     <button class="nav-btn" id="nav-team" onclick="showView('team')" style="display:none"><span class="ic">👥</span> Team &amp; Access</button>
-    <div class="side-user">
+    <div class="side-user" style="margin-top:auto">
       <div class="nm" id="sideName"></div>
       <div style="display:flex;gap:8px;margin-top:6px">
         <a id="teamLink" onclick="showView('team')" style="cursor:pointer;display:none">Team</a>
@@ -645,6 +674,30 @@
       </div>
     </section>
 
+    <!-- CONTENT SCHEDULE -->
+    <section id="view-schedule" class="hide">
+      <div class="head">
+        <div>
+          <h2 class="h-title">Content Schedule</h2>
+          <div class="h-sub">When your videos are going out. Schedule a clip by swiping it right in the Video bank.</div>
+        </div>
+        <button class="btn ghost" onclick="loadSchedule()">↻ Refresh</button>
+      </div>
+      <div class="card">
+        <div class="cal-head">
+          <button class="cal-nav" onclick="schedMonth(-1)">&#8249;</button>
+          <div class="cal-title" id="calTitle"></div>
+          <button class="cal-nav" onclick="schedMonth(1)">&#8250;</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:10px" id="calDayTitle">Upcoming</div>
+        <div id="calDayList"></div>
+        <div id="calDayEmpty" class="h-sub hide">Nothing scheduled for this day.</div>
+      </div>
+    </section>
+
     <!-- TEAM -->
     <section id="view-team" class="hide">
       <div class="head"><div><h2 class="h-title">Team &amp; Access</h2><div class="h-sub">Approve access requests and set roles.</div></div><button class="btn ghost" onclick="loadTeam()">↻ Refresh</button></div>
@@ -656,9 +709,9 @@
   <nav class="bottomnav">
     <button id="bnav-dashboard" onclick="showView('dashboard')" class="active"><span class="bi">🏠</span>Dashboard</button>
     <button id="bnav-bank" onclick="showView('bank')"><span class="bi">🎬</span>Bank</button>
+    <button class="bnav-plus" onclick="openUploadManager()" aria-label="Quick upload"><span class="plusic">＋</span></button>
     <button id="bnav-editor" onclick="showView('editor')"><span class="bi">✂️</span>Editor</button>
-    <button id="bnav-overlays" onclick="showView('overlays')"><span class="bi">🪄</span>Captions</button>
-    <button id="bnav-training" onclick="showView('training')"><span class="bi">🎓</span>Train</button>
+    <button id="bnav-schedule" onclick="showView('schedule')"><span class="bi">📅</span>Schedule</button>
   </nav>
 </div>
 
@@ -686,14 +739,58 @@ function prodName(id){ const p=state.products.find(x=>x.id===id); return p?p.nam
 // ---------- nav ----------
 function showView(v){
   state.currentView=v;
-  ['dashboard','bank','editor','overlays','training','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
+  ['dashboard','bank','editor','schedule','overlays','training','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
   if(v==='dashboard') loadDashboard();
   if(v==='bank') loadBank();
   if(v==='editor') loadEditor();
+  if(v==='schedule') loadSchedule();
   if(v==='overlays') loadOverlays();
   if(v==='training') loadTraining();
   if(v==='team') loadTeam();
+  closeDrawer();
 }
+function toggleDrawer(){ const s=document.querySelector('.sidebar'), sc=document.getElementById('scrim'); if(s)s.classList.toggle('open'); if(sc)sc.classList.toggle('open'); }
+function closeDrawer(){ const s=document.querySelector('.sidebar'), sc=document.getElementById('scrim'); if(s)s.classList.remove('open'); if(sc)sc.classList.remove('open'); }
+
+// ---------- CONTENT SCHEDULE ----------
+async function loadSchedule(){
+  if(!state.schedRef) state.schedRef=new Date();
+  await loadProducts();
+  const {data}=await sb.from('videos').select('id,filename,scheduled_at,posted_at,product_uid').not('scheduled_at','is',null).order('scheduled_at',{ascending:true});
+  state.schedVids=data||[];
+  renderCalendar();
+}
+function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function renderCalendar(){
+  const ref=state.schedRef||new Date(); const y=ref.getFullYear(), mo=ref.getMonth();
+  document.getElementById('calTitle').textContent=ref.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+  const byDay={};
+  (state.schedVids||[]).forEach(v=>{ const k=ymd(new Date(v.scheduled_at)); (byDay[k]=byDay[k]||[]).push(v); });
+  const first=new Date(y,mo,1); const startDow=first.getDay(); const days=new Date(y,mo+1,0).getDate();
+  const todayK=ymd(new Date());
+  let html=['Su','Mo','Tu','We','Th','Fr','Sa'].map(d=>'<div class="cal-dow">'+d+'</div>').join('');
+  for(let i=0;i<startDow;i++) html+='<div class="cal-cell empty"></div>';
+  for(let d=1;d<=days;d++){
+    const k=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const has=byDay[k]&&byDay[k].length;
+    const cls='cal-cell'+(k===todayK?' today':'')+(k===state.schedSel?' sel':'');
+    html+='<div class="'+cls+'" onclick="schedPick(\''+k+'\')"><div>'+d+'</div>'+(has?'<div class="cdot"></div>':'')+'</div>';
+  }
+  document.getElementById('calGrid').innerHTML=html;
+  renderSchedDay(byDay);
+}
+function renderSchedDay(byDay){
+  byDay=byDay||(()=>{ const o={}; (state.schedVids||[]).forEach(v=>{ const k=ymd(new Date(v.scheduled_at)); (o[k]=o[k]||[]).push(v); }); return o; })();
+  const list=document.getElementById('calDayList'); const empty=document.getElementById('calDayEmpty'); const title=document.getElementById('calDayTitle');
+  const pname=id=>{const p=state.products.find(x=>x.id===id);return p?p.name:'';};
+  let rows;
+  if(state.schedSel){ title.textContent=new Date(state.schedSel+'T00:00').toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'}); rows=(byDay[state.schedSel]||[]); }
+  else { title.textContent='Upcoming'; const now=Date.now(); rows=(state.schedVids||[]).filter(v=>new Date(v.scheduled_at).getTime()>=now-86400000).slice(0,30); }
+  empty.classList.toggle('hide',rows.length>0);
+  list.innerHTML=rows.map(v=>{ const dt=new Date(v.scheduled_at); const tm=dt.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); const dlbl=state.schedSel?tm:dt.toLocaleDateString(undefined,{day:'numeric',month:'short'})+' '+tm; const posted=v.posted_at?' &middot; <span style="color:var(--green);font-weight:700">posted</span>':''; return '<div class="sch-item"><div class="sch-time">'+dlbl+'</div><div style="flex:1;min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(v.filename||'video')+'</div><div class="h-sub">'+esc(pname(v.product_uid))+posted+'</div></div></div>'; }).join('');
+}
+function schedPick(k){ state.schedSel=(state.schedSel===k?null:k); renderCalendar(); }
+function schedMonth(delta){ const r=state.schedRef||new Date(); state.schedRef=new Date(r.getFullYear(),r.getMonth()+delta,1); state.schedSel=null; renderCalendar(); }
 
 // ---------- OVERLAY TRAINING ----------
 async function loadTraining(){
