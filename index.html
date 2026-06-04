@@ -288,10 +288,11 @@
   .mte-sheet-top .mte-done{margin-left:0;font-size:16px;font-weight:700;background:transparent;border:0;color:#fff;cursor:pointer;flex:0 0 auto}
   .mte-stybtn{flex:0 0 auto;background:transparent;border:1.5px solid #fff;color:#fff;width:34px;height:34px;border-radius:9px;font-weight:800;font-size:17px;cursor:pointer;line-height:1}
   .mte-stybtn.on{background:#fff;color:#000}
-  .mte-csrow{flex:1 1 auto;display:flex;align-items:center;gap:11px;overflow-x:auto;scrollbar-width:none}
-  .mte-csrow::-webkit-scrollbar{display:none}
-  .mte-cs{flex:0 0 auto;width:26px;height:26px;border-radius:50%;border:2px solid #fff;padding:0;cursor:pointer}
-  .mte-sheet-body{flex:1;display:flex;align-items:center;justify-content:center;position:relative;padding:0 60px 0 22px}
+  .mte-wheelbtn{flex:0 0 auto;width:32px;height:32px;border-radius:50%;border:2px solid #fff;padding:0;cursor:pointer;background:conic-gradient(from 0deg,#ff2d55,#ffd400,#27c2a0,#3a86ff,#8b5cf6,#ff2d55)}
+  .mte-cs{flex:0 0 auto;width:30px;height:30px;border-radius:50%;border:2px solid #fff;padding:0;cursor:pointer}
+  .mte-colors2{display:flex;gap:16px;justify-content:center;align-items:center;overflow-x:auto;padding:9px 14px;scrollbar-width:none}
+  .mte-colors2::-webkit-scrollbar{display:none}
+  .mte-sheet-body{flex:1;display:flex;align-items:flex-start;justify-content:center;position:relative;padding:9% 60px 0 22px}
   .mte-ta{width:100%;box-sizing:border-box;padding:0;background:transparent;border:0;outline:0;color:#fff;font-family:var(--ovfont);font-weight:700;font-size:28px;text-align:center;resize:none;-webkit-text-stroke:2px #000;paint-order:stroke fill;line-height:1.2;overflow-y:auto;max-height:55vh;word-break:normal;overflow-wrap:break-word}
   .mte-sizewrap{position:absolute;right:16px;top:50%;transform:translateY(-50%);height:44%;display:flex;align-items:center}
   .mte-size{-webkit-appearance:slider-vertical;appearance:slider-vertical;writing-mode:vertical-lr;direction:rtl;width:24px;height:100%;background:transparent;accent-color:#fff;cursor:pointer;touch-action:none}
@@ -539,16 +540,8 @@
       </div>
       <div class="mte-sheet" id="mteSheet">
         <div class="mte-sheet-top">
+          <button class="mte-wheelbtn" onclick="mteToggleColors()" aria-label="Colours"></button>
           <button class="mte-stybtn" onclick="mteToggleStyle()" id="mteStyBtn" aria-label="Text style">A</button>
-          <div class="mte-csrow">
-            <button class="mte-cs" style="background:#ffffff" onclick="mteSetColor('#ffffff')" aria-label="White"></button>
-            <button class="mte-cs" style="background:#000000" onclick="mteSetColor('#000000')" aria-label="Black"></button>
-            <button class="mte-cs" style="background:#fe2c55" onclick="mteSetColor('#fe2c55')" aria-label="Red"></button>
-            <button class="mte-cs" style="background:#ffd400" onclick="mteSetColor('#ffd400')" aria-label="Yellow"></button>
-            <button class="mte-cs" style="background:#27c2a0" onclick="mteSetColor('#27c2a0')" aria-label="Teal"></button>
-            <button class="mte-cs" style="background:#3a86ff" onclick="mteSetColor('#3a86ff')" aria-label="Blue"></button>
-            <button class="mte-cs" style="background:#8b5cf6" onclick="mteSetColor('#8b5cf6')" aria-label="Purple"></button>
-          </div>
           <button class="mte-done" onclick="mteTextDone()">Done</button>
         </div>
         <div class="mte-sheet-body">
@@ -561,6 +554,15 @@
           <button class="mte-fbtn" data-font="neon" onclick="mteSetFont('neon',this)">Neon</button>
           <button class="mte-fbtn" data-font="retro" onclick="mteSetFont('retro',this)" style="font-style:italic">Retro</button>
           <button class="mte-fbtn" data-font="comic" onclick="mteSetFont('comic',this)" style="font-family:'Comic Sans MS',cursive">Comic Sans</button>
+        </div>
+        <div class="mte-colors2" id="mteColors2" style="display:none">
+          <button class="mte-cs" style="background:#ffffff" onclick="mteSetColor('#ffffff')" aria-label="White"></button>
+          <button class="mte-cs" style="background:#000000" onclick="mteSetColor('#000000')" aria-label="Black"></button>
+          <button class="mte-cs" style="background:#fe2c55" onclick="mteSetColor('#fe2c55')" aria-label="Red"></button>
+          <button class="mte-cs" style="background:#ffd400" onclick="mteSetColor('#ffd400')" aria-label="Yellow"></button>
+          <button class="mte-cs" style="background:#27c2a0" onclick="mteSetColor('#27c2a0')" aria-label="Teal"></button>
+          <button class="mte-cs" style="background:#3a86ff" onclick="mteSetColor('#3a86ff')" aria-label="Blue"></button>
+          <button class="mte-cs" style="background:#8b5cf6" onclick="mteSetColor('#8b5cf6')" aria-label="Purple"></button>
         </div>
       </div>
     </div>
@@ -1536,10 +1538,14 @@ function mteOpenTextSheet(ov){
   mteCurColor=ov.color||'#ffffff'; mteCurSize=ov.size||28; mteCurFont=ov.font||'classic'; mteCurStyle=ov.style||((ov.outline===false)?'outline':'outline');
   const ta=document.getElementById('mteTa'); ta.value=ov.text||'';
   const sz=document.getElementById('mteSize'); if(sz)sz.value=mteCurSize;
-  mteSelFontBtn(mteCurFont); mteApplyTaStyle(); mteRenderOverlays();
+  mteSelFontBtn(mteCurFont);
+  const c2=document.getElementById('mteColors2'); if(c2)c2.style.display='none';
+  const ff=document.getElementById('mteFonts'); if(ff)ff.style.display='flex';
   document.getElementById('mteSheet').classList.add('open');
+  mteApplyTaStyle(); mteRenderOverlays();
   ta.focus(); mteAutoSizeTa(); mteKbBind();   // focus synchronously so the keyboard opens on the tap
 }
+function mteToggleColors(){ const f=document.getElementById('mteFonts'),c=document.getElementById('mteColors2'); if(!f||!c)return; const show=(c.style.display==='none'||!c.style.display); c.style.display=show?'flex':'none'; f.style.display=show?'none':'flex'; }
 // Apply the current control values live to the overlay being edited, so changes show on the video instantly
 function mteLiveApply(){
   mteAutoSizeTa();
@@ -1560,7 +1566,9 @@ function mteTextDone(){
 
 function mteRenderOverlays(){
   const wrap=document.getElementById('mteOvs'); if(!wrap)return; wrap.innerHTML='';
+  const editingNow=document.getElementById('mteSheet').classList.contains('open');
   mteTexts.forEach(o=>{
+    if(editingNow && o===mteEditingOv) return;   // hide the overlay being edited; the edit box is its live preview
     const d=document.createElement('div'); d.className='mte-ov';
     d.style.left=o.x+'%'; d.style.top=o.y+'%'; d.style.transform='translate(-50%,-50%)';
     d.style.fontFamily=mteFontCss(o.font||'classic');
