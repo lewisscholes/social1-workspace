@@ -1468,41 +1468,47 @@ function mteRenderThumbs(){
   layer.innerHTML=html;
 }
 // Live geometry update while a trim handle is dragged: resize the clip + everything after, reposition markers/handles, refresh thumbs. No scroll re-centring (the drag controls the view).
-function mteUpdTrim(){
-  const tl=document.getElementById('mteTl'); const ruler=document.getElementById('mteRuler'); const content=document.getElementById('mteTlContent'); const scroll=document.getElementById('mteTlScroll');
-  if(!tl||!scroll||!content)return;
-  const total=mteTotalKept()||0.001; const scrollW=scroll.clientWidth||320; const pad=scrollW/2; const W=total*mtePps;
-  // keep the scroll width frozen during a drag so shrinking the strip can't clamp-jump the scroll position
-  content.style.width=(mteTrimming?mteTrimContentW:(W+2*pad))+'px'; ruler.style.width=W+'px'; ruler.style.marginLeft=pad+'px'; tl.style.width=W+'px'; tl.style.marginLeft=pad+'px';
-  let acc=0, selL=0, selW=0;
-  tl.querySelectorAll('.mte-seg').forEach((el,i)=>{ const s=mteSegments[i]; if(!s)return; const w=(s.end-s.start)*mtePps; el.style.width=w+'px'; if(i===mteSelSeg){selL=acc;selW=w;} acc+=w; });
-  const marks=tl.querySelectorAll('.mte-split'); let cum=0,mi=0;
-  mteSegments.forEach((s,i)=>{ cum+=(s.end-s.start)*mtePps; if(i<mteSegments.length-1&&i!==mteSelSeg-1&&i!==mteSelSeg){ const mk=marks[mi++]; if(mk)mk.style.left=cum+'px'; } });
-  const hl=document.getElementById('mteTrimL'),hr=document.getElementById('mteTrimR');
-  if(hl)hl.style.left=selL+'px'; if(hr)hr.style.left=(selL+selW-22)+'px';
-  mteRenderRuler(total); mteRenderThumbs();
-}
 function mteTrimBind(el,side){
   const down=(e)=>{
     if(mteSelSeg<0)return; const seg=mteSegments[mteSelSeg]; if(!seg)return;
     e.stopPropagation(); if(e.cancelable)e.preventDefault();
     mteTrimming=true;
     if(mtePlaying){ mteV().pause(); mtePlaying=false; mteStopTick(); mteSyncPlay(); }
-    const scroll=document.getElementById('mteTlScroll');
-    const p0=e.touches?e.touches[0]:e; const sx=p0.clientX, os=seg.start, oe=seg.end, osl=scroll.scrollLeft;
-    const pad=(scroll.clientWidth||320)/2; mteTrimContentW=(mteDuration||oe)*mtePps+2*pad; document.getElementById('mteTlContent').style.width=mteTrimContentW+'px';   // freeze scroll width
+    const tl=document.getElementById('mteTl'); const content=document.getElementById('mteTlContent'); const scroll=document.getElementById('mteTlScroll');
+    const segEls=tl.querySelectorAll('.mte-seg'); const segEl=segEls[mteSelSeg]; const nextEl=segEls[mteSelSeg+1]||null;
+    const hl=document.getElementById('mteTrimL'), hr=document.getElementById('mteTrimR');
+    const p0=e.touches?e.touches[0]:e; const sx=p0.clientX, os=seg.start, oe=seg.end, W0=(oe-os)*mtePps;
+    let selL=0; for(let k=0;k<mteSelSeg;k++)selL+=(mteSegments[k].end-mteSegments[k].start)*mtePps;
+    const origNextML=nextEl?(parseFloat(nextEl.style.marginLeft)||0):0;
     const lower=(mteSelSeg>0?mteSegments[mteSelSeg-1].end:0);
     const upper=(mteSelSeg<mteSegments.length-1?mteSegments[mteSelSeg+1].start:(mteDuration||oe));
-    const MIN=0.25;
+    const MIN=0.25, pad=(scroll.clientWidth||320)/2;
+    // Freeze the scroll width and leave the thumbnail strip + every other clip exactly where they are.
+    // Only the dragged edge of THIS clip moves; nothing else shifts until release.
+    content.style.width=((mteDuration||oe)*mtePps+2*pad+200)+'px';
     const move=(ev)=>{
       const p=ev.touches?ev.touches[0]:ev; if(ev.cancelable)ev.preventDefault();
       const dt=(p.clientX-sx)/mtePps;
-      if(side==='l'){ seg.start=Math.max(lower,Math.min(oe-MIN,os+dt)); scroll.scrollLeft=osl-(seg.start-os)*mtePps; }
-      else { seg.end=Math.min(upper,Math.max(os+MIN,oe+dt)); }
+      if(side==='r'){
+        seg.end=Math.min(upper,Math.max(os+MIN,oe+dt));
+        const dpx=(seg.end-oe)*mtePps;
+        segEl.style.width=(W0+dpx)+'px';                              // left edge pinned, right edge follows finger
+        if(nextEl)nextEl.style.marginLeft=(origNextML-dpx)+'px';      // keep later clips locked in place
+        if(hr)hr.style.left=(selL+W0+dpx-22)+'px';
+      } else {
+        seg.start=Math.max(lower,Math.min(oe-MIN,os+dt));
+        const dpx=(seg.start-os)*mtePps;
+        segEl.style.marginLeft=dpx+'px';                             // right edge pinned, left edge follows finger
+        segEl.style.width=(W0-dpx)+'px';                             // total footprint unchanged -> later clips stay locked
+        if(hl)hl.style.left=(selL+dpx)+'px';
+      }
       const vid=mteV(); const edge=(side==='l'?seg.start:Math.max(seg.start,seg.end-0.05)); if(vid.fastSeek){try{vid.fastSeek(edge);}catch(_){vid.currentTime=edge;}}else{vid.currentTime=edge;}
-      mteUpdTrim(); mteUpdTime();
+      mteUpdTime();
     };
-    const up=(ev)=>{ if(ev&&ev.touches&&ev.touches.length>0)return; document.removeEventListener('mousemove',move);document.removeEventListener('touchmove',move);document.removeEventListener('mouseup',up);document.removeEventListener('touchend',up); mteTrimming=false; mteRenderTL(); mteUpdTime(); };   // commit: restore true width + re-centre on the trimmed edge
+    const up=(ev)=>{ if(ev&&ev.touches&&ev.touches.length>0)return; document.removeEventListener('mousemove',move);document.removeEventListener('touchmove',move);document.removeEventListener('mouseup',up);document.removeEventListener('touchend',up);
+      mteTrimming=false; if(segEl)segEl.style.marginLeft=''; if(nextEl)nextEl.style.marginLeft='';
+      const keep=scroll?scroll.scrollLeft:0; mteRenderTL(); if(scroll)scroll.scrollLeft=Math.max(0,Math.min(keep,scroll.scrollWidth-scroll.clientWidth)); mteUpdTime();   // reflow contiguous, keep the view where it was
+    };
     document.addEventListener('mousemove',move);document.addEventListener('touchmove',move,{passive:false});document.addEventListener('mouseup',up);document.addEventListener('touchend',up);
   };
   el.addEventListener('mousedown',down); el.addEventListener('touchstart',down,{passive:false});
