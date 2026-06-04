@@ -255,6 +255,7 @@
   .mte-stage{position:relative;flex:1 1 auto;min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:max(8px,env(safe-area-inset-top)) 6px 0}
   .mte-pv{position:relative;height:100%;max-width:100%;aspect-ratio:9/16;border-radius:14px;overflow:hidden;background:#000}
   .mte-pv video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
+  .mte-pv video.off{opacity:0}
   .mte-ovs{position:absolute;inset:0;overflow:hidden;pointer-events:none}
   .mte-ov{position:absolute;pointer-events:auto;cursor:move;touch-action:none;font-family:var(--ovfont);text-align:center;line-height:1.2;letter-spacing:-0.01em;width:max-content;max-width:84%;overflow-wrap:break-word;word-break:normal;padding:1px 5px;white-space:pre-wrap}
   .mte-guide-v,.mte-guide-h{position:absolute;background:#fe2c55;opacity:0;transition:opacity .08s;pointer-events:none;z-index:6}
@@ -520,6 +521,7 @@
       <div class="mte-stage" id="mteStage">
         <div class="mte-pv" id="mtePv">
           <video id="mteVideo" playsinline webkit-playsinline></video>
+          <video id="mteVideo2" class="off" playsinline webkit-playsinline muted></video>
           <div class="mte-ovs" id="mteOvs"></div>
           <div class="mte-guide-v" id="mteGuideV"></div>
           <div class="mte-guide-h" id="mteGuideH"></div>
@@ -1354,7 +1356,9 @@ function mteSyncKb(){ const sh=document.getElementById('mteSheet'); if(!sh)retur
 function mteKbBind(){ if(window.visualViewport){ window.visualViewport.addEventListener('resize',mteSyncKb); window.visualViewport.addEventListener('scroll',mteSyncKb); } mteSyncKb(); }
 function mteKbUnbind(){ if(window.visualViewport){ window.visualViewport.removeEventListener('resize',mteSyncKb); window.visualViewport.removeEventListener('scroll',mteSyncKb); } const sh=document.getElementById('mteSheet'); if(sh){ sh.style.height=''; sh.style.top=''; } }
 
-function mteV(){ return document.getElementById('mteVideo'); }
+let mteActive=0, mteRunIdx=0;
+function mteV(){ return document.getElementById(mteActive?'mteVideo2':'mteVideo'); }   // active (visible) video
+function mteVB(){ return document.getElementById(mteActive?'mteVideo':'mteVideo2'); }  // standby buffer
 
 let __mteScrollY=0;
 function mteLockScroll(on){
@@ -1386,40 +1390,55 @@ async function mteOpen(id){
   if(es&&es.overlays&&es.overlays.length){ mteTexts=es.overlays.map(o=>({id:++mteOvSeq,text:o.text,x:o.x,y:o.y,color:o.color,size:o.size||24,font:(o.font==='TikTok Sans'?'classic':(o.font||'classic')),style:(o.style||((o.outline===false)?'outline':'outline'))})); }
   else if(v.caption_suggested){ mteTexts.push({id:++mteOvSeq,text:v.caption_suggested,x:50,y:74,color:'#ffffff',size:24,font:'classic',style:'outline'}); }
   if(!mteTexts.length && v.product_uid){ mteAutoSuggest(id); }
-  const vid=mteV(); vid.muted=false;
+  mteActive=0; mteRunIdx=0;
+  const vid=document.getElementById('mteVideo'); const vidB=document.getElementById('mteVideo2');
+  vid.muted=false; vidB.muted=true; vid.classList.remove('off'); vidB.classList.add('off');
   vid.onloadedmetadata=()=>{
     mteDuration=vid.duration||0;
     if(es&&es.segments&&es.segments.length){ mteSegments=es.segments.map(s=>({start:Math.max(0,s.start),end:Math.min(mteDuration,s.end)})).filter(s=>s.end-s.start>0.05); }
     if(!mteSegments.length) mteSegments=[{start:0,end:mteDuration}];
     mteRenderTL(); mteRenderOverlays(); mteUpdTime(); mteBuildThumbs();
   };
-  vid.ontimeupdate=mteOnTimeUpdate;
-  vid.onended=()=>{ if(mteSegments.length){ vid.currentTime=mteSegments[0].start; if(mtePlaying)vid.play(); } };
+  vid.ontimeupdate=mteOnTimeUpdate; vidB.ontimeupdate=mteOnTimeUpdate;
+  vid.onended=null; vidB.onended=null;
   document.getElementById('mteSheet').classList.remove('open');
   document.getElementById('mte').classList.add('open');
   mteLockScroll(true);
   mteBindTl();
-  vid.src=url||'';
-  vid.play().then(()=>{mtePlaying=true;mteSyncPlay();mteStartTick();}).catch(()=>{mtePlaying=false;mteSyncPlay();});
+  vid.src=url||''; vidB.src=url||'';
+  try{ const pb=vidB.play(); if(pb&&pb.then)pb.then(()=>vidB.pause()).catch(()=>{}); }catch(e){}   // unlock buffer 2 for later programmatic swaps
+  vid.play().then(()=>{mtePlaying=true;mteSyncPlay();mteStartTick();mtePrimeStandby();}).catch(()=>{mtePlaying=false;mteSyncPlay();});
 }
 
 function mteClose(){
   mteStopTick();
-  const vid=mteV();
-  if(vid){ vid.pause(); vid.removeAttribute('src'); try{vid.load();}catch(e){} }
+  ['mteVideo','mteVideo2'].forEach(id=>{ const v=document.getElementById(id); if(v){ v.pause(); v.removeAttribute('src'); try{v.load();}catch(e){} } });
   document.getElementById('mte').classList.remove('open');
   document.getElementById('mteSheet').classList.remove('open');
   mteLockScroll(false);
 }
-function mteSeekVid(x){ const vid=mteV(); x=Math.max(0,x); if(vid.fastSeek){ try{vid.fastSeek(x);}catch(e){ vid.currentTime=x; } } else vid.currentTime=x; }
-// Catch segment boundaries every frame (not on the ~4Hz timeupdate) so cuts are skipped instantly with no overshoot.
+// Merge splits that are contiguous in the source into "runs" -- the browser plays each run straight through;
+// only the boundaries BETWEEN runs are real cuts that need a seek.
+function mteRuns(){ const r=[]; for(const s of mteSegments){ const last=r[r.length-1]; if(last&&Math.abs(s.start-last.end)<0.06)last.end=s.end; else r.push({start:s.start,end:s.end}); } return r; }
+function mteRunAt(t){ const runs=mteRuns(); for(let i=0;i<runs.length;i++){ if(t>=runs[i].start-0.05&&t<runs[i].end+0.001)return i; } return -1; }
+// keep the standby buffer pre-seeked (decoded) at the NEXT run's start, so a cut swaps instantly with no decode hitch
+function mtePrimeStandby(){ const runs=mteRuns(); if(!runs.length)return; const ni=(mteRunIdx+1<runs.length)?mteRunIdx+1:0; const sb=mteVB(); sb.muted=true; const dest=runs[ni].start; if(Math.abs(sb.currentTime-dest)>0.04){ try{sb.currentTime=dest;}catch(e){} } }
+function mteSwapTo(ni){
+  const runs=mteRuns(); if(!runs.length)return; const old=mteV(), nw=mteVB(); const dest=runs[ni].start;
+  if(Math.abs(nw.currentTime-dest)>0.12){ try{nw.currentTime=dest;}catch(e){} }   // fallback if it wasn't primed in time
+  nw.classList.remove('off'); nw.muted=mteMuted; old.classList.add('off'); old.muted=true; old.pause();
+  mteActive=1-mteActive; mteRunIdx=ni;
+  const p=nw.play(); if(p&&p.catch)p.catch(()=>{});
+  mtePrimeStandby();
+}
+// 60fps loop: plays each run straight through, swaps buffers at real cuts for seamless playback
 function mteAdvance(){
-  const vid=mteV(); const t=vid.currentTime;
-  let inSeg=null;
-  for(const s of mteSegments){ if(t>=s.start-0.03&&t<s.end){inSeg=s;break;} }
-  if(!inSeg){ const next=mteSegments.find(s=>s.start>=t); mteSeekVid(next?next.start:(mteSegments.length?mteSegments[0].start:0)); }
-  else if(t>=inSeg.end-0.04){ const idx=mteSegments.indexOf(inSeg); const next=mteSegments[idx+1];
-    if(next){ if(Math.abs(next.start-inSeg.end)>0.06) mteSeekVid(next.start); } else mteSeekVid(mteSegments[0].start); }
+  const runs=mteRuns(); if(!runs.length)return;
+  const va=mteV(); const t=va.currentTime;
+  if(mteRunIdx<0||mteRunIdx>=runs.length){ mteRunIdx=Math.max(0,mteRunAt(t)); mtePrimeStandby(); }
+  let run=runs[mteRunIdx];
+  if(t<run.start-0.2||t>run.end+0.4){ const ri=mteRunAt(t); if(ri>=0&&ri!==mteRunIdx){ mteRunIdx=ri; mtePrimeStandby(); run=runs[mteRunIdx]; } }
+  if(t>=run.end-0.04){ mteSwapTo((mteRunIdx+1<runs.length)?mteRunIdx+1:0); }
 }
 function mteStartTick(){ if(mteRaf)return; const loop=()=>{ if(!mtePlaying){ mteRaf=0; return; } mteAdvance(); mteUpdScroll(); mteUpdTime(); mteRaf=requestAnimationFrame(loop); }; mteRaf=requestAnimationFrame(loop); }
 function mteStopTick(){ if(mteRaf){ cancelAnimationFrame(mteRaf); mteRaf=0; } }
@@ -1624,9 +1643,9 @@ function mteZoom(dir){ if(!mtePpsFit)return; mtePps=Math.min(MTE_PPS_MAX,Math.ma
 
 function mteOnTimeUpdate(){ if(!mtePlaying) mteUpdTime(); }   // during playback the 60fps loop (mteAdvance) handles boundaries
 
-function mtePlayToggle(){ const vid=mteV(); if(vid.paused){ vid.play(); mtePlaying=true; mteStartTick(); } else { vid.pause(); mtePlaying=false; mteStopTick(); } mteSyncPlay(); }
+function mtePlayToggle(){ const a=mteV(),b=mteVB(); if(a.paused){ mteRunIdx=Math.max(0,mteRunAt(a.currentTime)); a.muted=mteMuted; b.muted=true; try{ const pb=b.play(); if(pb&&pb.then)pb.then(()=>b.pause()).catch(()=>{}); }catch(e){} a.play(); mtePlaying=true; mteStartTick(); mtePrimeStandby(); } else { a.pause(); b.pause(); mtePlaying=false; mteStopTick(); } mteSyncPlay(); }
 function mteSyncPlay(){ const b=document.getElementById('mtePlayc'); if(b)b.innerHTML=mtePlaying?'&#10074;&#10074;':'&#9658;'; }
-function mteToggleMute(){ const vid=mteV(); mteMuted=!mteMuted; vid.muted=mteMuted; const b=document.getElementById('mteVol'); if(b)b.innerHTML=mteMuted?'&#128263;':'&#128266;'; }
+function mteToggleMute(){ mteMuted=!mteMuted; mteV().muted=mteMuted; mteVB().muted=true; const b=document.getElementById('mteVol'); if(b)b.innerHTML=mteMuted?'&#128263;':'&#128266;'; }
 function mteSoon(name){ toast(name+' is coming soon','ok'); }
 
 function mteSplit(){
