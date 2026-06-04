@@ -268,6 +268,7 @@
   .mte-tr-ic{display:flex;gap:17px;align-items:center;justify-content:flex-end;min-width:88px}
   .mte-tr-ic button{background:transparent;border:0;color:#cfcfd2;font-size:15px;cursor:pointer;padding:0}
   .mte-tlrow{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:2px 10px 0}
+  .mte-gap{flex:0 0 21vh}   /* black thumb-scroll space between the timeline and the bottom buttons (TikTok layout) */
   .mte-vol{flex:0 0 auto;width:24px;text-align:center;color:#fff;font-size:15px;background:transparent;border:0;cursor:pointer}
   .mte-tlwrap{position:relative;flex:1 1 auto;min-width:0}
   .mte-tlscroll{position:relative;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-x}
@@ -543,6 +544,7 @@
         </div>
         <button class="mte-add" onclick="mteSoon('Add clip')" aria-label="Add clip">&#43;</button>
       </div>
+      <div class="mte-gap"></div>
       <div class="mte-bar" id="mteBar">
         <button onclick="mteSoon('Sound')"><span class="mi">&#9835;</span>Sound</button>
         <button onclick="mteAddText()"><span class="mi">Aa</span>Text</button>
