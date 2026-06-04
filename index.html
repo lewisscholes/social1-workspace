@@ -287,6 +287,8 @@
   .mte-trim.r{border-radius:0 8px 8px 0}
   .mte-split{position:absolute;top:0;bottom:0;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;z-index:6;pointer-events:none}
   .mte-split-h{width:15px;height:100%;background:rgba(255,255,255,.95);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#000;font-size:10px;font-weight:900;letter-spacing:-1.5px;box-shadow:0 0 0 1.5px rgba(0,0,0,.55)}
+  .mte-gapcut{position:absolute;top:0;bottom:0;width:6px;transform:translateX(-50%);background:#000;z-index:3;pointer-events:none}
+  .mte-dur{position:absolute;top:5px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-weight:600;padding:2px 6px;border-radius:5px;z-index:8;pointer-events:none;font-variant-numeric:tabular-nums}
   .mte-add{flex:0 0 auto;width:32px;height:66px;border-radius:7px;background:#2a2a2e;border:0;color:#fff;font-size:21px;cursor:pointer;align-self:flex-end}
   .mte-phfix{position:absolute;left:50%;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 5px rgba(0,0,0,.9);transform:translateX(-50%);pointer-events:none;z-index:8;border-radius:2px}
   .mte-bar{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px calc(24px + env(safe-area-inset-bottom))}
@@ -1434,15 +1436,16 @@ function mteRenderTL(){
   let html='<div class="mte-thumbs" id="mteThumbsL"></div>';
   // transparent segment boxes: thumbnails show through from the layer behind; these carry the seams + white selection outline
   mteSegments.forEach((s,i)=>{ const w=(s.end-s.start)*mtePps; html+='<div class="mte-seg'+(i===mteSelSeg?' sel':'')+'" data-i="'+i+'" style="width:'+w+'px"></div>'; });
-  // split markers straddling each internal cut so the divisions are clearly visible
+  // a clean visible gap at every internal cut so the divisions are obvious
   let cum=0;
-  mteSegments.forEach((s,i)=>{ cum+=(s.end-s.start)*mtePps; if(i<mteSegments.length-1&&i!==mteSelSeg-1&&i!==mteSelSeg){ html+='<div class="mte-split" style="left:'+cum+'px"><div class="mte-split-h">&#9656;&#9666;</div></div>'; } });
-  // draggable trim handles on the selected clip (drag to change in/out point directly on the timeline)
+  mteSegments.forEach((s,i)=>{ cum+=(s.end-s.start)*mtePps; if(i<mteSegments.length-1){ html+='<div class="mte-gapcut" style="left:'+cum+'px"></div>'; } });
+  // draggable trim handles + live duration badge on the selected clip
   if(mteSelSeg>=0&&mteSegments[mteSelSeg]){
     let leftX=0; for(let k=0;k<mteSelSeg;k++)leftX+=(mteSegments[k].end-mteSegments[k].start)*mtePps;
-    const selW=(mteSegments[mteSelSeg].end-mteSegments[mteSelSeg].start)*mtePps;
+    const sg=mteSegments[mteSelSeg]; const selW=(sg.end-sg.start)*mtePps;
     html+='<div class="mte-trim l" id="mteTrimL" style="left:'+leftX+'px">&#8249;</div>';
     html+='<div class="mte-trim r" id="mteTrimR" style="left:'+(leftX+selW-22)+'px">&#8250;</div>';
+    html+='<div class="mte-dur" id="mteDur" style="left:'+(leftX+26)+'px">'+(sg.end-sg.start).toFixed(1)+'s</div>';
   }
   tl.innerHTML=html;
   const hl=document.getElementById('mteTrimL'),hr=document.getElementById('mteTrimR');
@@ -1479,10 +1482,12 @@ function mteTrimReflow(){
   ruler.style.width=W+'px'; ruler.style.marginLeft=pad+'px'; tl.style.width=W+'px'; tl.style.marginLeft=pad+'px';
   let acc=0,selL=0,selW=0;
   tl.querySelectorAll('.mte-seg').forEach((el,i)=>{ const s=mteSegments[i]; if(!s)return; el.style.marginLeft=''; const w=(s.end-s.start)*mtePps; el.style.width=w+'px'; if(i===mteSelSeg){selL=acc;selW=w;} acc+=w; });
-  const marks=tl.querySelectorAll('.mte-split'); let cum=0,mi=0;
-  mteSegments.forEach((s,i)=>{ cum+=(s.end-s.start)*mtePps; if(i<mteSegments.length-1&&i!==mteSelSeg-1&&i!==mteSelSeg){ const mk=marks[mi++]; if(mk)mk.style.left=cum+'px'; } });
+  const cuts=tl.querySelectorAll('.mte-gapcut'); let cum=0,mi=0;
+  mteSegments.forEach((s,i)=>{ cum+=(s.end-s.start)*mtePps; if(i<mteSegments.length-1){ const mk=cuts[mi++]; if(mk)mk.style.left=cum+'px'; } });
   const hl=document.getElementById('mteTrimL'),hr=document.getElementById('mteTrimR');
   if(hl)hl.style.left=selL+'px'; if(hr)hr.style.left=(selL+selW-22)+'px';
+  const dur=document.getElementById('mteDur'); const sg=mteSegments[mteSelSeg];
+  if(dur&&sg){ dur.textContent=(sg.end-sg.start).toFixed(1)+'s'; dur.style.left=(selL+26)+'px'; }   // live duration as you trim
   mteRenderThumbs();
 }
 function mteTrimBind(el,side){
@@ -1593,10 +1598,10 @@ function mteBindTl(){
   // Scrubbing in the black gap below the timeline also scrolls the timeline (handy thumb area)
   const gap=document.querySelector('.mte-gap');
   if(gap){
-    let gx=0,gsl=0,gon=false;
-    gap.addEventListener('touchstart',(e)=>{ gon=true; gx=e.touches[0].clientX; gsl=scroll.scrollLeft; if(mtePlaying){ mteV().pause(); mtePlaying=false; mteStopTick(); mteSyncPlay(); } },{passive:true});
-    gap.addEventListener('touchmove',(e)=>{ if(!gon)return; if(e.cancelable)e.preventDefault(); scroll.scrollLeft=gsl-(e.touches[0].clientX-gx); },{passive:false});
-    gap.addEventListener('touchend',()=>{ gon=false; },{passive:true});
+    let gx=0,gy=0,gsl=0,gon=false,gmoved=false,gt=0;
+    gap.addEventListener('touchstart',(e)=>{ gon=true; gmoved=false; gx=e.touches[0].clientX; gy=e.touches[0].clientY; gsl=scroll.scrollLeft; gt=Date.now(); if(mtePlaying){ mteV().pause(); mtePlaying=false; mteStopTick(); mteSyncPlay(); } },{passive:true});
+    gap.addEventListener('touchmove',(e)=>{ if(!gon)return; if(Math.abs(e.touches[0].clientX-gx)+Math.abs(e.touches[0].clientY-gy)>8)gmoved=true; if(e.cancelable)e.preventDefault(); scroll.scrollLeft=gsl-(e.touches[0].clientX-gx); },{passive:false});
+    gap.addEventListener('touchend',()=>{ gon=false; if(!gmoved&&(Date.now()-gt)<350&&mteSelSeg>=0){ mteSelSeg=-1; mteRenderTL(); } },{passive:true});   // tap the black space = deselect, show the cuts
   }
 }
 function mteApplySeek(){ mteSeekRaf=0; if(mteSeekTarget==null)return; const src=mteKeptToSrc(mteSeekTarget); const vid=mteV(); if(Math.abs(vid.currentTime-src)>0.01){ if(vid.fastSeek){ try{vid.fastSeek(src);}catch(e){ vid.currentTime=src; } } else { vid.currentTime=src; } } mteUpdTime(); }
@@ -1613,7 +1618,8 @@ function mteOnTimeUpdate(){
     if(next){ vid.currentTime=next.start; } else if(mteSegments.length){ vid.currentTime=mteSegments[0].start; }
   } else if(t>=inSeg.end-0.05){
     const idx=mteSegments.indexOf(inSeg); const next=mteSegments[idx+1];
-    vid.currentTime=next?next.start:mteSegments[0].start;
+    if(next){ if(Math.abs(next.start-inSeg.end)>0.06) vid.currentTime=next.start; /* contiguous split: play straight through, no re-seek -> no stutter */ }
+    else { vid.currentTime=mteSegments[0].start; }
   }
   mteUpdTime();
 }
