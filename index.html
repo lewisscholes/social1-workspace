@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>Affiliate Editor</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -1090,7 +1093,7 @@ function swOverlayHtml(v){
       const fw=(o.font==='elegance')?'600':'700';
       const base='left:'+o.x+'%;top:'+o.y+'%;transform:translate(-50%,-50%);font-family:'+fam+';font-weight:'+fw+';font-style:'+fst+';font-size:'+(o.size||24)+'px;text-align:center;width:max-content;max-width:84%;overflow-wrap:break-word;word-break:normal;letter-spacing:-0.01em;';
       if(isBox){
-        return '<div class="sw-text" style="'+base+'color:transparent;line-height:1.55"><span style="background:'+o.color+';color:'+mteContrast(o.color)+';padding:0.08em 0.32em;border-radius:0.18em;-webkit-box-decoration-break:clone;box-decoration-break:clone">'+esc(o.text)+'</span></div>';
+        return '<div class="sw-text" style="'+base+'color:transparent;line-height:1.26"><span style="background:'+o.color+';color:'+mteContrast(o.color)+';padding:0.16em 0.34em;border-radius:0.16em;-webkit-box-decoration-break:clone;box-decoration-break:clone">'+esc(o.text)+'</span></div>';
       }
       const out=(o.outline!==false)?'-webkit-text-stroke:2px #000;paint-order:stroke fill;':'';
       const sh=(o.font==='neon')?('text-shadow:0 0 6px '+o.color+',0 0 13px '+o.color+';'):'';
@@ -1577,7 +1580,7 @@ function mteRenderOverlays(){
     const sty=o.style||((o.outline===false)?'outline':'outline');
     if(sty==='box'){
       d.style.color='transparent'; d.style.webkitTextStroke='0'; d.style.textShadow='none';
-      d.innerHTML='<span style="background:'+o.color+';color:'+mteContrast(o.color)+';padding:0.08em 0.32em;border-radius:0.18em;-webkit-box-decoration-break:clone;box-decoration-break:clone;line-height:1.55">'+esc(o.text)+'</span>';
+      d.innerHTML='<span style="background:'+o.color+';color:'+mteContrast(o.color)+';padding:0.16em 0.34em;border-radius:0.16em;-webkit-box-decoration-break:clone;box-decoration-break:clone;line-height:1.26">'+esc(o.text)+'</span>';
     } else {
       d.style.color=o.color; d.style.webkitTextStroke='2px #000'; d.style.paintOrder='stroke fill';
       d.style.textShadow=(o.font==='neon')?('0 0 6px '+o.color+',0 0 13px '+o.color):'none';
