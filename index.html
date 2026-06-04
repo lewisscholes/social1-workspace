@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#000000" />
 <title>Affiliate Editor</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -1346,8 +1347,8 @@ function mteV(){ return document.getElementById('mteVideo'); }
 
 let __mteScrollY=0;
 function mteLockScroll(on){
-  if(on){ __mteScrollY=window.scrollY||window.pageYOffset||0; const b=document.body.style; b.position='fixed'; b.top=(-__mteScrollY)+'px'; b.left='0'; b.right='0'; b.width='100%'; b.overflow='hidden'; }
-  else { const b=document.body.style; b.position=''; b.top=''; b.left=''; b.right=''; b.width=''; b.overflow=''; window.scrollTo(0,__mteScrollY); }
+  if(on){ __mteScrollY=window.scrollY||window.pageYOffset||0; const b=document.body.style; b.position='fixed'; b.top=(-__mteScrollY)+'px'; b.left='0'; b.right='0'; b.width='100%'; b.overflow='hidden'; b.background='#000'; document.documentElement.style.background='#000'; }
+  else { const b=document.body.style; b.position=''; b.top=''; b.left=''; b.right=''; b.width=''; b.overflow=''; b.background=''; document.documentElement.style.background=''; window.scrollTo(0,__mteScrollY); }
 }
 
 async function mteAutoSuggest(id){
@@ -1527,10 +1528,20 @@ function mteApplyTaStyle(){
     ta.style.textShadow=(mteCurFont==='neon')?('0 0 6px '+mteCurColor+',0 0 13px '+mteCurColor):'none';
   }
   const stb=document.getElementById('mteStyBtn'); if(stb)stb.classList.toggle('on',mteCurStyle==='box');
-  // Match the edit box width to the on-video overlay's wrap width so editor == saved result
-  const pv=document.getElementById('mtePv');
-  if(pv&&pv.clientWidth){ const w=Math.round(pv.clientWidth*0.84); ta.style.width=w+'px'; ta.style.maxWidth=w+'px'; }
+  ta.style.textAlign='center';
+  mteSizeTaToContent();
   mteAutoSizeTa();
+}
+// Hug the edit box to the text (capped at 84% of the video) so the box looks the same as the saved overlay -- not a full-width rectangle.
+function mteSizeTaToContent(){
+  const ta=document.getElementById('mteTa'); if(!ta)return;
+  const pv=document.getElementById('mtePv'); const maxW=pv&&pv.clientWidth?Math.round(pv.clientWidth*0.84):Math.round(window.innerWidth*0.84);
+  let m=document.getElementById('mteMeasure');
+  if(!m){ m=document.createElement('div'); m.id='mteMeasure'; m.style.cssText='position:absolute;visibility:hidden;left:-9999px;top:0;white-space:pre-wrap;overflow-wrap:break-word;word-break:break-word;box-sizing:border-box'; document.body.appendChild(m); }
+  m.style.fontFamily=ta.style.fontFamily; m.style.fontSize=ta.style.fontSize; m.style.fontWeight=ta.style.fontWeight; m.style.fontStyle=ta.style.fontStyle; m.style.lineHeight=ta.style.lineHeight||'1.2'; m.style.padding=ta.style.padding||'0'; m.style.maxWidth=maxW+'px';
+  m.textContent=(ta.value&&ta.value.length)?ta.value:(ta.placeholder||'A');
+  const w=Math.min(maxW, Math.ceil(m.getBoundingClientRect().width)+3);
+  ta.style.width=w+'px'; ta.style.maxWidth=maxW+'px';
 }
 function mteAutoSizeTa(){ const ta=document.getElementById('mteTa'); if(!ta)return; ta.style.height='auto'; ta.style.height=ta.scrollHeight+'px'; }
 function mteSelFontBtn(key){ document.querySelectorAll('#mteFonts .mte-fbtn').forEach(b=>b.classList.toggle('sel',b.dataset.font===key)); }
@@ -1554,7 +1565,7 @@ function mteOpenTextSheet(ov){
 function mteToggleColors(){ const f=document.getElementById('mteFonts'),c=document.getElementById('mteColors2'); if(!f||!c)return; const show=(c.style.display==='none'||!c.style.display); c.style.display=show?'flex':'none'; f.style.display=show?'none':'flex'; }
 // Apply the current control values live to the overlay being edited, so changes show on the video instantly
 function mteLiveApply(){
-  mteAutoSizeTa();
+  mteSizeTaToContent(); mteAutoSizeTa();
   if(!mteEditingOv)return;
   const ta=document.getElementById('mteTa'); if(ta)mteEditingOv.text=ta.value;
   mteEditingOv.color=mteCurColor; mteEditingOv.size=mteCurSize; mteEditingOv.font=mteCurFont; mteEditingOv.style=mteCurStyle;
