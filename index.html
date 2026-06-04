@@ -1356,7 +1356,7 @@ function mteSyncKb(){ const sh=document.getElementById('mteSheet'); if(!sh)retur
 function mteKbBind(){ if(window.visualViewport){ window.visualViewport.addEventListener('resize',mteSyncKb); window.visualViewport.addEventListener('scroll',mteSyncKb); } mteSyncKb(); }
 function mteKbUnbind(){ if(window.visualViewport){ window.visualViewport.removeEventListener('resize',mteSyncKb); window.visualViewport.removeEventListener('scroll',mteSyncKb); } const sh=document.getElementById('mteSheet'); if(sh){ sh.style.height=''; sh.style.top=''; } }
 
-let mteActive=0, mteRunIdx=0;
+let mteActive=0, mteRunIdx=0, mteRolling=false;
 function mteV(){ return document.getElementById(mteActive?'mteVideo2':'mteVideo'); }   // active (visible) video
 function mteVB(){ return document.getElementById(mteActive?'mteVideo':'mteVideo2'); }  // standby buffer
 
@@ -1424,21 +1424,23 @@ function mteRunAt(t){ const runs=mteRuns(); for(let i=0;i<runs.length;i++){ if(t
 // keep the standby buffer pre-seeked (decoded) at the NEXT run's start, so a cut swaps instantly with no decode hitch
 function mtePrimeStandby(){ const runs=mteRuns(); if(!runs.length)return; const ni=(mteRunIdx+1<runs.length)?mteRunIdx+1:0; const sb=mteVB(); sb.muted=true; const dest=runs[ni].start; if(Math.abs(sb.currentTime-dest)>0.04){ try{sb.currentTime=dest;}catch(e){} } }
 function mteSwapTo(ni){
-  const runs=mteRuns(); if(!runs.length)return; const old=mteV(), nw=mteVB(); const dest=runs[ni].start;
-  if(Math.abs(nw.currentTime-dest)>0.12){ try{nw.currentTime=dest;}catch(e){} }   // fallback if it wasn't primed in time
+  const runs=mteRuns(); if(!runs.length)return; const old=mteV(), nw=mteVB();
+  if(nw.paused){ const d=runs[ni].start; if(Math.abs(nw.currentTime-d)>0.12){ try{nw.currentTime=d;}catch(e){} } const p=nw.play(); if(p&&p.catch)p.catch(()=>{}); }   // safety: pre-roll didn't run
   nw.classList.remove('off'); nw.muted=mteMuted; old.classList.add('off'); old.muted=true; old.pause();
-  mteActive=1-mteActive; mteRunIdx=ni;
-  const p=nw.play(); if(p&&p.catch)p.catch(()=>{});
+  mteActive=1-mteActive; mteRunIdx=ni; mteRolling=false;
   mtePrimeStandby();
 }
-// 60fps loop: plays each run straight through, swaps buffers at real cuts for seamless playback
+// 60fps loop: plays each run straight through; pre-rolls the standby buffer ~60ms before a cut so it's already
+// playing smoothly when we swap visibility -> no decode/play-warmup freeze at the cut.
 function mteAdvance(){
   const runs=mteRuns(); if(!runs.length)return;
   const va=mteV(); const t=va.currentTime;
-  if(mteRunIdx<0||mteRunIdx>=runs.length){ mteRunIdx=Math.max(0,mteRunAt(t)); mtePrimeStandby(); }
+  if(mteRunIdx<0||mteRunIdx>=runs.length){ mteRunIdx=Math.max(0,mteRunAt(t)); mteRolling=false; mtePrimeStandby(); }
   let run=runs[mteRunIdx];
-  if(t<run.start-0.2||t>run.end+0.4){ const ri=mteRunAt(t); if(ri>=0&&ri!==mteRunIdx){ mteRunIdx=ri; mtePrimeStandby(); run=runs[mteRunIdx]; } }
-  if(t>=run.end-0.04){ mteSwapTo((mteRunIdx+1<runs.length)?mteRunIdx+1:0); }
+  if(t<run.start-0.2||t>run.end+0.4){ const ri=mteRunAt(t); if(ri>=0&&ri!==mteRunIdx){ mteRunIdx=ri; mteRolling=false; mtePrimeStandby(); run=runs[mteRunIdx]; } }
+  const ni=(mteRunIdx+1<runs.length)?mteRunIdx+1:0;
+  if(!mteRolling && t>=run.end-0.07){ const sb=mteVB(); sb.muted=true; const d=runs[ni].start; if(Math.abs(sb.currentTime-d)>0.04){ try{sb.currentTime=d;}catch(e){} } const p=sb.play(); if(p&&p.catch)p.catch(()=>{}); mteRolling=true; }
+  if(t>=run.end-0.012){ mteSwapTo(ni); }
 }
 function mteStartTick(){ if(mteRaf)return; const loop=()=>{ if(!mtePlaying){ mteRaf=0; return; } mteAdvance(); mteUpdScroll(); mteUpdTime(); mteRaf=requestAnimationFrame(loop); }; mteRaf=requestAnimationFrame(loop); }
 function mteStopTick(){ if(mteRaf){ cancelAnimationFrame(mteRaf); mteRaf=0; } }
