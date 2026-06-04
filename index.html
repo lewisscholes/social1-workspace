@@ -280,7 +280,7 @@
   .mte-thumbs div{position:absolute;top:0;bottom:0;background-size:cover;background-position:center}
   .mte-seg{position:relative;height:100%;border-right:2px solid #000;box-sizing:border-box;flex:0 0 auto;z-index:2}
   .mte-seg:last-child{border-right:0}
-  .mte-seg.sel{outline:3px solid #fff;outline-offset:-3px;border-radius:7px;z-index:5}
+  .mte-seg.sel{outline:3px solid #fff;outline-offset:-3px;border-radius:7px;z-index:5;box-shadow:0 0 0 3px #000}
   .mte-trim{position:absolute;top:-2px;bottom:-2px;width:22px;background:#fff;display:flex;align-items:center;justify-content:center;color:#111;font-weight:900;font-size:16px;line-height:1;z-index:7;cursor:ew-resize;touch-action:none}
   .mte-trim.l{border-radius:8px 0 0 8px}
   .mte-trim.r{border-radius:0 8px 8px 0}
@@ -1434,7 +1434,7 @@ function mteRenderTL(){
   mteSegments.forEach((s,i)=>{ const w=(s.end-s.start)*mtePps; html+='<div class="mte-seg'+(i===mteSelSeg?' sel':'')+'" data-i="'+i+'" style="width:'+w+'px"></div>'; });
   // split markers straddling each internal cut so the divisions are clearly visible
   let cum=0;
-  mteSegments.forEach((s,i)=>{ cum+=(s.end-s.start)*mtePps; if(i<mteSegments.length-1){ html+='<div class="mte-split" style="left:'+cum+'px"><div class="mte-split-h">&#9656;&#9666;</div></div>'; } });
+  mteSegments.forEach((s,i)=>{ cum+=(s.end-s.start)*mtePps; if(i<mteSegments.length-1&&i!==mteSelSeg-1&&i!==mteSelSeg){ html+='<div class="mte-split" style="left:'+cum+'px"><div class="mte-split-h">&#9656;&#9666;</div></div>'; } });
   // draggable trim handles on the selected clip (drag to change in/out point directly on the timeline)
   if(mteSelSeg>=0&&mteSegments[mteSelSeg]){
     let leftX=0; for(let k=0;k<mteSelSeg;k++)leftX+=(mteSegments[k].end-mteSegments[k].start)*mtePps;
@@ -1476,7 +1476,7 @@ function mteUpdTrim(){
   let acc=0, selL=0, selW=0;
   tl.querySelectorAll('.mte-seg').forEach((el,i)=>{ const s=mteSegments[i]; if(!s)return; const w=(s.end-s.start)*mtePps; el.style.width=w+'px'; if(i===mteSelSeg){selL=acc;selW=w;} acc+=w; });
   const marks=tl.querySelectorAll('.mte-split'); let cum=0,mi=0;
-  mteSegments.forEach((s,i)=>{ cum+=(s.end-s.start)*mtePps; if(i<mteSegments.length-1){ const mk=marks[mi++]; if(mk)mk.style.left=cum+'px'; } });
+  mteSegments.forEach((s,i)=>{ cum+=(s.end-s.start)*mtePps; if(i<mteSegments.length-1&&i!==mteSelSeg-1&&i!==mteSelSeg){ const mk=marks[mi++]; if(mk)mk.style.left=cum+'px'; } });
   const hl=document.getElementById('mteTrimL'),hr=document.getElementById('mteTrimR');
   if(hl)hl.style.left=selL+'px'; if(hr)hr.style.left=(selL+selW-22)+'px';
   mteRenderRuler(total); mteRenderThumbs();
