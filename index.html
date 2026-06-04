@@ -1347,7 +1347,7 @@ function epInitTextDrag(){
 // keep old refs for other parts of the app
 // ---------- MOBILE TIKTOK-STYLE EDITOR ----------
 let mteId=null, mteDuration=0, mteSegments=[], mteSelSeg=-1, mteThumbs=[], mtePlaying=false, mteTexts=[], mteEditingOv=null, mteOvSeq=0;
-let mtePps=0, mtePpsFit=0, mteProgScroll=false, mteProgT=0, mteRaf=0, mteMuted=false, mteBound=false, mteSeekTarget=null, mteSeekRaf=0;
+let mtePps=0, mtePpsFit=0, mteProgScroll=false, mteProgT=0, mteRaf=0, mteMuted=false, mteBound=false, mteSeekTarget=null, mteSeekRaf=0, mteThumbKey='';
 let mteCurColor='#ffffff', mteCurSize=28, mteCurFont='classic', mteCurStyle='outline', mtePinchBase=0, mtePinchPps=0, mtePinchRaf=0, mteThumbRaf=0, mteTrimming=false, mteTrimContentW=0, mteLastScrubSeek=0, mteScrubEndT=0;
 function mteContrast(hex){ const m=/^#?([0-9a-f]{6})$/i.exec(hex||''); if(!m)return '#000'; const n=parseInt(m[1],16); const r=(n>>16)&255,g=(n>>8)&255,b=n&255; return (0.299*r+0.587*g+0.114*b)>150?'#000':'#fff'; }
 function mteSyncKb(){ const sh=document.getElementById('mteSheet'); if(!sh)return; const vv=window.visualViewport; if(vv){ sh.style.height=vv.height+'px'; sh.style.top=vv.offsetTop+'px'; } }
@@ -1411,7 +1411,17 @@ function mteClose(){
   document.getElementById('mteSheet').classList.remove('open');
   mteLockScroll(false);
 }
-function mteStartTick(){ if(mteRaf)return; const loop=()=>{ if(!mtePlaying){ mteRaf=0; return; } mteUpdScroll(); mteUpdTime(); mteRaf=requestAnimationFrame(loop); }; mteRaf=requestAnimationFrame(loop); }
+function mteSeekVid(x){ const vid=mteV(); x=Math.max(0,x); if(vid.fastSeek){ try{vid.fastSeek(x);}catch(e){ vid.currentTime=x; } } else vid.currentTime=x; }
+// Catch segment boundaries every frame (not on the ~4Hz timeupdate) so cuts are skipped instantly with no overshoot.
+function mteAdvance(){
+  const vid=mteV(); const t=vid.currentTime;
+  let inSeg=null;
+  for(const s of mteSegments){ if(t>=s.start-0.03&&t<s.end){inSeg=s;break;} }
+  if(!inSeg){ const next=mteSegments.find(s=>s.start>=t); mteSeekVid(next?next.start:(mteSegments.length?mteSegments[0].start:0)); }
+  else if(t>=inSeg.end-0.04){ const idx=mteSegments.indexOf(inSeg); const next=mteSegments[idx+1];
+    if(next){ if(Math.abs(next.start-inSeg.end)>0.06) mteSeekVid(next.start); } else mteSeekVid(mteSegments[0].start); }
+}
+function mteStartTick(){ if(mteRaf)return; const loop=()=>{ if(!mtePlaying){ mteRaf=0; return; } mteAdvance(); mteUpdScroll(); mteUpdTime(); mteRaf=requestAnimationFrame(loop); }; mteRaf=requestAnimationFrame(loop); }
 function mteStopTick(){ if(mteRaf){ cancelAnimationFrame(mteRaf); mteRaf=0; } }
 
 function mteFmt(s){ s=Math.max(0,Math.round(s||0)); const m=Math.floor(s/60); const ss=s%60; return m+':'+(ss<10?'0':'')+ss; }
@@ -1450,7 +1460,7 @@ function mteRenderTL(){
   tl.innerHTML=html;
   const hl=document.getElementById('mteTrimL'),hr=document.getElementById('mteTrimR');
   if(hl)mteTrimBind(hl,'l'); if(hr)mteTrimBind(hr,'r');
-  mteRenderThumbs();
+  mteThumbKey=''; mteRenderThumbs();   // layer was just rebuilt empty, force a fresh fill
   mteRenderRuler(total);
   mteUpdScroll();
 }
@@ -1463,7 +1473,11 @@ function mteRenderThumbs(){
   const total=mteTotalKept()||0.001; const scrollW=scroll.clientWidth||320; const pad=scrollW/2; const W=total*mtePps;
   const sl=scroll.scrollLeft;
   const x0=Math.max(0, sl-pad-60), x1=Math.min(W, sl-pad+scrollW+60);
-  const CW=46; let html=''; const start=Math.floor(x0/CW)*CW;
+  const CW=46; const start=Math.floor(x0/CW)*CW; const lastCell=Math.floor((x1-0.001)/CW)*CW;
+  const key=start+'|'+lastCell+'|'+Math.round(mtePps*100)+'|'+Math.round(total*1000)+'|'+mteThumbs.length;
+  if(key===mteThumbKey) return;   // visible cells unchanged -> skip the DOM rebuild, keeps scrubbing fluid
+  mteThumbKey=key;
+  let html='';
   for(let x=start; x<x1; x+=CW){
     const kept=Math.min(x/mtePps, total-0.001); const src=mteKeptToSrc(kept);
     let th=mteThumbs[0]; for(const t of mteThumbs){ if(Math.abs(t.t-src)<Math.abs(th.t-src))th=t; }
@@ -1608,21 +1622,7 @@ function mteApplySeek(){ mteSeekRaf=0; if(mteSeekTarget==null)return; const src=
 
 function mteZoom(dir){ if(!mtePpsFit)return; mtePps=Math.min(MTE_PPS_MAX,Math.max(mtePpsFit,mtePps*(dir>0?1.5:1/1.5))); mteRenderTL(); }
 
-function mteOnTimeUpdate(){
-  if(!mtePlaying){ mteUpdTime(); return; }
-  const vid=mteV(); const t=vid.currentTime;
-  let inSeg=null;
-  for(const s of mteSegments){ if(t>=s.start-0.03&&t<s.end){inSeg=s;break;} }
-  if(!inSeg){
-    const next=mteSegments.find(s=>s.start>=t);
-    if(next){ vid.currentTime=next.start; } else if(mteSegments.length){ vid.currentTime=mteSegments[0].start; }
-  } else if(t>=inSeg.end-0.05){
-    const idx=mteSegments.indexOf(inSeg); const next=mteSegments[idx+1];
-    if(next){ if(Math.abs(next.start-inSeg.end)>0.06) vid.currentTime=next.start; /* contiguous split: play straight through, no re-seek -> no stutter */ }
-    else { vid.currentTime=mteSegments[0].start; }
-  }
-  mteUpdTime();
-}
+function mteOnTimeUpdate(){ if(!mtePlaying) mteUpdTime(); }   // during playback the 60fps loop (mteAdvance) handles boundaries
 
 function mtePlayToggle(){ const vid=mteV(); if(vid.paused){ vid.play(); mtePlaying=true; mteStartTick(); } else { vid.pause(); mtePlaying=false; mteStopTick(); } mteSyncPlay(); }
 function mteSyncPlay(){ const b=document.getElementById('mtePlayc'); if(b)b.innerHTML=mtePlaying?'&#10074;&#10074;':'&#9658;'; }
