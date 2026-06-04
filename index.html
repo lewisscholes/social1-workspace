@@ -275,18 +275,18 @@
   .mte-tlcontent{position:relative}
   .mte-ruler{position:relative;height:15px;color:#8e8e93;font-size:10px}
   .mte-ruler span{position:absolute;transform:translateX(-50%);white-space:nowrap;font-variant-numeric:tabular-nums;top:1px}
-  .mte-tl{position:relative;height:50px;display:flex;border-radius:7px;overflow:hidden;background:#1c1c1e}
+  .mte-tl{position:relative;height:66px;display:flex;border-radius:8px;overflow:hidden;background:#1c1c1e}
   .mte-thumbs{position:absolute;inset:0;z-index:1;overflow:hidden}
   .mte-thumbs div{position:absolute;top:0;bottom:0;background-size:cover;background-position:center}
   .mte-seg{position:relative;height:100%;border-right:2px solid #000;box-sizing:border-box;flex:0 0 auto;z-index:2}
   .mte-seg:last-child{border-right:0}
-  .mte-seg.sel{outline:2.5px solid #fff;outline-offset:-2px;border-radius:6px;z-index:5}
-  .mte-trim{position:absolute;top:0;bottom:0;width:16px;background:#fff;display:flex;align-items:center;justify-content:center;color:#000;font-weight:900;font-size:14px;line-height:1;z-index:7;cursor:ew-resize;touch-action:none}
-  .mte-trim.l{border-radius:6px 0 0 6px}
-  .mte-trim.r{border-radius:0 6px 6px 0}
+  .mte-seg.sel{outline:3px solid #fff;outline-offset:-3px;border-radius:7px;z-index:5}
+  .mte-trim{position:absolute;top:-2px;bottom:-2px;width:22px;background:#fff;display:flex;align-items:center;justify-content:center;color:#111;font-weight:900;font-size:16px;line-height:1;z-index:7;cursor:ew-resize;touch-action:none}
+  .mte-trim.l{border-radius:8px 0 0 8px}
+  .mte-trim.r{border-radius:0 8px 8px 0}
   .mte-split{position:absolute;top:0;bottom:0;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;z-index:6;pointer-events:none}
   .mte-split-h{width:15px;height:100%;background:rgba(255,255,255,.95);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#000;font-size:10px;font-weight:900;letter-spacing:-1.5px;box-shadow:0 0 0 1.5px rgba(0,0,0,.55)}
-  .mte-add{flex:0 0 auto;width:32px;height:50px;border-radius:7px;background:#2a2a2e;border:0;color:#fff;font-size:21px;cursor:pointer;align-self:flex-end}
+  .mte-add{flex:0 0 auto;width:32px;height:66px;border-radius:7px;background:#2a2a2e;border:0;color:#fff;font-size:21px;cursor:pointer;align-self:flex-end}
   .mte-phfix{position:absolute;left:50%;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 5px rgba(0,0,0,.9);transform:translateX(-50%);pointer-events:none;z-index:8;border-radius:2px}
   .mte-bar{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px calc(16px + env(safe-area-inset-bottom))}
   .mte-bar button{background:#1c1c1e;border:0;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:500;cursor:pointer;flex:1 1 0;min-width:0;height:56px;border-radius:11px}
@@ -1440,7 +1440,7 @@ function mteRenderTL(){
     let leftX=0; for(let k=0;k<mteSelSeg;k++)leftX+=(mteSegments[k].end-mteSegments[k].start)*mtePps;
     const selW=(mteSegments[mteSelSeg].end-mteSegments[mteSelSeg].start)*mtePps;
     html+='<div class="mte-trim l" id="mteTrimL" style="left:'+leftX+'px">&#8249;</div>';
-    html+='<div class="mte-trim r" id="mteTrimR" style="left:'+(leftX+selW-16)+'px">&#8250;</div>';
+    html+='<div class="mte-trim r" id="mteTrimR" style="left:'+(leftX+selW-22)+'px">&#8250;</div>';
   }
   tl.innerHTML=html;
   const hl=document.getElementById('mteTrimL'),hr=document.getElementById('mteTrimR');
@@ -1478,7 +1478,7 @@ function mteUpdTrim(){
   const marks=tl.querySelectorAll('.mte-split'); let cum=0,mi=0;
   mteSegments.forEach((s,i)=>{ cum+=(s.end-s.start)*mtePps; if(i<mteSegments.length-1){ const mk=marks[mi++]; if(mk)mk.style.left=cum+'px'; } });
   const hl=document.getElementById('mteTrimL'),hr=document.getElementById('mteTrimR');
-  if(hl)hl.style.left=selL+'px'; if(hr)hr.style.left=(selL+selW-16)+'px';
+  if(hl)hl.style.left=selL+'px'; if(hr)hr.style.left=(selL+selW-22)+'px';
   mteRenderRuler(total); mteRenderThumbs();
 }
 function mteTrimBind(el,side){
@@ -1563,6 +1563,7 @@ function mteBindTl(){
   },{passive:false});
   scroll.addEventListener('touchend',(e)=>{
     if(mtePinchBase&&(!e.touches||e.touches.length<2)){ mtePinchBase=0; if(mtePinchRaf){cancelAnimationFrame(mtePinchRaf);mtePinchRaf=0;} mteRenderTL(); return; }
+    if(mteTrimming)return;   // a trim-handle drag just ended; don't treat it as a tap
     if(!tapPinch&&!tapMoved&&(Date.now()-tapT)<350){ mteSelectAtClientX(tapX); }   // quick tap = select the clip
   },{passive:true});
   scroll.addEventListener('scroll',()=>{ if(!mteThumbRaf)mteThumbRaf=requestAnimationFrame(()=>{ mteThumbRaf=0; mteRenderThumbs(); }); if(mtePlaying||mteProgScroll||mteTrimming)return; mteSeekTarget=Math.max(0,Math.min(mteTotalKept(),scroll.scrollLeft/mtePps)); if(!mteSeekRaf)mteSeekRaf=requestAnimationFrame(mteApplySeek); });
