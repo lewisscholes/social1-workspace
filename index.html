@@ -249,11 +249,11 @@
   /* Mobile TikTok-style editor */
   .mte{position:fixed;inset:0;z-index:300;background:#000;color:#fff;display:none;flex-direction:column;-webkit-user-select:none;user-select:none;overscroll-behavior:contain}
   .mte.open{display:flex}
-  .mte-top{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:max(10px,env(safe-area-inset-top)) 14px 6px}
-  .mte-back{background:rgba(120,120,128,.5);border:0;color:#fff;width:38px;height:38px;border-radius:50%;font-size:22px;line-height:1;cursor:pointer}
-  .mte-next{background:#fe2c55;border:0;color:#fff;width:44px;height:44px;border-radius:50%;font-size:21px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
-  .mte-stage{position:relative;flex:1 1 auto;min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:2px 10px}
-  .mte-pv{position:relative;height:100%;max-height:44vh;max-width:100%;aspect-ratio:9/16;border-radius:14px;overflow:hidden;background:#000}
+  .mte-top{position:absolute;top:0;left:0;right:0;z-index:320;display:flex;align-items:center;justify-content:space-between;padding:max(8px,env(safe-area-inset-top)) 12px 0;pointer-events:none}
+  .mte-back{background:rgba(120,120,128,.5);border:0;color:#fff;width:38px;height:38px;border-radius:50%;font-size:22px;line-height:1;cursor:pointer;pointer-events:auto}
+  .mte-next{background:#fe2c55;border:0;color:#fff;width:44px;height:44px;border-radius:50%;font-size:21px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;pointer-events:auto}
+  .mte-stage{position:relative;flex:1 1 auto;min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:max(8px,env(safe-area-inset-top)) 6px 0}
+  .mte-pv{position:relative;height:100%;max-width:100%;aspect-ratio:9/16;border-radius:14px;overflow:hidden;background:#000}
   .mte-pv video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
   .mte-ovs{position:absolute;inset:0;overflow:hidden;pointer-events:none}
   .mte-ov{position:absolute;pointer-events:auto;cursor:move;touch-action:none;font-family:var(--ovfont);text-align:center;line-height:1.2;letter-spacing:-0.01em;width:max-content;max-width:84%;overflow-wrap:break-word;word-break:normal;padding:1px 5px;white-space:pre-wrap}
