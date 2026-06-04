@@ -1486,6 +1486,7 @@ function mteTrimBind(el,side){
     // Freeze the scroll width and leave the thumbnail strip + every other clip exactly where they are.
     // Only the dragged edge of THIS clip moves; nothing else shifts until release.
     content.style.width=((mteDuration||oe)*mtePps+2*pad+200)+'px';
+    let seekRaf=0, pendingEdge=0;
     const move=(ev)=>{
       const p=ev.touches?ev.touches[0]:ev; if(ev.cancelable)ev.preventDefault();
       const dt=(p.clientX-sx)/mtePps;
@@ -1495,19 +1496,23 @@ function mteTrimBind(el,side){
         segEl.style.width=(W0+dpx)+'px';                              // left edge pinned, right edge follows finger
         if(nextEl)nextEl.style.marginLeft=(origNextML-dpx)+'px';      // keep later clips locked in place
         if(hr)hr.style.left=(selL+W0+dpx-22)+'px';
+        pendingEdge=Math.max(seg.start,seg.end-0.04);
       } else {
         seg.start=Math.max(lower,Math.min(oe-MIN,os+dt));
         const dpx=(seg.start-os)*mtePps;
         segEl.style.marginLeft=dpx+'px';                             // right edge pinned, left edge follows finger
         segEl.style.width=(W0-dpx)+'px';                             // total footprint unchanged -> later clips stay locked
         if(hl)hl.style.left=(selL+dpx)+'px';
+        pendingEdge=seg.start;
       }
-      const vid=mteV(); const edge=(side==='l'?seg.start:Math.max(seg.start,seg.end-0.05)); if(vid.fastSeek){try{vid.fastSeek(edge);}catch(_){vid.currentTime=edge;}}else{vid.currentTime=edge;}
+      if(!seekRaf)seekRaf=requestAnimationFrame(()=>{ seekRaf=0; const vid=mteV(); if(vid.fastSeek){try{vid.fastSeek(pendingEdge);}catch(_){vid.currentTime=pendingEdge;}}else{vid.currentTime=pendingEdge;} });   // throttle the preview seek to one per frame so it follows smoothly
       mteUpdTime();
     };
     const up=(ev)=>{ if(ev&&ev.touches&&ev.touches.length>0)return; document.removeEventListener('mousemove',move);document.removeEventListener('touchmove',move);document.removeEventListener('mouseup',up);document.removeEventListener('touchend',up);
+      if(seekRaf){cancelAnimationFrame(seekRaf);seekRaf=0;}
       mteTrimming=false; if(segEl)segEl.style.marginLeft=''; if(nextEl)nextEl.style.marginLeft='';
-      const keep=scroll?scroll.scrollLeft:0; mteRenderTL(); if(scroll)scroll.scrollLeft=Math.max(0,Math.min(keep,scroll.scrollWidth-scroll.clientWidth)); mteUpdTime();   // reflow contiguous, keep the view where it was
+      const ct=Math.max(0,(side==='l'?seg.start:seg.end)); mteV().currentTime=ct;   // park playback at the trimmed edge (set sync so the re-render centres on it)
+      mteRenderTL(); mteUpdTime();   // reflow contiguous + lock the playhead line onto the trim point
     };
     document.addEventListener('mousemove',move);document.addEventListener('touchmove',move,{passive:false});document.addEventListener('mouseup',up);document.addEventListener('touchend',up);
   };
