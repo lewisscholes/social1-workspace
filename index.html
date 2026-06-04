@@ -281,6 +281,9 @@
   .mte-seg{position:relative;height:100%;border-right:2px solid #000;box-sizing:border-box;flex:0 0 auto;z-index:2}
   .mte-seg:last-child{border-right:0}
   .mte-seg.sel{outline:2.5px solid #fff;outline-offset:-2px;border-radius:6px;z-index:5}
+  .mte-trim{position:absolute;top:0;bottom:0;width:16px;background:#fff;display:flex;align-items:center;justify-content:center;color:#000;font-weight:900;font-size:14px;line-height:1;z-index:7;cursor:ew-resize;touch-action:none}
+  .mte-trim.l{border-radius:6px 0 0 6px}
+  .mte-trim.r{border-radius:0 6px 6px 0}
   .mte-split{position:absolute;top:0;bottom:0;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;z-index:6;pointer-events:none}
   .mte-split-h{width:15px;height:100%;background:rgba(255,255,255,.95);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#000;font-size:10px;font-weight:900;letter-spacing:-1.5px;box-shadow:0 0 0 1.5px rgba(0,0,0,.55)}
   .mte-add{flex:0 0 auto;width:32px;height:50px;border-radius:7px;background:#2a2a2e;border:0;color:#fff;font-size:21px;cursor:pointer;align-self:flex-end}
@@ -1341,7 +1344,7 @@ function epInitTextDrag(){
 // ---------- MOBILE TIKTOK-STYLE EDITOR ----------
 let mteId=null, mteDuration=0, mteSegments=[], mteSelSeg=-1, mteThumbs=[], mtePlaying=false, mteTexts=[], mteEditingOv=null, mteOvSeq=0;
 let mtePps=0, mtePpsFit=0, mteProgScroll=false, mteProgT=0, mteRaf=0, mteMuted=false, mteBound=false, mteSeekTarget=null, mteSeekRaf=0;
-let mteCurColor='#ffffff', mteCurSize=28, mteCurFont='classic', mteCurStyle='outline', mtePinchBase=0, mtePinchPps=0, mtePinchRaf=0, mteThumbRaf=0;
+let mteCurColor='#ffffff', mteCurSize=28, mteCurFont='classic', mteCurStyle='outline', mtePinchBase=0, mtePinchPps=0, mtePinchRaf=0, mteThumbRaf=0, mteTrimming=false;
 function mteContrast(hex){ const m=/^#?([0-9a-f]{6})$/i.exec(hex||''); if(!m)return '#000'; const n=parseInt(m[1],16); const r=(n>>16)&255,g=(n>>8)&255,b=n&255; return (0.299*r+0.587*g+0.114*b)>150?'#000':'#fff'; }
 function mteSyncKb(){ const sh=document.getElementById('mteSheet'); if(!sh)return; const vv=window.visualViewport; if(vv){ sh.style.height=vv.height+'px'; sh.style.top=vv.offsetTop+'px'; } }
 function mteKbBind(){ if(window.visualViewport){ window.visualViewport.addEventListener('resize',mteSyncKb); window.visualViewport.addEventListener('scroll',mteSyncKb); } mteSyncKb(); }
@@ -1432,7 +1435,16 @@ function mteRenderTL(){
   // split markers straddling each internal cut so the divisions are clearly visible
   let cum=0;
   mteSegments.forEach((s,i)=>{ cum+=(s.end-s.start)*mtePps; if(i<mteSegments.length-1){ html+='<div class="mte-split" style="left:'+cum+'px"><div class="mte-split-h">&#9656;&#9666;</div></div>'; } });
+  // draggable trim handles on the selected clip (drag to change in/out point directly on the timeline)
+  if(mteSelSeg>=0&&mteSegments[mteSelSeg]){
+    let leftX=0; for(let k=0;k<mteSelSeg;k++)leftX+=(mteSegments[k].end-mteSegments[k].start)*mtePps;
+    const selW=(mteSegments[mteSelSeg].end-mteSegments[mteSelSeg].start)*mtePps;
+    html+='<div class="mte-trim l" id="mteTrimL" style="left:'+leftX+'px">&#8249;</div>';
+    html+='<div class="mte-trim r" id="mteTrimR" style="left:'+(leftX+selW-16)+'px">&#8250;</div>';
+  }
   tl.innerHTML=html;
+  const hl=document.getElementById('mteTrimL'),hr=document.getElementById('mteTrimR');
+  if(hl)mteTrimBind(hl,'l'); if(hr)mteTrimBind(hr,'r');
   mteRenderThumbs();
   mteRenderRuler(total);
   mteUpdScroll();
@@ -1454,6 +1466,44 @@ function mteRenderThumbs(){
     html+='<div style="left:'+x+'px;width:'+w+'px;background-image:url('+th.url+')"></div>';
   }
   layer.innerHTML=html;
+}
+// Live geometry update while a trim handle is dragged: resize the clip + everything after, reposition markers/handles, refresh thumbs. No scroll re-centring (the drag controls the view).
+function mteUpdTrim(){
+  const tl=document.getElementById('mteTl'); const ruler=document.getElementById('mteRuler'); const content=document.getElementById('mteTlContent'); const scroll=document.getElementById('mteTlScroll');
+  if(!tl||!scroll||!content)return;
+  const total=mteTotalKept()||0.001; const scrollW=scroll.clientWidth||320; const pad=scrollW/2; const W=total*mtePps;
+  content.style.width=(W+2*pad)+'px'; ruler.style.width=W+'px'; ruler.style.marginLeft=pad+'px'; tl.style.width=W+'px'; tl.style.marginLeft=pad+'px';
+  let acc=0, selL=0, selW=0;
+  tl.querySelectorAll('.mte-seg').forEach((el,i)=>{ const s=mteSegments[i]; if(!s)return; const w=(s.end-s.start)*mtePps; el.style.width=w+'px'; if(i===mteSelSeg){selL=acc;selW=w;} acc+=w; });
+  const marks=tl.querySelectorAll('.mte-split'); let cum=0,mi=0;
+  mteSegments.forEach((s,i)=>{ cum+=(s.end-s.start)*mtePps; if(i<mteSegments.length-1){ const mk=marks[mi++]; if(mk)mk.style.left=cum+'px'; } });
+  const hl=document.getElementById('mteTrimL'),hr=document.getElementById('mteTrimR');
+  if(hl)hl.style.left=selL+'px'; if(hr)hr.style.left=(selL+selW-16)+'px';
+  mteRenderRuler(total); mteRenderThumbs();
+}
+function mteTrimBind(el,side){
+  const down=(e)=>{
+    if(mteSelSeg<0)return; const seg=mteSegments[mteSelSeg]; if(!seg)return;
+    e.stopPropagation(); if(e.cancelable)e.preventDefault();
+    mteTrimming=true;
+    if(mtePlaying){ mteV().pause(); mtePlaying=false; mteStopTick(); mteSyncPlay(); }
+    const scroll=document.getElementById('mteTlScroll');
+    const p0=e.touches?e.touches[0]:e; const sx=p0.clientX, os=seg.start, oe=seg.end, osl=scroll.scrollLeft;
+    const lower=(mteSelSeg>0?mteSegments[mteSelSeg-1].end:0);
+    const upper=(mteSelSeg<mteSegments.length-1?mteSegments[mteSelSeg+1].start:(mteDuration||oe));
+    const MIN=0.25;
+    const move=(ev)=>{
+      const p=ev.touches?ev.touches[0]:ev; if(ev.cancelable)ev.preventDefault();
+      const dt=(p.clientX-sx)/mtePps;
+      if(side==='l'){ seg.start=Math.max(lower,Math.min(oe-MIN,os+dt)); scroll.scrollLeft=osl-(seg.start-os)*mtePps; }
+      else { seg.end=Math.min(upper,Math.max(os+MIN,oe+dt)); }
+      const vid=mteV(); const edge=(side==='l'?seg.start:Math.max(seg.start,seg.end-0.05)); if(vid.fastSeek){try{vid.fastSeek(edge);}catch(_){vid.currentTime=edge;}}else{vid.currentTime=edge;}
+      mteUpdTrim(); mteUpdTime();
+    };
+    const up=(ev)=>{ if(ev&&ev.touches&&ev.touches.length>0)return; document.removeEventListener('mousemove',move);document.removeEventListener('touchmove',move);document.removeEventListener('mouseup',up);document.removeEventListener('touchend',up); mteTrimming=false; mteUpdTime(); };
+    document.addEventListener('mousemove',move);document.addEventListener('touchmove',move,{passive:false});document.addEventListener('mouseup',up);document.addEventListener('touchend',up);
+  };
+  el.addEventListener('mousedown',down); el.addEventListener('touchstart',down,{passive:false});
 }
 function mteSelectAtClientX(cx){
   const scroll=document.getElementById('mteTlScroll'); if(!scroll||!mtePps||!mteSegments.length)return;
@@ -1515,7 +1565,7 @@ function mteBindTl(){
     if(mtePinchBase&&(!e.touches||e.touches.length<2)){ mtePinchBase=0; if(mtePinchRaf){cancelAnimationFrame(mtePinchRaf);mtePinchRaf=0;} mteRenderTL(); return; }
     if(!tapPinch&&!tapMoved&&(Date.now()-tapT)<350){ mteSelectAtClientX(tapX); }   // quick tap = select the clip
   },{passive:true});
-  scroll.addEventListener('scroll',()=>{ if(!mteThumbRaf)mteThumbRaf=requestAnimationFrame(()=>{ mteThumbRaf=0; mteRenderThumbs(); }); if(mtePlaying||mteProgScroll)return; mteSeekTarget=Math.max(0,Math.min(mteTotalKept(),scroll.scrollLeft/mtePps)); if(!mteSeekRaf)mteSeekRaf=requestAnimationFrame(mteApplySeek); });
+  scroll.addEventListener('scroll',()=>{ if(!mteThumbRaf)mteThumbRaf=requestAnimationFrame(()=>{ mteThumbRaf=0; mteRenderThumbs(); }); if(mtePlaying||mteProgScroll||mteTrimming)return; mteSeekTarget=Math.max(0,Math.min(mteTotalKept(),scroll.scrollLeft/mtePps)); if(!mteSeekRaf)mteSeekRaf=requestAnimationFrame(mteApplySeek); });
 }
 function mteApplySeek(){ mteSeekRaf=0; if(mteSeekTarget==null)return; const src=mteKeptToSrc(mteSeekTarget); const vid=mteV(); if(Math.abs(vid.currentTime-src)>0.01){ if(vid.fastSeek){ try{vid.fastSeek(src);}catch(e){ vid.currentTime=src; } } else { vid.currentTime=src; } } mteUpdTime(); }
 
