@@ -1161,19 +1161,73 @@ function bankBar(list){
   bar.innerHTML='<button class="btn" style="width:100%;justify-content:center" onclick="downloadAllEdited()">'+lbl+'</button>';
   return bar;
 }
+let dlCancelled=false;
+function dlCancel(){ dlCancelled=true; closeModal(); toast('Cancelled','ok'); }
+function dlFmtEta(sec){
+  if(!isFinite(sec)||sec<0) return 'Estimating time left...';
+  sec=Math.round(sec);
+  if(sec<=1) return 'Almost ready...';
+  if(sec<60) return 'about '+sec+'s left';
+  const m=Math.floor(sec/60), s=sec%60; return 'about '+m+'m '+(s<10?'0':'')+s+'s left';
+}
+function dlProgressModal(n){
+  showModal('<h3>Preparing '+n+' video'+(n!==1?'s':'')+'</h3>'
+    +'<p class="h-sub" id="dlpSub" style="margin:2px 0 0">Getting them ready to save to your camera roll...</p>'
+    +'<div style="height:10px;border-radius:6px;background:var(--line);overflow:hidden;margin:14px 0 8px"><div id="dlpBar" style="height:100%;width:0%;background:var(--grad);transition:width .25s ease"></div></div>'
+    +'<div class="h-sub" id="dlpEta" style="text-align:center;font-weight:600;color:var(--ink)">Estimating time left...</div>'
+    +'<div class="actions" style="margin-top:16px"><button class="btn ghost" style="width:100%;justify-content:center" onclick="dlCancel()">Cancel</button></div>');
+}
+function dlProgressUpdate(done,total,doneBytes,totalBytes,t0){
+  const bar=document.getElementById('dlpBar'); const sub=document.getElementById('dlpSub'); const eta=document.getElementById('dlpEta');
+  if(!bar) return;
+  const pct=Math.max(0,Math.min(100,Math.round(done/total*100)));
+  bar.style.width=pct+'%';
+  if(sub) sub.textContent=done+' of '+total+' ready';
+  const elapsed=(Date.now()-t0)/1000;
+  let etaSec=Infinity;
+  if(done>=total) etaSec=0;
+  else if(doneBytes>0 && totalBytes>0) etaSec=elapsed*(totalBytes-doneBytes)/doneBytes;   // bytes-based = more accurate
+  else if(done>0) etaSec=elapsed*(total-done)/done;                                        // fall back to count
+  if(eta) eta.textContent=dlFmtEta(etaSec);
+}
 async function downloadAllEdited(){
   const list=bankBuckets().edited.slice(); if(!list.length){ toast('Nothing to download','err'); return; }
-  // Phone: pull every edited clip, then save them ALL to the camera roll in one share-sheet action.
+  // Phone: pull every edited clip (a few at a time) behind a live progress bar + ETA, then
+  // save them ALL to the camera roll in one share-sheet action. iOS needs a FRESH tap to allow
+  // the share, so when the files are ready we show a Save button (promptShareAll) to tap.
   if(isMobileDevice() && navigator.canShare){
-    toast('Preparing '+list.length+' video'+(list.length!==1?'s':'')+'…','ok');
-    const files=[];
-    for(const v of list){
-      try{ const {data}=await sb.storage.from(BUCKET).createSignedUrl(v.storage_path,900); if(data&&data.signedUrl){ const blob=await (await fetch(data.signedUrl)).blob(); files.push(new File([blob], v.filename||'video.mp4',{type:blob.type||'video/mp4'})); } }catch(e){}
+    dlCancelled=false;
+    const total=list.length;
+    const totalBytes=list.reduce((s,v)=>s+(v.size_bytes||0),0);
+    const t0=Date.now();
+    dlProgressModal(total);
+    const results=new Array(total).fill(null);
+    let done=0, doneBytes=0, idx=0;
+    const CONC=Math.min(3,total);   // 3 parallel downloads -- faster without swamping the phone
+    async function worker(){
+      while(true){
+        if(dlCancelled) return;
+        const i=idx++; if(i>=total) return;
+        const v=list[i];
+        try{
+          const {data}=await sb.storage.from(BUCKET).createSignedUrl(v.storage_path,900);
+          if(data&&data.signedUrl){
+            const blob=await (await fetch(data.signedUrl)).blob();
+            results[i]=new File([blob], v.filename||'video.mp4',{type:blob.type||'video/mp4'});
+          }
+        }catch(e){}
+        done++; doneBytes+=(v.size_bytes||0);
+        dlProgressUpdate(done,total,doneBytes,totalBytes,t0);
+      }
     }
+    await Promise.all(Array.from({length:CONC},()=>worker()));
+    if(dlCancelled) return;
+    const files=results.filter(Boolean);
     if(files.length && navigator.canShare({files})){ promptShareAll(files,list); return; }   // fresh-tap modal -> share sheet -> Save N Videos
+    closeModal();   // sharing not available -- fall through to plain downloads below
   }
   // Computer (and phones without file sharing): save each to the Downloads folder
-  toast('Downloading '+list.length+' video'+(list.length!==1?'s':'')+'…','ok');
+  toast('Downloading '+list.length+' video'+(list.length!==1?'s':'')+'...','ok');
   for(const v of list){
     try{ const {data}=await sb.storage.from(BUCKET).createSignedUrl(v.storage_path,300,{download:v.filename}); if(data&&data.signedUrl){ const a=document.createElement('a'); a.href=data.signedUrl; a.download=v.filename||'video.mp4'; document.body.appendChild(a); a.click(); a.remove(); } }catch(e){}
     await new Promise(r=>setTimeout(r,1500));
