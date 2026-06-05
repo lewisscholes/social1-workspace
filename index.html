@@ -1738,7 +1738,7 @@ async function mteOpen(id){
   vid.onended=null; vidB.onended=null;
   document.getElementById('mteSheet').classList.remove('open');
   document.getElementById('mte').classList.add('open');
-  document.querySelectorAll('.sw-card video').forEach(x=>{ try{x.pause();}catch(e){} });   // free the decoders/bandwidth the deck was using -> editor loads faster
+  document.querySelectorAll('.sw-card video').forEach(x=>{ try{x.pause(); x.removeAttribute('src'); x.load();}catch(e){} });   // fully release the deck's video decoders -> the editor's player isn't starved (no multi-second play stalls)
   mteLockScroll(true);
   mteBindTl();
   vid.src=url||''; vidB.src=url||'';
@@ -1748,11 +1748,12 @@ async function mteOpen(id){
 
 function mteClose(){
   mteStopTick();
+  mteThumbToken++;   // abort any in-flight thumbnail build and free its decoder
   ['mteVideo','mteVideo2'].forEach(id=>{ const v=document.getElementById(id); if(v){ v.pause(); v.removeAttribute('src'); try{v.load();}catch(e){} } });
   document.getElementById('mte').classList.remove('open');
   document.getElementById('mteSheet').classList.remove('open');
   mteLockScroll(false);
-  document.querySelectorAll('.sw-card video').forEach(x=>{ try{x.play().catch(()=>{});}catch(e){} });   // resume the deck previews
+  try{ swRender(); }catch(e){}   // rebuild the deck (restores the video sources we released on open)
 }
 // Merge splits that are contiguous in the source into "runs" -- the browser plays each run straight through;
 // only the boundaries BETWEEN runs are real cuts that need a seek.
@@ -2053,20 +2054,26 @@ function mteDeleteSeg(){
   mteRenderTL(); mteUpdTime(); toast('Deleted','ok');
 }
 
+let mteThumbToken=0;
 async function mteBuildThumbs(){
+  const myTok=++mteThumbToken;                 // newest builder wins; older ones abort
+  const url=signed[mteId]; if(!url||!mteDuration)return;
+  const tv=document.createElement('video'); tv.crossOrigin='anonymous'; tv.muted=true; tv.preload='auto'; tv.playsInline=true; tv.src=url;
+  const release=()=>{ try{ tv.pause(); tv.removeAttribute('src'); tv.load(); }catch(e){} };   // CRITICAL: free the decoder when done/aborted
   try{
-    const url=signed[mteId]; if(!url||!mteDuration)return;
-    const tv=document.createElement('video'); tv.crossOrigin='anonymous'; tv.muted=true; tv.preload='auto'; tv.src=url;
     await new Promise((res,rej)=>{ tv.onloadedmetadata=()=>res(); tv.onerror=()=>rej(); setTimeout(()=>rej(),9000); });
+    if(myTok!==mteThumbToken){ release(); return; }
     const N=Math.max(14,Math.min(40,Math.round(mteDuration))), cv=document.createElement('canvas'); cv.width=60; cv.height=104; const ctx=cv.getContext('2d'); const out=[];
     for(let i=0;i<N;i++){
+      if(myTok!==mteThumbToken){ release(); return; }   // editor closed or another build started -> stop + free decoder
       const t=mteDuration*(i+0.5)/N;
       await new Promise((res)=>{ tv.onseeked=()=>res(); try{tv.currentTime=Math.min(t,Math.max(0,mteDuration-0.05));}catch(e){res();} setTimeout(()=>res(),1500); });
-      try{ ctx.drawImage(tv,0,0,cv.width,cv.height); out.push({t:t,url:cv.toDataURL('image/jpeg',0.55)}); }catch(e){ return; }
-      if(i%4===3){ mteThumbs=out.slice(); mteRenderThumbs(); }   // progressive fill so the strip appears as it captures
+      try{ ctx.drawImage(tv,0,0,cv.width,cv.height); out.push({t:t,url:cv.toDataURL('image/jpeg',0.55)}); }catch(e){ release(); return; }
+      if(i%4===3 && myTok===mteThumbToken){ mteThumbs=out.slice(); mteRenderThumbs(); }   // progressive fill so the strip appears as it captures
     }
-    mteThumbs=out; mteRenderTL();
+    if(myTok===mteThumbToken){ mteThumbs=out; mteRenderTL(true); }
   }catch(e){ /* thumbnails unavailable -- plain timeline */ }
+  finally{ release(); }
 }
 
 // ---- text overlays ----
