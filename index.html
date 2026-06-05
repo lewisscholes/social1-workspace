@@ -1793,9 +1793,10 @@ function mteKeptToSrc(k){ for(const s of mteSegments){ const len=s.end-s.start; 
 
 function mteUpdTime(){ const el=document.getElementById('mteTime'); if(!el)return; el.innerHTML='<b>'+mteFmt(mteSrcToKept(mteV().currentTime))+'</b> / '+mteFmt(mteTotalKept()); }
 
-function mteRenderTL(){
+function mteRenderTL(keepScroll){
   const tl=document.getElementById('mteTl'); const ruler=document.getElementById('mteRuler'); const content=document.getElementById('mteTlContent'); const scroll=document.getElementById('mteTlScroll');
   if(!tl||!scroll||!content)return;
+  const prevSL = keepScroll ? scroll.scrollLeft : null;   // selecting/splitting must NOT jump the playhead
   const total=mteTotalKept()||0.001;
   const scrollW=scroll.clientWidth||320;
   mtePpsFit=scrollW/total;
@@ -1824,8 +1825,13 @@ function mteRenderTL(){
   if(hl)mteTrimBind(hl,'l'); if(hr)mteTrimBind(hr,'r');
   mteThumbKey=''; mteRenderThumbs();   // layer was just rebuilt empty, force a fresh fill
   mteRenderRuler(total);
-  mteUpdScroll();
+  if(prevSL!=null){ mteProgScroll=true; scroll.scrollLeft=prevSL; clearTimeout(mteProgT); mteProgT=setTimeout(()=>{mteProgScroll=false;},90); }   // keep the marker exactly where it was
+  else mteUpdScroll();
 }
+// The on-screen playhead = the centred marker = the scroll position. This (not the video's
+// currentTime, which can lag a scrub) is the source of truth for "where we're up to".
+function mteMarkerKept(){ const sc=document.getElementById('mteTlScroll'); if(!sc||!mtePps) return mteSrcToKept(mteV().currentTime); return Math.max(0,Math.min(mteTotalKept(), sc.scrollLeft/mtePps)); }
+function mteMarkerSrc(){ return mteKeptToSrc(mteMarkerKept()); }
 // Virtualized thumbnail strip: only the cells visible in the scroll viewport are drawn, at a fixed crisp width.
 // Zooming widens the strip (more frames spaced out by TIME) without magnifying any single image, and stays fast at any zoom.
 function mteRenderThumbs(){
@@ -1915,8 +1921,8 @@ function mteSelectAtClientX(cx){
   const xInTl=scroll.scrollLeft+(cx-rect.left)-pad;
   let acc=0,hit=-1;
   for(let i=0;i<mteSegments.length;i++){ const w=(mteSegments[i].end-mteSegments[i].start)*mtePps; if(xInTl>=acc-1&&xInTl<acc+w+1){ hit=i; break; } acc+=w; }
-  if(hit<0){ if(mteSelSeg<0)return; mteSelSeg=-1; mteRenderTL(); return; }
-  mteSelSeg=(mteSelSeg===hit?-1:hit); mteRenderTL();
+  if(hit<0){ if(mteSelSeg<0)return; mteSelSeg=-1; mteRenderTL(true); return; }
+  mteSelSeg=(mteSelSeg===hit?-1:hit); mteRenderTL(true);   // keep the playhead where it is
 }
 
 function mteRenderRuler(total){
@@ -1977,7 +1983,7 @@ function mteBindTl(){
     let gx=0,gy=0,gsl=0,gon=false,gmoved=false,gt=0;
     gap.addEventListener('touchstart',(e)=>{ gon=true; gmoved=false; gx=e.touches[0].clientX; gy=e.touches[0].clientY; gsl=scroll.scrollLeft; gt=Date.now(); if(mtePlaying){ mteV().pause(); mtePlaying=false; mteStopTick(); mteSyncPlay(); } },{passive:true});
     gap.addEventListener('touchmove',(e)=>{ if(!gon)return; if(Math.abs(e.touches[0].clientX-gx)+Math.abs(e.touches[0].clientY-gy)>8)gmoved=true; if(e.cancelable)e.preventDefault(); scroll.scrollLeft=gsl-(e.touches[0].clientX-gx); },{passive:false});
-    gap.addEventListener('touchend',()=>{ gon=false; if(!gmoved&&(Date.now()-gt)<350&&mteSelSeg>=0){ mteSelSeg=-1; mteRenderTL(); } },{passive:true});   // tap the black space = deselect, show the cuts
+    gap.addEventListener('touchend',()=>{ gon=false; if(!gmoved&&(Date.now()-gt)<350&&mteSelSeg>=0){ mteSelSeg=-1; mteRenderTL(true); } },{passive:true});   // tap the black space = deselect, show the cuts (keep position)
   }
 }
 // Seek-to-latest: never queue more than one seek at a time. When the in-flight seek
@@ -2008,9 +2014,9 @@ function mteToggleMute(){ mteMuted=!mteMuted; mteV().muted=mteMuted; mteVB().mut
 function mteSoon(name){ toast(name+' is coming soon','ok'); }
 
 function mteSplit(){
-  const t=mteV().currentTime;
+  const t=mteMarkerSrc();   // split at the on-screen marker, not a possibly-stale currentTime
   for(let i=0;i<mteSegments.length;i++){ const s=mteSegments[i];
-    if(t>s.start+0.1&&t<s.end-0.1){ const ns={start:t,end:s.end}; s.end=t; mteSegments.splice(i+1,0,ns); mteSelSeg=i; mteRenderTL(); mteUpdTime(); toast('Split','ok'); return; }   // select the clip LEFT of the cut so its right handle sits on the split point
+    if(t>s.start+0.05&&t<s.end-0.05){ const ns={start:t,end:s.end}; s.end=t; mteSegments.splice(i+1,0,ns); mteSelSeg=i; try{mteV().currentTime=t;}catch(e){} mteRenderTL(true); mteUpdTime(); toast('Split','ok'); return; }   // keep the marker on the split point; select the LEFT clip so its right handle sits there
   }
   toast('Move the playhead inside a clip to split','err');
 }
@@ -2018,10 +2024,10 @@ function mteSplit(){
 function mteDeleteSeg(){
   if(mteSelSeg<0){ toast('Tap a clip on the timeline first','err'); return; }
   if(mteSegments.length<=1){ toast('Cannot delete the only clip','err'); return; }
-  const vid=mteV(); const keptPos=mteSrcToKept(vid.currentTime);   // remember where the marker line is
+  const vid=mteV(); const keptPos=mteMarkerKept();                 // remember where the marker line is
   mteSegments.splice(mteSelSeg,1); mteSelSeg=-1;
   const kp=Math.max(0,Math.min(keptPos, mteTotalKept()));          // keep the line at the same spot (clamped)
-  vid.currentTime=mteKeptToSrc(kp);
+  try{vid.currentTime=mteKeptToSrc(kp);}catch(e){}
   mteRenderTL(); mteUpdTime(); toast('Deleted','ok');
 }
 
