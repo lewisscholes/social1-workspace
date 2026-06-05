@@ -1744,6 +1744,7 @@ async function mteOpen(id){
   vid.src=url||''; vidB.src=url||'';
   try{ const pb=vidB.play(); if(pb&&pb.then)pb.then(()=>vidB.pause()).catch(()=>{}); }catch(e){}   // unlock buffer 2 for later programmatic swaps
   vid.play().then(()=>{mtePlaying=true;mteSyncPlay();mteStartTick();mtePrimeStandby();}).catch(()=>{mtePlaying=false;mteSyncPlay();});
+  mtePrefetchBlob(id, v);   // pull the small proxy fully into memory so seeks/scrubs are instant (no network)
 }
 
 function mteClose(){
@@ -1754,6 +1755,27 @@ function mteClose(){
   document.getElementById('mteSheet').classList.remove('open');
   mteLockScroll(false);
   try{ swRender(); }catch(e){}   // rebuild the deck (restores the video sources we released on open)
+}
+
+// ---- Instant seeking: keep the (small 480p) proxy fully in memory as a blob, so every
+// scrub/seek is a local decode with zero network latency. Applied while paused so it
+// never interrupts playback; cached for the last few clips for instant re-open. ----
+const mteBlob={}; let mteBlobOrder=[];
+async function mtePrefetchBlob(id, v){
+  if(!v || !v.proxy_path) return;                 // only the small proxy, never the full original
+  if(mteBlob[id]){ if(!mtePlaying) mteApplyBlob(); return; }
+  const su=signed[id]; if(!su) return;
+  try{
+    const blob=await (await fetch(su)).blob();
+    if(mteId!==id) return;                         // user moved to another clip
+    mteBlob[id]=URL.createObjectURL(blob); mteBlobOrder.push(id);
+    while(mteBlobOrder.length>3){ const o=mteBlobOrder.shift(); if(o!==id && mteBlob[o]){ try{URL.revokeObjectURL(mteBlob[o]);}catch(e){} delete mteBlob[o]; } }
+    if(!mtePlaying) mteApplyBlob();                // swap now if paused; otherwise it swaps on the next pause/scrub
+  }catch(e){}
+}
+function mteApplyBlob(){
+  const u=mteBlob[mteId]; if(!u || mtePlaying) return;
+  ['mteVideo','mteVideo2'].forEach(eid=>{ const el=document.getElementById(eid); if(el && el.src!==u){ const ct=el.currentTime||0; el.src=u; el.addEventListener('loadedmetadata',()=>{ try{el.currentTime=ct;}catch(e){} },{once:true}); } });
 }
 // Merge splits that are contiguous in the source into "runs" -- the browser plays each run straight through;
 // only the boundaries BETWEEN runs are real cuts that need a seek.
@@ -1961,6 +1983,8 @@ function mteBindTl(){
   scroll.addEventListener('touchstart',(e)=>{
     mteProgScroll=false;
     if(mtePlaying){ mteV().pause(); mtePlaying=false; mteStopTick(); mteSyncPlay(); }
+    mteApplyBlob();   // now paused -> switch to the in-memory proxy so this scrub is instant
+
     if(e.touches.length===2){ tapPinch=true; mtePinchBase=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); mtePinchPps=mtePps; }
     else { tapPinch=false; tapMoved=false; tapX=e.touches[0].clientX; tapY=e.touches[0].clientY; tapT=Date.now(); }
   },{passive:true});
