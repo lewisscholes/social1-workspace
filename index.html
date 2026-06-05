@@ -295,9 +295,9 @@
   .mte-next{background:#fe2c55;border:0;color:#fff;width:44px;height:44px;border-radius:50%;font-size:21px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;pointer-events:auto}
   .mte-stage{position:relative;flex:1 1 auto;min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:max(8px,env(safe-area-inset-top)) 6px 0}
   .mte-pv{position:relative;height:100%;max-width:100%;aspect-ratio:9/16;border-radius:14px;overflow:hidden;background:#000}
-  .mte-pv video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
-  .mte-pv video.off{opacity:0}
-  .mte-ovs{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+  .mte-pv video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;z-index:2}
+  .mte-pv video.off{z-index:1}   /* standby sits BEHIND (both opaque) so it keeps decoding -> warm, hitch-free cut swaps */
+  .mte-ovs{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:5}
   .mte-ov{position:absolute;pointer-events:auto;cursor:move;touch-action:none;font-family:var(--ovfont);text-align:center;line-height:1.2;letter-spacing:-0.01em;width:max-content;max-width:84%;overflow-wrap:break-word;word-break:normal;padding:1px 5px;white-space:pre-wrap}
   .mte-guide-v,.mte-guide-h{position:absolute;background:#fe2c55;opacity:0;transition:opacity .08s;pointer-events:none;z-index:6}
   .mte-guide-v{top:5%;bottom:5%;left:50%;width:1.5px;transform:translateX(-50%)}
@@ -576,6 +576,8 @@
         <span class="mte-time" id="mteTime"><b>0:00</b> / 0:00</span>
         <button class="mte-playc" id="mtePlayc" onclick="mtePlayToggle()" aria-label="Play">&#9658;</button>
         <span class="mte-tr-ic">
+          <button id="mteUndo" onclick="mteUndo()" aria-label="Undo"><svg class="svic" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a4 4 0 0 1 0 8h-1"/></svg></button>
+          <button id="mteRedo" onclick="mteRedo()" aria-label="Redo"><svg class="svic" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a4 4 0 0 0 0 8h1"/></svg></button>
           <button onclick="mteZoom(-1)" aria-label="Zoom out">&#8722;</button>
           <button onclick="mteZoom(1)" aria-label="Zoom in">&#43;</button>
         </span>
@@ -595,10 +597,9 @@
       </div>
       <div class="mte-gap"></div>
       <div class="mte-bar" id="mteBar">
-        <button onclick="mteSoon('Sound')"><span class="mi">&#9835;</span>Sound</button>
         <button onclick="mteAddText()"><span class="mi">Aa</span>Text</button>
-        <button onclick="mteSplit()"><span class="mi">&#9986;</span>Split</button>
-        <button onclick="mteDeleteSeg()"><span class="mi">&#128465;</span>Delete</button>
+        <button onclick="mteSplit()"><span class="mi"><svg class="svic" viewBox="0 0 24 24"><rect x="3" y="6.5" width="6.4" height="11" rx="1.8"/><rect x="14.6" y="6.5" width="6.4" height="11" rx="1.8"/><line x1="12" y1="3.5" x2="12" y2="20.5" stroke-dasharray="2 2.4"/></svg></span>Split</button>
+        <button onclick="mteDeleteSeg()"><span class="mi"><svg class="svic" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></span>Delete</button>
       </div>
       <div class="mte-sheet" id="mteSheet">
         <div class="mte-sheet-top">
@@ -1717,7 +1718,7 @@ async function mteAutoSuggest(id){
 
 async function mteOpen(id){
   const v=swVids.find(x=>x.id===id); if(!v) return;
-  mteId=id; mteSelSeg=-1; mteThumbs=[]; mtePlaying=false; mteTexts=[]; mteSegments=[]; mtePps=0; mteMuted=false;
+  mteId=id; mteSelSeg=-1; mteThumbs=[]; mtePlaying=false; mteTexts=[]; mteSegments=[]; mtePps=0; mteMuted=false; mteResetUndo();
   let url=signed[id];
   if(!url){ const {data:s}=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600); url=s&&s.signedUrl; if(url)signed[id]=url; }
   const es=v.edit_state;
@@ -1779,7 +1780,7 @@ function mteAdvance(){
   // still hidden+muted. By the time we hit the cut it has been decoding/playing for LEAD
   // and has arrived exactly on the cut point -- so the swap is warm (no decode hitch) and
   // lands on the right frame (no content skip).
-  const LEAD=0.16;
+  const LEAD=0.24;
   if(!mteRolling && t>=run.end-LEAD){ const sb=mteVB(); sb.muted=true; const warm=Math.max(0,runs[ni].start-LEAD); if(Math.abs(sb.currentTime-warm)>0.04){ try{sb.currentTime=warm;}catch(e){} } const p=sb.play(); if(p&&p.catch)p.catch(()=>{}); mteRolling=true; }
   if(t>=run.end-0.012){ mteSwapTo(ni); }
 }
@@ -1876,6 +1877,7 @@ function mteTrimBind(el,side){
   const down=(e)=>{
     if(mteSelSeg<0)return; const seg=mteSegments[mteSelSeg]; if(!seg)return;
     e.stopPropagation(); if(e.cancelable)e.preventDefault();
+    mtePushUndo();   // snapshot before a trim so it can be undone
     mteTrimming=true;
     if(mtePlaying){ mteV().pause(); mtePlaying=false; mteStopTick(); mteSyncPlay(); }
     const content=document.getElementById('mteTlContent'); const scroll=document.getElementById('mteTlScroll');
@@ -2008,7 +2010,7 @@ function mteZoom(dir){ if(!mtePpsFit)return; mtePps=Math.min(MTE_PPS_MAX,Math.ma
 
 function mteOnTimeUpdate(){ if(!mtePlaying) mteUpdTime(); }   // during playback the 60fps loop (mteAdvance) handles boundaries
 
-function mtePlayToggle(){ const a=mteV(),b=mteVB(); if(a.paused){ mteRunIdx=Math.max(0,mteRunAt(a.currentTime)); a.muted=mteMuted; b.muted=true; try{ const pb=b.play(); if(pb&&pb.then)pb.then(()=>b.pause()).catch(()=>{}); }catch(e){} a.play(); mtePlaying=true; mteStartTick(); mtePrimeStandby(); } else { a.pause(); b.pause(); mtePlaying=false; mteStopTick(); } mteSyncPlay(); }
+function mtePlayToggle(){ const a=mteV(),b=mteVB(); if(a.paused){ const ms=mteMarkerSrc(); if(Math.abs(a.currentTime-ms)>0.05){ try{a.currentTime=ms;}catch(e){} } mteRunIdx=Math.max(0,mteRunAt(ms)); a.muted=mteMuted; b.muted=true; try{ const pb=b.play(); if(pb&&pb.then)pb.then(()=>b.pause()).catch(()=>{}); }catch(e){} a.play(); mtePlaying=true; mteStartTick(); mtePrimeStandby(); } else { a.pause(); b.pause(); mtePlaying=false; mteStopTick(); } mteSyncPlay(); }
 function mteSyncPlay(){ const b=document.getElementById('mtePlayc'); if(b)b.innerHTML=mtePlaying?'&#10074;&#10074;':'&#9658;'; }
 function mteToggleMute(){ mteMuted=!mteMuted; mteV().muted=mteMuted; mteVB().muted=true; const b=document.getElementById('mteVol'); if(b)b.innerHTML=mteMuted?'&#128263;':'&#128266;'; }
 function mteSoon(name){ toast(name+' is coming soon','ok'); }
@@ -2016,17 +2018,37 @@ function mteSoon(name){ toast(name+' is coming soon','ok'); }
 function mteSplit(){
   const t=mteMarkerSrc();   // split at the on-screen marker, not a possibly-stale currentTime
   for(let i=0;i<mteSegments.length;i++){ const s=mteSegments[i];
-    if(t>s.start+0.05&&t<s.end-0.05){ const ns={start:t,end:s.end}; s.end=t; mteSegments.splice(i+1,0,ns); mteSelSeg=i; try{mteV().currentTime=t;}catch(e){} mteRenderTL(true); mteUpdTime(); toast('Split','ok'); return; }   // keep the marker on the split point; select the LEFT clip so its right handle sits there
+    if(t>s.start+0.05&&t<s.end-0.05){ mtePushUndo(); const ns={start:t,end:s.end}; s.end=t; mteSegments.splice(i+1,0,ns); mteSelSeg=i; try{mteV().currentTime=t;}catch(e){} mteRenderTL(true); mteUpdTime(); toast('Split','ok'); return; }   // keep the marker on the split point; select the LEFT clip so its right handle sits there
   }
   toast('Move the playhead inside a clip to split','err');
 }
 
+// ---------- UNDO / REDO (editor) ----------
+let mteUndoStack=[], mteRedoStack=[];
+function mteSnap(){ return { segs:mteSegments.map(s=>({start:s.start,end:s.end})), texts:mteTexts.map(o=>Object.assign({},o)), sel:mteSelSeg, kept:mteMarkerKept() }; }
+function mtePushUndo(){ mteUndoStack.push(mteSnap()); if(mteUndoStack.length>60)mteUndoStack.shift(); mteRedoStack.length=0; mteUpdUndoBtns(); }
+function mteResetUndo(){ mteUndoStack=[]; mteRedoStack=[]; mteUpdUndoBtns(); }
+function mteUpdUndoBtns(){ const u=document.getElementById('mteUndo'),r=document.getElementById('mteRedo'); if(u)u.style.opacity=mteUndoStack.length?'1':'.3'; if(r)r.style.opacity=mteRedoStack.length?'1':'.3'; }
+function mteRestoreSnap(s){
+  mteSegments=s.segs.map(x=>({start:x.start,end:x.end}));
+  mteTexts=s.texts.map(o=>Object.assign({},o));
+  mteSelSeg=(s.sel!=null?s.sel:-1);
+  mteRenderTL(); mteRenderOverlays();
+  const kp=Math.max(0,Math.min(s.kept||0, mteTotalKept()));
+  try{ mteV().currentTime=mteKeptToSrc(kp); }catch(e){}
+  mteUpdScroll(); mteUpdTime(); mteUpdUndoBtns();
+}
+function mteUndo(){ if(!mteUndoStack.length){ toast('Nothing to undo','err'); return; } if(mtePlaying)mtePlayToggle(); mteRedoStack.push(mteSnap()); mteRestoreSnap(mteUndoStack.pop()); toast('Undo','ok'); }
+function mteRedo(){ if(!mteRedoStack.length){ toast('Nothing to redo','err'); return; } if(mtePlaying)mtePlayToggle(); mteUndoStack.push(mteSnap()); mteRestoreSnap(mteRedoStack.pop()); toast('Redo','ok'); }
+
 function mteDeleteSeg(){
   if(mteSelSeg<0){ toast('Tap a clip on the timeline first','err'); return; }
   if(mteSegments.length<=1){ toast('Cannot delete the only clip','err'); return; }
-  const vid=mteV(); const keptPos=mteMarkerKept();                 // remember where the marker line is
+  mtePushUndo();
+  const vid=mteV();
+  let join=0; for(let k=0;k<mteSelSeg;k++) join+=(mteSegments[k].end-mteSegments[k].start);   // kept-time of the cut this clip sat on
   mteSegments.splice(mteSelSeg,1); mteSelSeg=-1;
-  const kp=Math.max(0,Math.min(keptPos, mteTotalKept()));          // keep the line at the same spot (clamped)
+  const kp=Math.max(0,Math.min(join, mteTotalKept()));            // land the marker on the join where the two clips just closed together
   try{vid.currentTime=mteKeptToSrc(kp);}catch(e){}
   mteRenderTL(); mteUpdTime(); toast('Deleted','ok');
 }
@@ -2078,7 +2100,7 @@ function mteTaText(ta){ return ((ta&&ta.innerText)||'').replace(/\u00a0/g,' ').r
 function mteTaKey(e){ if(e.key==='Enter'){ e.preventDefault(); document.execCommand('insertLineBreak'); mteLiveApply(); } }
 function mtePlaceCaretEnd(el){ try{ const r=document.createRange(); r.selectNodeContents(el); r.collapse(false); const s=window.getSelection(); s.removeAllRanges(); s.addRange(r); }catch(_){} }
 function mteSelFontBtn(key){ document.querySelectorAll('#mteFonts .mte-fbtn').forEach(b=>b.classList.toggle('sel',b.dataset.font===key)); }
-function mteAddText(){ mteOpenTextSheet(null); }
+function mteAddText(){ mtePushUndo(); mteOpenTextSheet(null); }
 function mteOpenTextSheet(ov){
   if(!ov){ ov={id:++mteOvSeq,text:'',x:50,y:50,color:'#ffffff',size:28,font:'classic',style:'outline'}; mteTexts.push(ov); }
   mteEditingOv=ov;
@@ -2155,7 +2177,7 @@ function mteOvDrag(el,o){
     if(Math.abs(ny-50)<3.5){ ny=50; if(gh)gh.classList.add('on'); } else if(gh)gh.classList.remove('on');
     o.x=nx; o.y=ny; el.style.left=nx+'%'; el.style.top=ny+'%'; if(e.cancelable)e.preventDefault(); };
   const up=(e)=>{ if(e&&e.touches&&e.touches.length>0) return; document.removeEventListener('mousemove',move); document.removeEventListener('touchmove',move); document.removeEventListener('mouseup',up); document.removeEventListener('touchend',up); if(gv)gv.classList.remove('on'); if(gh)gh.classList.remove('on'); if(mode==='drag'&&!moved)mteOpenTextSheet(o); mode=null; };
-  const down=(e)=>{ if(e.touches&&e.touches.length===2){ mode='pinch'; baseDist=dist(e.touches)||1; baseSize=o.size||24; } else { mode='drag'; const p=e.touches?e.touches[0]:e; sx=p.clientX; sy=p.clientY; ox=o.x; oy=o.y; moved=false; } document.addEventListener('mousemove',move); document.addEventListener('touchmove',move,{passive:false}); document.addEventListener('mouseup',up); document.addEventListener('touchend',up); if(e.cancelable)e.preventDefault(); };
+  const down=(e)=>{ mtePushUndo(); if(e.touches&&e.touches.length===2){ mode='pinch'; baseDist=dist(e.touches)||1; baseSize=o.size||24; } else { mode='drag'; const p=e.touches?e.touches[0]:e; sx=p.clientX; sy=p.clientY; ox=o.x; oy=o.y; moved=false; } document.addEventListener('mousemove',move); document.addEventListener('touchmove',move,{passive:false}); document.addEventListener('mouseup',up); document.addEventListener('touchend',up); if(e.cancelable)e.preventDefault(); };
   el.addEventListener('mousedown',down); el.addEventListener('touchstart',down,{passive:false});
 }
 
