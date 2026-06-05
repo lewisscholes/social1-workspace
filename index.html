@@ -565,8 +565,8 @@
       </div>
       <div class="mte-stage" id="mteStage">
         <div class="mte-pv" id="mtePv">
-          <video id="mteVideo" playsinline webkit-playsinline></video>
-          <video id="mteVideo2" class="off" playsinline webkit-playsinline muted></video>
+          <video id="mteVideo" preload="auto" playsinline webkit-playsinline></video>
+          <video id="mteVideo2" class="off" preload="auto" playsinline webkit-playsinline muted></video>
           <div class="mte-ovs" id="mteOvs"></div>
           <div class="mte-guide-v" id="mteGuideV"></div>
           <div class="mte-guide-h" id="mteGuideH"></div>
@@ -1619,12 +1619,13 @@ async function mteOpen(id){
     mteDuration=vid.duration||0;
     if(es&&es.segments&&es.segments.length){ mteSegments=es.segments.map(s=>({start:Math.max(0,s.start),end:Math.min(mteDuration,s.end)})).filter(s=>s.end-s.start>0.05); }
     if(!mteSegments.length) mteSegments=[{start:0,end:mteDuration}];
-    mteRenderTL(); mteRenderOverlays(); mteUpdTime(); mteBuildThumbs();
+    mteRenderTL(); mteRenderOverlays(); mteUpdTime(); setTimeout(mteBuildThumbs,450);   // let the preview load first, then build the filmstrip
   };
   vid.ontimeupdate=mteOnTimeUpdate; vidB.ontimeupdate=mteOnTimeUpdate;
   vid.onended=null; vidB.onended=null;
   document.getElementById('mteSheet').classList.remove('open');
   document.getElementById('mte').classList.add('open');
+  document.querySelectorAll('.sw-card video').forEach(x=>{ try{x.pause();}catch(e){} });   // free the decoders/bandwidth the deck was using -> editor loads faster
   mteLockScroll(true);
   mteBindTl();
   vid.src=url||''; vidB.src=url||'';
@@ -1638,6 +1639,7 @@ function mteClose(){
   document.getElementById('mte').classList.remove('open');
   document.getElementById('mteSheet').classList.remove('open');
   mteLockScroll(false);
+  document.querySelectorAll('.sw-card video').forEach(x=>{ try{x.play().catch(()=>{});}catch(e){} });   // resume the deck previews
 }
 // Merge splits that are contiguous in the source into "runs" -- the browser plays each run straight through;
 // only the boundaries BETWEEN runs are real cuts that need a seek.
