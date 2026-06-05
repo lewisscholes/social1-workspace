@@ -1691,7 +1691,7 @@ function mteSyncKb(){ const sh=document.getElementById('mteSheet'); if(!sh)retur
 function mteKbBind(){ if(window.visualViewport){ window.visualViewport.addEventListener('resize',mteSyncKb); window.visualViewport.addEventListener('scroll',mteSyncKb); } mteSyncKb(); }
 function mteKbUnbind(){ if(window.visualViewport){ window.visualViewport.removeEventListener('resize',mteSyncKb); window.visualViewport.removeEventListener('scroll',mteSyncKb); } const sh=document.getElementById('mteSheet'); if(sh){ sh.style.height=''; sh.style.top=''; } }
 
-let mteActive=0, mteRunIdx=0, mteRolling=false;
+let mteActive=0, mteRunIdx=0, mteRolling=false, mteSbReady=false;
 function mteV(){ return document.getElementById(mteActive?'mteVideo2':'mteVideo'); }   // active (visible) video
 function mteVB(){ return document.getElementById(mteActive?'mteVideo':'mteVideo2'); }  // standby buffer
 
@@ -1804,9 +1804,19 @@ function mteAdvance(){
   // still hidden+muted. By the time we hit the cut it has been decoding/playing for LEAD
   // and has arrived exactly on the cut point -- so the swap is warm (no decode hitch) and
   // lands on the right frame (no content skip).
-  const LEAD=0.24;
-  if(!mteRolling && t>=run.end-LEAD){ const sb=mteVB(); sb.muted=true; const warm=Math.max(0,runs[ni].start-LEAD); if(Math.abs(sb.currentTime-warm)>0.04){ try{sb.currentTime=warm;}catch(e){} } const p=sb.play(); if(p&&p.catch)p.catch(()=>{}); mteRolling=true; }
-  if(t>=run.end-0.012){ mteSwapTo(ni); }
+  const LEAD=0.32;
+  if(!mteRolling && t>=run.end-LEAD){
+    const sb=mteVB(); sb.muted=true; const warm=Math.max(0,runs[ni].start-LEAD);
+    if(Math.abs(sb.currentTime-warm)>0.04){ try{sb.currentTime=warm;}catch(e){} }
+    mteSbReady=false;
+    const p=sb.play(); if(p&&p.catch)p.catch(()=>{});
+    // rVFC fires only once the standby has actually PRESENTED a frame -> proof it's warm
+    if(sb.requestVideoFrameCallback){ try{ sb.requestVideoFrameCallback(()=>{ mteSbReady=true; }); }catch(e){ mteSbReady=true; } } else { mteSbReady=true; }
+    mteRolling=true;
+  }
+  // Swap at the cut, but only once the standby is genuinely presenting frames (warm) -- so the
+  // next clip never appears mid-decode. Hard deadline so we can never stall on the boundary.
+  if(mteRolling && t>=run.end-0.012 && (mteSbReady || t>=run.end+0.06)){ mteSwapTo(ni); }
 }
 function mteStartTick(){ if(mteRaf)return; const loop=()=>{ if(!mtePlaying){ mteRaf=0; return; } mteAdvance(); mteUpdScroll(); mteUpdTime(); mteRaf=requestAnimationFrame(loop); }; mteRaf=requestAnimationFrame(loop); }
 function mteStopTick(){ if(mteRaf){ cancelAnimationFrame(mteRaf); mteRaf=0; } }
