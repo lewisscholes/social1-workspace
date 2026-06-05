@@ -1433,7 +1433,7 @@ function swOverlayHtml(v){
       const fam=(o.font&&o.font!=='classic'&&o.font!=='TikTok Sans')?mteFontCss(o.font):'var(--ovfont)';
       const fst=(o.font==='retro')?'italic':'normal';
       const fw=(o.font==='elegance')?'600':'700';
-      const base='left:'+o.x+'%;top:'+o.y+'%;transform:translate(-50%,-50%);font-family:'+fam+';font-weight:'+fw+';font-style:'+fst+';font-size:'+(o.size||24)+'px;text-align:center;width:max-content;max-width:84%;overflow-wrap:break-word;word-break:normal;letter-spacing:-0.01em;';
+      const base='left:'+o.x+'%;top:'+o.y+'%;transform:translate(-50%,-50%) scale('+(o.scale||1)+');font-family:'+fam+';font-weight:'+fw+';font-style:'+fst+';font-size:'+(o.size||24)+'px;text-align:center;width:max-content;max-width:84%;overflow-wrap:break-word;word-break:normal;letter-spacing:-0.01em;';
       if(isBox){
         return '<div class="sw-text" style="'+base+'color:transparent;line-height:1.5"><span style="background:'+o.color+';color:'+mteContrast(o.color)+';font-weight:600;padding:0.14em 0.32em;border-radius:0.16em;-webkit-box-decoration-break:clone;box-decoration-break:clone">'+esc(o.text)+'</span></div>';
       }
@@ -1722,7 +1722,7 @@ async function mteOpen(id){
   let url=signed[id];
   if(!url){ const {data:s}=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600); url=s&&s.signedUrl; if(url)signed[id]=url; }
   const es=v.edit_state;
-  if(es&&es.overlays&&es.overlays.length){ mteTexts=es.overlays.map(o=>({id:++mteOvSeq,text:o.text,x:o.x,y:o.y,color:o.color,size:o.size||24,font:(o.font==='TikTok Sans'?'classic':(o.font||'classic')),style:(o.style||((o.outline===false)?'outline':'outline'))})); }
+  if(es&&es.overlays&&es.overlays.length){ mteTexts=es.overlays.map(o=>({id:++mteOvSeq,text:o.text,x:o.x,y:o.y,color:o.color,size:o.size||24,scale:o.scale||1,font:(o.font==='TikTok Sans'?'classic':(o.font||'classic')),style:(o.style||((o.outline===false)?'outline':'outline'))})); }
   else if(v.caption_suggested){ mteTexts.push({id:++mteOvSeq,text:v.caption_suggested,x:50,y:74,color:'#ffffff',size:24,font:'classic',style:'outline'}); }
   if(!mteTexts.length && v.product_uid){ mteAutoSuggest(id); }
   mteActive=0; mteRunIdx=0;
@@ -2161,7 +2161,7 @@ function mtePlaceCaretEnd(el){ try{ const r=document.createRange(); r.selectNode
 function mteSelFontBtn(key){ document.querySelectorAll('#mteFonts .mte-fbtn').forEach(b=>b.classList.toggle('sel',b.dataset.font===key)); }
 function mteAddText(){ mtePushUndo(); mteOpenTextSheet(null); }
 function mteOpenTextSheet(ov){
-  if(!ov){ ov={id:++mteOvSeq,text:'',x:50,y:50,color:'#ffffff',size:28,font:'classic',style:'outline'}; mteTexts.push(ov); }
+  if(!ov){ ov={id:++mteOvSeq,text:'',x:50,y:50,color:'#ffffff',size:28,scale:1,font:'classic',style:'outline'}; mteTexts.push(ov); }
   mteEditingOv=ov;
   mteCurColor=ov.color||'#ffffff'; mteCurSize=ov.size||28; mteCurFont=ov.font||'classic'; mteCurStyle=ov.style||((ov.outline===false)?'outline':'outline');
   const ta=document.getElementById('mteTa'); ta.textContent=ov.text||'';
@@ -2205,7 +2205,7 @@ function mteRenderOverlays(){
   mteTexts.forEach(o=>{
     if(editingNow && o===mteEditingOv) return;   // hide the overlay being edited; the edit box is its live preview
     const d=document.createElement('div'); d.className='mte-ov';
-    d.style.left=o.x+'%'; d.style.top=o.y+'%'; d.style.transform='translate(-50%,-50%)';
+    d.style.left=o.x+'%'; d.style.top=o.y+'%'; d.style.transform='translate(-50%,-50%) scale('+(o.scale||1)+')';
     d.style.fontFamily=mteFontCss(o.font||'classic');
     d.style.fontWeight=((o.font==='elegance')?'600':'700'); d.style.fontStyle=(o.font==='retro')?'italic':'normal';
     d.style.fontSize=((o.size||24)*tscale)+'px';
@@ -2225,10 +2225,10 @@ function mteRenderOverlays(){
 
 function mteOvDrag(el,o){
   const pv=document.getElementById('mtePv'); const gv=document.getElementById('mteGuideV'); const gh=document.getElementById('mteGuideH');
-  let sx=0,sy=0,ox=0,oy=0,moved=false,mode=null,baseDist=0,baseSize=0;
+  let sx=0,sy=0,ox=0,oy=0,moved=false,mode=null,baseDist=0,baseScale=1;
   const dist=(t)=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
   const move=(e)=>{
-    if(e.touches&&e.touches.length>=2){ if(mode!=='pinch'){ mode='pinch'; baseDist=dist(e.touches)||1; baseSize=o.size||24; if(gv)gv.classList.remove('on'); if(gh)gh.classList.remove('on'); } if(e.cancelable)e.preventDefault(); const d=dist(e.touches); o.size=Math.min(200,Math.max(10,Math.round(baseSize*(d/(baseDist||1))))); el.style.fontSize=(o.size*mteTextScale())+'px'; return; }
+    if(e.touches&&e.touches.length>=2){ if(mode!=='pinch'){ mode='pinch'; baseDist=dist(e.touches)||1; baseScale=o.scale||1; if(gv)gv.classList.remove('on'); if(gh)gh.classList.remove('on'); } if(e.cancelable)e.preventDefault(); const d=dist(e.touches); o.scale=Math.min(6,Math.max(0.3, baseScale*(d/(baseDist||1)))); el.style.transform='translate(-50%,-50%) scale('+o.scale+')'; return; }   // scale the WHOLE element (keeps line breaks); never changes font-size/wrapping
     if(mode==='pinch') return;
     const p=e.touches?e.touches[0]:e; const r=pv.getBoundingClientRect(); const dx=p.clientX-sx, dy=p.clientY-sy; if(Math.abs(dx)+Math.abs(dy)>6)moved=true;
     let nx=Math.min(125,Math.max(-25,ox+dx/r.width*100)), ny=Math.min(118,Math.max(-18,oy+dy/r.height*100));
@@ -2236,14 +2236,14 @@ function mteOvDrag(el,o){
     if(Math.abs(ny-50)<3.5){ ny=50; if(gh)gh.classList.add('on'); } else if(gh)gh.classList.remove('on');
     o.x=nx; o.y=ny; el.style.left=nx+'%'; el.style.top=ny+'%'; if(e.cancelable)e.preventDefault(); };
   const up=(e)=>{ if(e&&e.touches&&e.touches.length>0) return; document.removeEventListener('mousemove',move); document.removeEventListener('touchmove',move); document.removeEventListener('mouseup',up); document.removeEventListener('touchend',up); if(gv)gv.classList.remove('on'); if(gh)gh.classList.remove('on'); if(mode==='drag'&&!moved)mteOpenTextSheet(o); mode=null; };
-  const down=(e)=>{ mtePushUndo(); if(e.touches&&e.touches.length===2){ mode='pinch'; baseDist=dist(e.touches)||1; baseSize=o.size||24; } else { mode='drag'; const p=e.touches?e.touches[0]:e; sx=p.clientX; sy=p.clientY; ox=o.x; oy=o.y; moved=false; } document.addEventListener('mousemove',move); document.addEventListener('touchmove',move,{passive:false}); document.addEventListener('mouseup',up); document.addEventListener('touchend',up); if(e.cancelable)e.preventDefault(); };
+  const down=(e)=>{ mtePushUndo(); if(e.touches&&e.touches.length===2){ mode='pinch'; baseDist=dist(e.touches)||1; baseScale=o.scale||1; } else { mode='drag'; const p=e.touches?e.touches[0]:e; sx=p.clientX; sy=p.clientY; ox=o.x; oy=o.y; moved=false; } document.addEventListener('mousemove',move); document.addEventListener('touchmove',move,{passive:false}); document.addEventListener('mouseup',up); document.addEventListener('touchend',up); if(e.cancelable)e.preventDefault(); };
   el.addEventListener('mousedown',down); el.addEventListener('touchstart',down,{passive:false});
 }
 
 async function mteSave(){
   const v=swVids.find(x=>x.id===mteId); if(!v){ mteClose(); return; }
   const segs=mteSegments.map(s=>({start:Math.round(s.start*100)/100,end:Math.round(s.end*100)/100}));
-  const overlays=mteTexts.map(o=>({text:o.text,x:Math.round(o.x*10)/10,y:Math.round(o.y*10)/10,color:o.color,size:o.size||24,font:(o.font||'classic'),style:(o.style||'outline')}));
+  const overlays=mteTexts.map(o=>({text:o.text,x:Math.round(o.x*10)/10,y:Math.round(o.y*10)/10,color:o.color,size:o.size||24,scale:Math.round((o.scale||1)*1000)/1000,font:(o.font||'classic'),style:(o.style||'outline')}));
   const editState={segments:segs,overlays:overlays,source_duration:Math.round(mteDuration*100)/100,edited_at:new Date().toISOString()};
   const cap=overlays.length?overlays[0].text:(v.caption_suggested||null);
   // 1) Persist the edit state to the video so it survives, restores on re-open, and shows on the swipe card
@@ -2255,7 +2255,7 @@ async function mteSave(){
   // First cancel any earlier render of THIS clip that hasn't finished, so re-saving
   // replaces the pending render instead of stacking another duplicate.
   try{ await sb.from('edit_jobs').delete().eq('video_id',mteId).in('status',['queued','rendering','error']); }catch(e){}
-  const wOverlays=overlays.map(o=>({text:o.text,x:o.x,y:o.y,color:o.color,size:o.size,font:(o.font==='classic'?'TikTok Sans':o.font),weight:700,style:(o.style||'outline'),box:(o.style==='box'),stroke:(o.style==='box'?0:2.5),outline:(o.style!=='box')}));
+  const wOverlays=overlays.map(o=>({text:o.text,x:o.x,y:o.y,color:o.color,size:o.size,scale:(o.scale||1),font:(o.font==='classic'?'TikTok Sans':o.font),weight:700,style:(o.style||'outline'),box:(o.style==='box'),stroke:(o.style==='box'?0:2.5),outline:(o.style!=='box')}));
   const job={video_id:mteId,storage_path:v.storage_path,filename:v.filename,folder_id:v.folder_id,product_uid:v.product_uid,options:{segments:segs,source_duration:editState.source_duration,overlays:wOverlays,edited_at:editState.edited_at},status:'queued',requested_by:displayName(state.user)};
   const {error:je}=await sb.from('edit_jobs').insert(job);
   toast(je?'Edits saved (render queue pending)':'Edits saved','ok');
