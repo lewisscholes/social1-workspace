@@ -141,8 +141,8 @@
   .tab.active{color:var(--blue-d);border-bottom-color:var(--blue)}
   .cnt{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:19px;padding:0 6px;border-radius:999px;background:var(--blue-soft);color:var(--blue-d);font-size:11px;font-weight:700}
   /* modal */
-  .modal{position:fixed;inset:0;background:rgba(17,24,39,.45);display:flex;align-items:flex-start;justify-content:center;z-index:60;padding:40px 16px;overflow:auto}
-  .modal .box{background:#fff;border-radius:16px;padding:22px;width:560px;max-width:96vw}
+  .modal{position:fixed;inset:0;background:rgba(17,24,39,.45);display:flex;align-items:center;justify-content:center;z-index:60;padding:24px 16px;overflow:auto}
+  .modal .box{background:#fff;border-radius:20px;padding:22px;width:560px;max-width:96vw;max-height:90vh;overflow:auto;box-shadow:0 24px 70px rgba(10,12,30,.3)}
   .modal h3{margin:0 0 14px;font-size:18px}
   .modal label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px;font-weight:600}
   .modal input,.modal select,.modal textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;background:#fff}
@@ -160,7 +160,7 @@
   .hide{display:none!important}
   .drop{border:2px dashed var(--line);border-radius:12px;padding:22px;text-align:center;color:var(--muted);background:#fff;margin-bottom:14px}
   .drop.drag{border-color:var(--blue);background:var(--blue-soft);color:var(--blue-d)}
-  .uploadbtn{display:block;width:100%;text-align:center;background:var(--blue);color:#fff;padding:15px;border-radius:11px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px}
+  .modal label.uploadbtn{display:block;width:100%;text-align:center;background:var(--grad);color:#fff;padding:15px;border-radius:13px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;box-shadow:0 6px 16px rgba(255,59,84,.34)}
   .bar{height:6px;background:#e8edf5;border-radius:999px;overflow:hidden;margin-top:8px}
   .bar > div{height:100%;background:var(--blue);width:0%}
   .teamrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px}
@@ -1142,21 +1142,44 @@ function renderBank(){
   empty.classList.toggle('hide', list.length>0);
   if(!list.length){ const msgs={new:'No new videos. Upload some, or they arrive from the Drive relay.',edited:'No edited videos yet. Edit a clip and tap the tick -- it renders here, ready to download.',downloaded:'Nothing downloaded yet.',posted:'Nothing posted yet.'}; document.getElementById('bankEmptyMsg').textContent=msgs[state.bankTab]||'Nothing here yet.'; wrap.innerHTML=''; return; }
   wrap.innerHTML='';
-  if(state.bankTab==='edited'){ const bar=document.createElement('div'); bar.style.cssText='grid-column:1/-1;margin-bottom:4px'; bar.innerHTML='<button class="btn" onclick="downloadAllEdited()">&#8595; Download all ('+list.length+')</button>'; wrap.appendChild(bar); }
+  if(state.bankTab==='edited'){ wrap.appendChild(bankBar(list)); }
   list.forEach(v=>wrap.appendChild(bankCard(v)));
   hydrateBankUrls();
 }
+function bankBar(list){
+  const bar=document.createElement('div'); bar.style.cssText='grid-column:1/-1;margin-bottom:4px';
+  const lbl=isMobileDevice()?('&#8595; Save all '+list.length+' to camera roll'):('&#8595; Download all ('+list.length+')');
+  bar.innerHTML='<button class="btn" style="width:100%;justify-content:center" onclick="downloadAllEdited()">'+lbl+'</button>';
+  return bar;
+}
 async function downloadAllEdited(){
   const list=bankBuckets().edited.slice(); if(!list.length){ toast('Nothing to download','err'); return; }
-  toast('Downloading '+list.length+' video'+(list.length!==1?'s':'')+'...','ok');
+  // Phone: pull every edited clip, then save them ALL to the camera roll in one share-sheet action.
+  if(isMobileDevice() && navigator.canShare){
+    toast('Preparing '+list.length+' video'+(list.length!==1?'s':'')+'…','ok');
+    const files=[];
+    for(const v of list){
+      try{ const {data}=await sb.storage.from(BUCKET).createSignedUrl(v.storage_path,900); if(data&&data.signedUrl){ const blob=await (await fetch(data.signedUrl)).blob(); files.push(new File([blob], v.filename||'video.mp4',{type:blob.type||'video/mp4'})); } }catch(e){}
+    }
+    if(files.length && navigator.canShare({files})){ promptShareAll(files,list); return; }   // fresh-tap modal -> share sheet -> Save N Videos
+  }
+  // Computer (and phones without file sharing): save each to the Downloads folder
+  toast('Downloading '+list.length+' video'+(list.length!==1?'s':'')+'…','ok');
   for(const v of list){
     try{ const {data}=await sb.storage.from(BUCKET).createSignedUrl(v.storage_path,300,{download:v.filename}); if(data&&data.signedUrl){ const a=document.createElement('a'); a.href=data.signedUrl; a.download=v.filename||'video.mp4'; document.body.appendChild(a); a.click(); a.remove(); } }catch(e){}
     await new Promise(r=>setTimeout(r,1500));
   }
+  await markAllDownloaded(list);
+}
+async function markAllDownloaded(list){
   const rows=list.filter(v=>!downloadedBy(v.id,state.user.id)).map(v=>({video_id:v.id,user_id:state.user.id,user_email:state.user.email}));
   if(rows.length){ try{ await sb.from('video_downloads').insert(rows); }catch(e){} }
-  await loadBank();
-  toast('Done -- moved to Downloaded','ok');
+  await loadBank(); toast('Done','ok');
+}
+function promptShareAll(files,list){
+  showModal('<h3>Save to camera roll</h3><p class="h-sub" style="margin:6px 0 14px">'+files.length+' edited video'+(files.length!==1?'s are':' is')+' ready. Tap <b>Save '+files.length+'</b>, then choose <b>Save '+files.length+' Video'+(files.length!==1?'s':'')+'</b> in the share sheet.</p><div class="actions"><button class="btn" id="shareAllNow">Save '+files.length+' to camera roll</button><button class="btn ghost" onclick="closeModal()">Cancel</button></div>');
+  const b=document.getElementById('shareAllNow');
+  if(b) b.onclick=async()=>{ try{ await navigator.share({files}); closeModal(); await markAllDownloaded(list); }catch(e){ if(e&&e.name==='AbortError')return; closeModal(); toast('Could not open the share sheet','err'); } };
 }
 const signed={};
 function bankCard(v){
@@ -1197,7 +1220,7 @@ function placeMenu(btn, m){
 document.addEventListener('click',()=>document.querySelectorAll('.menu').forEach(m=>m.classList.add('hide')));
 document.addEventListener('scroll',()=>document.querySelectorAll('.menu:not(.hide)').forEach(m=>m.classList.add('hide')),true);
 async function hydrateBankUrls(){ for(const v of state.videos){ if(signed[v.id])continue; const {data}=await sb.storage.from(BUCKET).createSignedUrl(v.storage_path,3600); if(data&&data.signedUrl) signed[v.id]=data.signedUrl; } renderBankVideos(); }
-function renderBankVideos(){ document.querySelectorAll('#bankCards .vcard').forEach((card,i)=>{}); /* re-render to attach urls */ const b=bankBuckets(); const list=b[state.bankTab]; const wrap=document.getElementById('bankCards'); if(wrap && list.length){ wrap.innerHTML=''; list.forEach(v=>wrap.appendChild(bankCard(v))); } }
+function renderBankVideos(){ const b=bankBuckets(); const list=b[state.bankTab]; const wrap=document.getElementById('bankCards'); if(wrap && list.length){ wrap.innerHTML=''; if(state.bankTab==='edited'){ wrap.appendChild(bankBar(list)); } list.forEach(v=>wrap.appendChild(bankCard(v))); } }
 function isMobileDevice(){ return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints>1); }
 async function recordDownload(id){ if(state.user&&!downloadedBy(id,state.user.id)){ const {error:de}=await sb.from('video_downloads').insert({video_id:id,user_id:state.user.id,user_email:state.user.email}); if(!de){ await loadBank(); toast('Moved to your Downloaded','ok'); } } }
 async function fileDownload(v,id){ toast('Preparing download…'); const {data,error}=await sb.storage.from(BUCKET).createSignedUrl(v.storage_path,120,{download:v.filename}); if(error){toast('Failed: '+error.message,'err');return;} const a=document.createElement('a'); a.href=data.signedUrl; a.download=v.filename; a.click(); await recordDownload(id); }
@@ -2185,11 +2208,10 @@ async function bgUpload(jobs){
 function openUploadManager(preFiles){
   if(!state.products.length){ toast('Create a product first (run a scrape, or it’s created on the fly)','err'); }
   window.__umFiles=(preFiles&&preFiles.length)?[...preFiles]:[];
-  const opts=state.products.map(p=>`<option value="${esc(p.name)}">`).join('');
+  const opts=state.products.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
   showModal(`<h3>Upload videos</h3>
     <label>Tag these clips to a product</label>
-    <input id="um_prod" list="um_prodlist" placeholder="Pick or type a product name" autocomplete="off">
-    <datalist id="um_prodlist">${opts}</datalist>
+    <select id="um_prod"><option value="">No product (tag later)</option>${opts}</select>
     <label class="uploadbtn" for="um_files" style="margin-top:12px">📁 Choose videos</label>
     <input id="um_files" type="file" accept="video/*" multiple style="display:none" onchange="umAdd(this.files)">
     <div id="um_rows"></div>
@@ -2199,7 +2221,7 @@ function openUploadManager(preFiles){
 function umAdd(fl){ for(const f of fl) window.__umFiles.push(f); umRows(); }
 function umRows(){ const w=document.getElementById('um_rows'); const f=window.__umFiles||[]; document.getElementById('um_go').classList.toggle('hide',!f.length); w.innerHTML=f.length?`<div class="h-sub" style="margin:8px 0">${f.length} clip${f.length===1?'':'s'} ready</div>`+f.map((x,i)=>`<div style="display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:8px;margin:6px 0"><div style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🎬 ${esc(x.name)}</div><button class="cm-arrow" onclick="umRm(${i})">✕</button></div>`).join(''):'<div class="h-sub" style="padding:8px 0">No clips added.</div>'; }
 function umRm(i){ window.__umFiles.splice(i,1); umRows(); }
-async function umUpload(){ const f=window.__umFiles||[]; if(!f.length){toast('Add clips','err');return;} const pname=val('um_prod').trim(); if(!pname){toast('Pick or name a product','err');return;} const prodId=await resolveProduct(pname); const jobs=f.map(x=>({file:x,prod:prodId})); window.__umFiles=[]; closeModal(); toast('Uploading '+jobs.length+' in the background','ok'); bgUpload(jobs); }
+async function umUpload(){ const f=window.__umFiles||[]; if(!f.length){toast('Add clips','err');return;} const prodId=val('um_prod')||null; const jobs=f.map(x=>({file:x,prod:prodId})); window.__umFiles=[]; closeModal(); toast('Uploading '+jobs.length+' in the background','ok'); bgUpload(jobs); }
 
 // ---------- AUTH ----------
 let authMode='login';
