@@ -2035,7 +2035,9 @@ function mteZoom(dir){ if(!mtePpsFit)return; mtePps=Math.min(MTE_PPS_MAX,Math.ma
 
 function mteOnTimeUpdate(){ if(!mtePlaying) mteUpdTime(); }   // during playback the 60fps loop (mteAdvance) handles boundaries
 
-function mtePlayToggle(){ const a=mteV(),b=mteVB(); if(a.paused){ const ms=mteMarkerSrc(); if(Math.abs(a.currentTime-ms)>0.05){ try{a.currentTime=ms;}catch(e){} } mteRunIdx=Math.max(0,mteRunAt(ms)); a.muted=mteMuted; b.muted=true; try{ const pb=b.play(); if(pb&&pb.then)pb.then(()=>b.pause()).catch(()=>{}); }catch(e){} a.play(); mtePlaying=true; mteStartTick(); mtePrimeStandby(); } else { a.pause(); b.pause(); mtePlaying=false; mteStopTick(); } mteSyncPlay(); }
+function mtePlayToggle(){ const a=mteV(),b=mteVB(); if(a.paused){ const ms=mteMarkerSrc(); if(Math.abs(a.currentTime-ms)>0.05){ try{a.currentTime=ms;}catch(e){} } mteRunIdx=Math.max(0,mteRunAt(ms)); a.muted=mteMuted; a.play(); mtePlaying=true; mteStartTick();   // start the visible video IMMEDIATELY -> snappy play
+    setTimeout(()=>{ if(!mtePlaying)return; const bb=mteVB(); bb.muted=true; try{ const pb=bb.play(); if(pb&&pb.then)pb.then(()=>bb.pause()).catch(()=>{}); }catch(e){} mtePrimeStandby(); }, 60);   // warm the standby buffer a beat later so it doesn't compete with the active video's start
+  } else { a.pause(); b.pause(); mtePlaying=false; mteStopTick(); } mteSyncPlay(); }
 function mteSyncPlay(){ const b=document.getElementById('mtePlayc'); if(b)b.innerHTML=mtePlaying?'&#10074;&#10074;':'&#9658;'; }
 function mteToggleMute(){ mteMuted=!mteMuted; mteV().muted=mteMuted; mteVB().muted=true; const b=document.getElementById('mteVol'); if(b)b.innerHTML=mteMuted?'&#128263;':'&#128266;'; }
 function mteSoon(name){ toast(name+' is coming soon','ok'); }
