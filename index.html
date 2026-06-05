@@ -2063,7 +2063,7 @@ async function mteBuildThumbs(){
   try{
     await new Promise((res,rej)=>{ tv.onloadedmetadata=()=>res(); tv.onerror=()=>rej(); setTimeout(()=>rej(),9000); });
     if(myTok!==mteThumbToken){ release(); return; }
-    const N=Math.max(14,Math.min(40,Math.round(mteDuration))), cv=document.createElement('canvas'); cv.width=60; cv.height=104; const ctx=cv.getContext('2d'); const out=[];
+    const N=Math.max(10,Math.min(22,Math.round(mteDuration/1.4))), cv=document.createElement('canvas'); cv.width=60; cv.height=104; const ctx=cv.getContext('2d'); const out=[];   // fewer captures = faster, lighter open
     for(let i=0;i<N;i++){
       if(myTok!==mteThumbToken){ release(); return; }   // editor closed or another build started -> stop + free decoder
       const t=mteDuration*(i+0.5)/N;
