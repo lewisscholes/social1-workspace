@@ -1132,7 +1132,13 @@ function bankBuckets(){
       seenEdited.add(key);
       if(downloadedBy(v.id,uid)) b.downloaded.push(v); else b.edited.push(v); return;
     }
-    if(v.status==='edited') return; // raw clip already sent to Edited -- represented by its rendered version
+    if(v.status==='edited'){
+      // Swiped to Edited but the workhorse hasn't finished rendering yet -> show it
+      // RIGHT AWAY as a 'Finalizing' card so it lands instantly; it swaps to the
+      // real rendered file once that exists (seenEdited holds sources already rendered).
+      if(!seenEdited.has(v.id)) b.edited.push(Object.assign({_finalizing:true},v));
+      return;
+    }
     if(isPosted(v)||v.status==='scheduled') b.posted.push(v);
     else if(downloadedBy(v.id,uid)) b.downloaded.push(v);
     else b.new.push(v);
@@ -1154,10 +1160,17 @@ function renderBank(){
   if(state.bankTab==='edited'){ wrap.appendChild(bankBar(list)); }
   list.forEach(v=>wrap.appendChild(bankCard(v)));
   hydrateBankUrls();
+  // While anything is still 'Finalizing', quietly re-check so the card swaps to the
+  // finished file on its own (no manual refresh).
+  clearTimeout(bankPollT);
+  if(b.edited.some(x=>x._finalizing) && state.currentView==='bank'){ bankPollT=setTimeout(()=>{ if(state.currentView==='bank') loadBank(); }, 7000); }
 }
+let bankPollT=null;
 function bankBar(list){
   const bar=document.createElement('div'); bar.style.cssText='grid-column:1/-1;margin-bottom:4px';
-  const lbl=isMobileDevice()?('&#8595; Save all '+list.length+' to camera roll'):('&#8595; Download all ('+list.length+')');
+  const ready=list.filter(v=>!v._finalizing).length;   // don't count clips still finalizing
+  if(!ready) return bar;   // nothing downloadable yet -> no button
+  const lbl=isMobileDevice()?('&#8595; Save all '+ready+' to camera roll'):('&#8595; Download all ('+ready+')');
   bar.innerHTML='<button class="btn" style="width:100%;justify-content:center" onclick="downloadAllEdited()">'+lbl+'</button>';
   return bar;
 }
@@ -1191,7 +1204,7 @@ function dlProgressUpdate(done,total,doneBytes,totalBytes,t0){
   if(eta) eta.textContent=dlFmtEta(etaSec);
 }
 async function downloadAllEdited(){
-  const list=bankBuckets().edited.slice(); if(!list.length){ toast('Nothing to download','err'); return; }
+  const list=bankBuckets().edited.slice().filter(v=>!v._finalizing); if(!list.length){ toast(bankBuckets().edited.length?'Still finalizing -- try again in a moment':'Nothing to download','err'); return; }
   // Phone: pull every edited clip (a few at a time) behind a live progress bar + ETA, then
   // save them ALL to the camera roll in one share-sheet action. iOS needs a FRESH tap to allow
   // the share, so when the files are ready we show a Save button (promptShareAll) to tap.
@@ -1250,6 +1263,19 @@ function bankCard(v){
   const url=signed[v.id]||'';
   const size=v.size_bytes?((v.size_bytes/1048576).toFixed(1)+' MB'):'';
   const posted=isPosted(v); const self=isSelf();
+  if(v._finalizing){
+    // Landed in Edited instantly -- the workhorse is still rendering the final file.
+    card.innerHTML=`
+    <div class="vthumb" style="position:relative"><video preload="metadata" muted playsinline src="${esc(url)}#t=0.1"></video>
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,8,24,.45);color:#fff;gap:8px"><div class="inline-loader"></div><div style="font-weight:700;font-size:12px;letter-spacing:.02em">Finalizing</div></div>
+    </div>
+    <div class="vbody">
+      <div class="vtop"><div class="vh" style="font-size:13px;word-break:break-word">${esc(v.title||v.filename)}</div></div>
+      <div class="vstats">${v.product_uid?`<span class="vtag">${esc(prodName(v.product_uid))}</span>`:''}<span>preparing...</span></div>
+      <div class="vrow"><button class="btn ghost sm" disabled style="width:100%;justify-content:center;opacity:.7">Rendering final video...</button></div>
+    </div>`;
+    return card;
+  }
   card.innerHTML=`
     <div class="vthumb"><video preload="metadata" muted playsinline src="${esc(url)}#t=0.1"></video></div>
     <div class="vbody">
@@ -1282,7 +1308,10 @@ function placeMenu(btn, m){
 }
 document.addEventListener('click',()=>document.querySelectorAll('.menu').forEach(m=>m.classList.add('hide')));
 document.addEventListener('scroll',()=>document.querySelectorAll('.menu:not(.hide)').forEach(m=>m.classList.add('hide')),true);
-async function hydrateBankUrls(){ for(const v of state.videos){ if(signed[v.id])continue; const {data}=await sb.storage.from(BUCKET).createSignedUrl(v.storage_path,3600); if(data&&data.signedUrl) signed[v.id]=data.signedUrl; } renderBankVideos(); }
+// For PLAYBACK/preview we use the small 720p proxy when it's ready (fast to load);
+// downloads and the final render always use the full-res original (storage_path).
+function previewPath(v){ return (v&&v.proxy_path)?v.proxy_path:(v&&v.storage_path); }
+async function hydrateBankUrls(){ for(const v of state.videos){ if(signed[v.id])continue; const {data}=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600); if(data&&data.signedUrl) signed[v.id]=data.signedUrl; } renderBankVideos(); }
 function renderBankVideos(){ const b=bankBuckets(); const list=b[state.bankTab]; const wrap=document.getElementById('bankCards'); if(wrap && list.length){ wrap.innerHTML=''; if(state.bankTab==='edited'){ wrap.appendChild(bankBar(list)); } list.forEach(v=>wrap.appendChild(bankCard(v))); } }
 function isMobileDevice(){ return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints>1); }
 async function recordDownload(id){ if(state.user&&!downloadedBy(id,state.user.id)){ const {error:de}=await sb.from('video_downloads').insert({video_id:id,user_id:state.user.id,user_email:state.user.email}); if(!de){ await loadBank(); toast('Moved to your Downloaded','ok'); } } }
@@ -1345,7 +1374,7 @@ async function loadEditor(){
   // Preload signed URLs for first 3
   for(let i=0;i<Math.min(3,swVids.length);i++){
     const v=swVids[i];
-    if(!signed[v.id]){const {data:s}=await sb.storage.from(BUCKET).createSignedUrl(v.storage_path,3600);if(s?.signedUrl)signed[v.id]=s.signedUrl;}
+    if(!signed[v.id]){const {data:s}=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600);if(s?.signedUrl)signed[v.id]=s.signedUrl;}
   }
   swRender();
 }
@@ -1454,7 +1483,7 @@ function swAdvance(){
   swIdx++;
   // Preload next card's URL
   const next=swVids[swIdx+2];
-  if(next&&!signed[next.id]) sb.storage.from(BUCKET).createSignedUrl(next.storage_path,3600).then(({data:s})=>{if(s?.signedUrl)signed[next.id]=s.signedUrl;});
+  if(next&&!signed[next.id]) sb.storage.from(BUCKET).createSignedUrl(previewPath(next),3600).then(({data:s})=>{if(s?.signedUrl)signed[next.id]=s.signedUrl;});
   swRender();
 }
 
@@ -1677,7 +1706,7 @@ async function mteOpen(id){
   const v=swVids.find(x=>x.id===id); if(!v) return;
   mteId=id; mteSelSeg=-1; mteThumbs=[]; mtePlaying=false; mteTexts=[]; mteSegments=[]; mtePps=0; mteMuted=false;
   let url=signed[id];
-  if(!url){ const {data:s}=await sb.storage.from(BUCKET).createSignedUrl(v.storage_path,3600); url=s&&s.signedUrl; if(url)signed[id]=url; }
+  if(!url){ const {data:s}=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600); url=s&&s.signedUrl; if(url)signed[id]=url; }
   const es=v.edit_state;
   if(es&&es.overlays&&es.overlays.length){ mteTexts=es.overlays.map(o=>({id:++mteOvSeq,text:o.text,x:o.x,y:o.y,color:o.color,size:o.size||24,font:(o.font==='TikTok Sans'?'classic':(o.font||'classic')),style:(o.style||((o.outline===false)?'outline':'outline'))})); }
   else if(v.caption_suggested){ mteTexts.push({id:++mteOvSeq,text:v.caption_suggested,x:50,y:74,color:'#ffffff',size:24,font:'classic',style:'outline'}); }
