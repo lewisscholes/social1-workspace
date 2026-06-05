@@ -1121,8 +1121,17 @@ function downloadedBy(vid,uid){ return state.downloads.some(d=>d.video_id===vid&
 function setBankTab(t){ state.bankTab=t; renderBank(); }
 function bankBuckets(){
   const uid=viewUser(); const b={new:[],edited:[],downloaded:[],posted:[]};
+  // Only the newest edited render per source clip counts -- re-editing a clip makes a fresh
+  // render, and we don't want every old version cluttering the Edited tab. (state.videos is
+  // already ordered created_at desc, so the first one we see per source is the latest.)
+  const seenEdited=new Set();
   state.videos.filter(v=>!v.pending_approval).forEach(v=>{
-    if(v.kind==='edited'){ if(downloadedBy(v.id,uid)) b.downloaded.push(v); else b.edited.push(v); return; }
+    if(v.kind==='edited'){
+      const key=v.source_video_id||v.id;
+      if(seenEdited.has(key)) return;        // a newer render of this clip already shown
+      seenEdited.add(key);
+      if(downloadedBy(v.id,uid)) b.downloaded.push(v); else b.edited.push(v); return;
+    }
     if(v.status==='edited') return; // raw clip already sent to Edited -- represented by its rendered version
     if(isPosted(v)||v.status==='scheduled') b.posted.push(v);
     else if(downloadedBy(v.id,uid)) b.downloaded.push(v);
@@ -1342,32 +1351,39 @@ function swOverlayHtml(v){
 }
 
 function swInitDrag(){
-  const card=document.querySelector('.sw-card.is-top'); if(!card) return;
-  const onDown=e=>{
-    swDragging=true; card.classList.add('dragging');
-    const pt=e.touches?e.touches[0]:e;
-    swStartX=pt.clientX; swStartY=pt.clientY; swCurX=0; swCurY=0;
-  };
+  const card=document.querySelector('.sw-card.is-top'); if(!card||card.dataset.dragBound) return;
+  card.dataset.dragBound='1';   // guard: never bind the same card twice
   const onMove=e=>{
-    if(!swDragging)return; e.preventDefault();
+    if(!swDragging)return; if(e.cancelable)e.preventDefault();
     const pt=e.touches?e.touches[0]:e;
     swCurX=pt.clientX-swStartX; swCurY=pt.clientY-swStartY;
     const rot=swCurX/18;
     card.style.transform=`translate(${swCurX}px,${swCurY}px) rotate(${rot}deg)`;
   };
   const onUp=()=>{
+    // Always tear the document listeners down -- otherwise every re-render leaks another
+    // pair of move/up handlers and the deck gets heavier (and flickery) on each edit.
+    document.removeEventListener('mousemove',onMove);
+    document.removeEventListener('touchmove',onMove);
+    document.removeEventListener('mouseup',onUp);
+    document.removeEventListener('touchend',onUp);
     if(!swDragging)return; swDragging=false; card.classList.remove('dragging');
     const threshold=90;
     if(swCurX>threshold){ swFly('right'); }
     else if(swCurX<-threshold){swFly('left');}
     else{card.classList.add('snap-back');card.style.transform='';setTimeout(()=>card.classList.remove('snap-back'),400);}
   };
+  const onDown=e=>{
+    swDragging=true; card.classList.add('dragging');
+    const pt=e.touches?e.touches[0]:e;
+    swStartX=pt.clientX; swStartY=pt.clientY; swCurX=0; swCurY=0;
+    document.addEventListener('mousemove',onMove);
+    document.addEventListener('touchmove',onMove,{passive:false});
+    document.addEventListener('mouseup',onUp);
+    document.addEventListener('touchend',onUp);
+  };
   card.addEventListener('mousedown',onDown);
   card.addEventListener('touchstart',onDown,{passive:true});
-  document.addEventListener('mousemove',onMove);
-  document.addEventListener('touchmove',onMove,{passive:false});
-  document.addEventListener('mouseup',onUp,{once:true});
-  document.addEventListener('touchend',onUp,{once:true});
 }
 
 function swFly(dir){
@@ -2031,7 +2047,10 @@ async function mteSave(){
   if(ue){ toast('Could not save: '+ue.message,'err'); return; }
   v.edit_state=editState; v.caption_suggested=cap;
   swRender();
-  // 2) Queue the worker to render the trimmed + captioned file (non-blocking)
+  // 2) Queue the worker to render the trimmed + captioned file (non-blocking).
+  // First cancel any earlier render of THIS clip that hasn't finished, so re-saving
+  // replaces the pending render instead of stacking another duplicate.
+  try{ await sb.from('edit_jobs').delete().eq('video_id',mteId).in('status',['queued','rendering','error']); }catch(e){}
   const wOverlays=overlays.map(o=>({text:o.text,x:o.x,y:o.y,color:o.color,size:o.size,font:(o.font==='classic'?'TikTok Sans':o.font),weight:700,style:(o.style||'outline'),box:(o.style==='box'),stroke:(o.style==='box'?0:2.5),outline:(o.style!=='box')}));
   const job={video_id:mteId,storage_path:v.storage_path,filename:v.filename,folder_id:v.folder_id,product_uid:v.product_uid,options:{segments:segs,source_duration:editState.source_duration,overlays:wOverlays,edited_at:editState.edited_at},status:'queued',requested_by:displayName(state.user)};
   const {error:je}=await sb.from('edit_jobs').insert(job);
