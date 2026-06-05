@@ -1104,12 +1104,14 @@ async function deleteScrape(jobId){
 
 // ---------- VIDEO BANK ----------
 async function loadBank(){
-  const [{data:vids},{data:dls},{data:profs}]=await Promise.all([
+  const [{data:vids},{data:dls},{data:profs},{data:ajobs}]=await Promise.all([
     sb.from('videos').select('*').order('created_at',{ascending:false}),
     sb.from('video_downloads').select('*'),
-    sb.from('profiles').select('*')
+    sb.from('profiles').select('*'),
+    sb.from('edit_jobs').select('video_id,status').in('status',['queued','rendering'])   // what's actually rendering right now
   ]);
   state.videos=vids||[]; state.downloads=dls||[]; state.profiles=profs||[];
+  state.activeEdits=new Set((ajobs||[]).map(j=>j.video_id));
   populateViewAs(); renderBank();
 }
 function populateViewAs(){ const sel=document.getElementById('viewAs'); if(!sel)return; const me=state.user; const others=(state.profiles||[]).filter(p=>p.id!==me.id&&p.status==='approved'); sel.innerHTML=`<option value="${me.id}">Me (${esc(displayName(me))})</option>`+others.map(p=>`<option value="${p.id}">${esc(nameOf(p))}</option>`).join(''); sel.value=state.viewAs||me.id; }
@@ -1133,10 +1135,11 @@ function bankBuckets(){
       if(downloadedBy(v.id,uid)) b.downloaded.push(v); else b.edited.push(v); return;
     }
     if(v.status==='edited'){
-      // Swiped to Edited but the workhorse hasn't finished rendering yet -> show it
-      // RIGHT AWAY as a 'Finalizing' card so it lands instantly; it swaps to the
-      // real rendered file once that exists (seenEdited holds sources already rendered).
-      if(!seenEdited.has(v.id)) b.edited.push(Object.assign({_finalizing:true},v));
+      if(seenEdited.has(v.id)) return;   // a rendered version exists -> shown as that
+      // Only show the spinner while a render is genuinely queued/in-progress; otherwise
+      // show the clip itself (downloadable) so nothing gets stuck on 'Finalizing' forever.
+      const rendering=state.activeEdits && state.activeEdits.has(v.id);
+      b.edited.push(rendering?Object.assign({_finalizing:true},v):v);
       return;
     }
     if(isPosted(v)||v.status==='scheduled') b.posted.push(v);
@@ -1155,17 +1158,27 @@ function renderBank(){
   const list=b[state.bankTab];
   const wrap=document.getElementById('bankCards'); const empty=document.getElementById('bankEmpty');
   empty.classList.toggle('hide', list.length>0);
-  if(!list.length){ const msgs={new:'No new videos. Upload some, or they arrive from the Drive relay.',edited:'No edited videos yet. Edit a clip and tap the tick -- it renders here, ready to download.',downloaded:'Nothing downloaded yet.',posted:'Nothing posted yet.'}; document.getElementById('bankEmptyMsg').textContent=msgs[state.bankTab]||'Nothing here yet.'; wrap.innerHTML=''; return; }
-  wrap.innerHTML='';
-  if(state.bankTab==='edited'){ wrap.appendChild(bankBar(list)); }
-  list.forEach(v=>wrap.appendChild(bankCard(v)));
+  if(!list.length){ const msgs={new:'No new videos. Upload some, or they arrive from the Drive relay.',edited:'No edited videos yet. Edit a clip and tap the tick -- it renders here, ready to download.',downloaded:'Nothing downloaded yet.',posted:'Nothing posted yet.'}; document.getElementById('bankEmptyMsg').textContent=msgs[state.bankTab]||'Nothing here yet.'; wrap.innerHTML=''; wrap.dataset.sig=''; return; }
+  paintBank(list);
   hydrateBankUrls();
   // While anything is still 'Finalizing', quietly re-check so the card swaps to the
-  // finished file on its own (no manual refresh).
+  // finished file on its own (no manual refresh). The repaint is a no-op unless
+  // something actually changed, so this no longer makes the cards flash.
   clearTimeout(bankPollT);
   if(b.edited.some(x=>x._finalizing) && state.currentView==='bank'){ bankPollT=setTimeout(()=>{ if(state.currentView==='bank') loadBank(); }, 7000); }
 }
 let bankPollT=null;
+// Only rebuild the card grid when its contents actually change -- otherwise the 7s
+// poll would wipe + recreate every <video> each time and they'd flash in and out.
+function paintBank(list){
+  const wrap=document.getElementById('bankCards'); if(!wrap) return;
+  const sig=state.bankTab+'|'+list.map(v=>v.id+(v._finalizing?'#f':'')+(signed[v.id]?'#u':'')).join(',');
+  if(wrap.dataset.sig===sig) return;   // nothing changed -> leave the DOM (and playing videos) alone
+  wrap.dataset.sig=sig;
+  wrap.innerHTML='';
+  if(state.bankTab==='edited'){ wrap.appendChild(bankBar(list)); }
+  list.forEach(v=>wrap.appendChild(bankCard(v)));
+}
 function bankBar(list){
   const bar=document.createElement('div'); bar.style.cssText='grid-column:1/-1;margin-bottom:4px';
   const ready=list.filter(v=>!v._finalizing).length;   // don't count clips still finalizing
@@ -1312,7 +1325,7 @@ document.addEventListener('scroll',()=>document.querySelectorAll('.menu:not(.hid
 // downloads and the final render always use the full-res original (storage_path).
 function previewPath(v){ return (v&&v.proxy_path)?v.proxy_path:(v&&v.storage_path); }
 async function hydrateBankUrls(){ for(const v of state.videos){ if(signed[v.id])continue; const {data}=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600); if(data&&data.signedUrl) signed[v.id]=data.signedUrl; } renderBankVideos(); }
-function renderBankVideos(){ const b=bankBuckets(); const list=b[state.bankTab]; const wrap=document.getElementById('bankCards'); if(wrap && list.length){ wrap.innerHTML=''; if(state.bankTab==='edited'){ wrap.appendChild(bankBar(list)); } list.forEach(v=>wrap.appendChild(bankCard(v))); } }
+function renderBankVideos(){ const b=bankBuckets(); const list=b[state.bankTab]; if(list.length) paintBank(list); }
 function isMobileDevice(){ return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints>1); }
 async function recordDownload(id){ if(state.user&&!downloadedBy(id,state.user.id)){ const {error:de}=await sb.from('video_downloads').insert({video_id:id,user_id:state.user.id,user_email:state.user.email}); if(!de){ await loadBank(); toast('Moved to your Downloaded','ok'); } } }
 async function fileDownload(v,id){ toast('Preparing download…'); const {data,error}=await sb.storage.from(BUCKET).createSignedUrl(v.storage_path,120,{download:v.filename}); if(error){toast('Failed: '+error.message,'err');return;} const a=document.createElement('a'); a.href=data.signedUrl; a.download=v.filename; a.click(); await recordDownload(id); }
