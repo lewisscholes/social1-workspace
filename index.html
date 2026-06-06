@@ -1775,7 +1775,7 @@ function epInitTextDrag(){
 // ---------- MOBILE TIKTOK-STYLE EDITOR ----------
 let mteId=null, mteDuration=0, mteSegments=[], mteSelSeg=-1, mteThumbs=[], mtePlaying=false, mteTexts=[], mteEditingOv=null, mteOvSeq=0, mteMedia=[], mteMovSeq=0, mteSelMedia=null, mteOTrimming=false;
 let mtePps=0, mtePpsFit=0, mteProgScroll=false, mteProgT=0, mteRaf=0, mteMuted=false, mteBound=false, mteSeekTarget=null, mteSeekRaf=0, mteThumbKey='';
-let mteCurColor='#ffffff', mteCurSize=28, mteCurFont='classic', mteCurStyle='outline', mtePinchBase=0, mtePinchPps=0, mtePinchRaf=0, mteThumbRaf=0, mteTrimming=false, mteTrimContentW=0, mteLastScrubSeek=0, mteScrubEndT=0, mteSeeking=false;
+let mteCurColor='#ffffff', mteCurSize=28, mteCurFont='classic', mteCurStyle='plain', mtePinchBase=0, mtePinchPps=0, mtePinchRaf=0, mteThumbRaf=0, mteTrimming=false, mteTrimContentW=0, mteLastScrubSeek=0, mteScrubEndT=0, mteSeeking=false;
 function mteContrast(hex){ const m=/^#?([0-9a-f]{6})$/i.exec(hex||''); if(!m)return '#000'; const n=parseInt(m[1],16); const r=(n>>16)&255,g=(n>>8)&255,b=n&255; return (0.299*r+0.587*g+0.114*b)>150?'#000':'#fff'; }
 function mteSyncKb(){ const sh=document.getElementById('mteSheet'); if(!sh)return; const vv=window.visualViewport; if(vv){ sh.style.height=vv.height+'px'; sh.style.top=vv.offsetTop+'px'; } }
 function mteKbBind(){ if(window.visualViewport){ window.visualViewport.addEventListener('resize',mteSyncKb); window.visualViewport.addEventListener('scroll',mteSyncKb); } mteSyncKb(); }
@@ -1801,7 +1801,7 @@ async function mteAutoSuggest(id){
     if(error||(data&&data.error)) return; // no data / not configured -- user can tap Suggest overlays
     const {data:vr}=await sb.from('videos').select('caption_suggested').eq('id',id).single();
     if(vr&&vr.caption_suggested&&mteId===id&&!mteTexts.length){
-      mteTexts.push({id:++mteOvSeq,text:mteClampLines(vr.caption_suggested),x:50,y:MTE_OV_TOP,color:'#ffffff',size:24,font:'classic',style:'outline'});
+      mteTexts.push({id:++mteOvSeq,text:mteClampLines(vr.caption_suggested),x:50,y:MTE_OV_TOP,color:'#ffffff',size:24,font:'classic',style:'plain'});
       mteRenderOverlays();
       const sv=swVids.find(x=>x.id===id); if(sv)sv.caption_suggested=vr.caption_suggested;
       toast('Overlay idea added','ok');
@@ -1816,8 +1816,8 @@ async function mteOpen(id){
   let url=signed[id];
   if(!url){ const {data:s}=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600); url=s&&s.signedUrl; if(url)signed[id]=url; }
   const es=v.edit_state;
-  if(es&&es.overlays&&es.overlays.length){ mteTexts=es.overlays.map(o=>({id:++mteOvSeq,text:o.text,x:o.x,y:o.y,color:o.color,size:o.size||24,scale:o.scale||1,font:(o.font==='TikTok Sans'?'classic':(o.font||'classic')),style:(o.style||((o.outline===false)?'outline':'outline'))})); }
-  else if(v.caption_suggested){ mteTexts.push({id:++mteOvSeq,text:mteClampLines(v.caption_suggested),x:50,y:MTE_OV_TOP,color:'#ffffff',size:24,font:'classic',style:'outline'}); }
+  if(es&&es.overlays&&es.overlays.length){ mteTexts=es.overlays.map(o=>({id:++mteOvSeq,text:o.text,x:o.x,y:o.y,color:o.color,size:o.size||24,scale:o.scale||1,font:(o.font==='TikTok Sans'?'classic':(o.font||'classic')),style:(o.style||(o.box?'box':(o.outline===false?'plain':'outline')))})); }
+  else if(v.caption_suggested){ mteTexts.push({id:++mteOvSeq,text:mteClampLines(v.caption_suggested),x:50,y:MTE_OV_TOP,color:'#ffffff',size:24,font:'classic',style:'plain'}); }
   if(!mteTexts.length && v.product_uid){ mteAutoSuggest(id); }
   mteActive=0; mteRunIdx=0;
   const vid=document.getElementById('mteVideo'); const vidB=document.getElementById('mteVideo2');
@@ -2261,15 +2261,22 @@ function mteApplyTaStyle(){
     ta.style.webkitTextStroke='0'; ta.style.textShadow='none';
     ta.style.padding='0.14em 0.32em'; ta.style.borderRadius='0.16em'; ta.style.lineHeight='1.5';
     ta.style.caretColor=mteContrast(mteCurColor);
-  } else {
+  } else if(mteCurStyle==='outline'){
     ta.style.fontWeight=(mteCurFont==='elegance')?'600':'700';
     ta.style.color=mteCurColor; ta.style.background='transparent';
     ta.style.webkitTextStroke='2px #000'; ta.style.paintOrder='stroke fill';
     ta.style.padding='0'; ta.style.borderRadius='0'; ta.style.lineHeight='1.2';
     ta.style.textShadow=(mteCurFont==='neon')?('0 0 6px '+mteCurColor+',0 0 13px '+mteCurColor):'none';
     ta.style.caretColor=mteCurColor;
+  } else {   // 'plain' -- clean text, no outline, no banner
+    ta.style.fontWeight=(mteCurFont==='elegance')?'600':'700';
+    ta.style.color=mteCurColor; ta.style.background='transparent';
+    ta.style.webkitTextStroke='0'; ta.style.paintOrder='normal';
+    ta.style.padding='0'; ta.style.borderRadius='0'; ta.style.lineHeight='1.2';
+    ta.style.textShadow=(mteCurFont==='neon')?('0 0 6px '+mteCurColor+',0 0 13px '+mteCurColor):'none';
+    ta.style.caretColor=mteCurColor;
   }
-  const stb=document.getElementById('mteStyBtn'); if(stb)stb.classList.toggle('on',mteCurStyle==='box');
+  const stb=document.getElementById('mteStyBtn'); if(stb){ stb.classList.toggle('on',mteCurStyle!=='plain'); stb.textContent=(mteCurStyle==='box'?'A':(mteCurStyle==='outline'?'A':'A')); stb.title='Text style: '+mteCurStyle; }
   // wrap width matches the on-video overlay (84% of the video) so it wraps identically
   const pv=document.getElementById('mtePv'); const wrap=document.getElementById('mteTaWrap');
   if(wrap&&pv&&pv.clientWidth){ wrap.style.maxWidth=Math.round(pv.clientWidth*0.84)+'px'; }
@@ -2282,9 +2289,9 @@ function mtePlaceCaretEnd(el){ try{ const r=document.createRange(); r.selectNode
 function mteSelFontBtn(key){ document.querySelectorAll('#mteFonts .mte-fbtn').forEach(b=>b.classList.toggle('sel',b.dataset.font===key)); }
 function mteAddText(){ mtePushUndo(); mteOpenTextSheet(null); }
 function mteOpenTextSheet(ov){
-  if(!ov){ ov={id:++mteOvSeq,text:'',x:50,y:50,color:'#ffffff',size:28,scale:1,font:'classic',style:'outline'}; mteTexts.push(ov); }
+  if(!ov){ ov={id:++mteOvSeq,text:'',x:50,y:50,color:'#ffffff',size:28,scale:1,font:'classic',style:'plain'}; mteTexts.push(ov); }
   mteEditingOv=ov;
-  mteCurColor=ov.color||'#ffffff'; mteCurSize=ov.size||28; mteCurFont=ov.font||'classic'; mteCurStyle=ov.style||((ov.outline===false)?'outline':'outline');
+  mteCurColor=ov.color||'#ffffff'; mteCurSize=ov.size||28; mteCurFont=ov.font||'classic'; mteCurStyle=ov.style||(ov.box?'box':(ov.outline===false?'plain':'outline'));
   const ta=document.getElementById('mteTa'); ta.textContent=ov.text||'';
   const sz=document.getElementById('mteSize'); if(sz)sz.value=mteCurSize;
   mteSelFontBtn(mteCurFont);
@@ -2308,7 +2315,7 @@ function mteLiveApply(){
 function mteSetColor(c){ mteCurColor=c; mteApplyTaStyle(); mteLiveApply(); }
 function mteSizeChange(v){ mteCurSize=parseInt(v)||28; mteApplyTaStyle(); mteLiveApply(); }
 function mteSetFont(key,btn){ mteCurFont=key; mteSelFontBtn(key); mteApplyTaStyle(); mteLiveApply(); }
-function mteToggleStyle(){ mteCurStyle=(mteCurStyle==='box')?'outline':'box'; mteApplyTaStyle(); mteLiveApply(); }
+function mteToggleStyle(){ mteCurStyle=(mteCurStyle==='plain')?'outline':((mteCurStyle==='outline')?'box':'plain'); toast('Style: '+mteCurStyle,'ok'); mteApplyTaStyle(); mteLiveApply(); }
 function mteTextDone(){
   const ta=document.getElementById('mteTa'); const txt=(ta?mteTaText(ta):'').trim();
   if(mteEditingOv){ if(!txt){ mteTexts=mteTexts.filter(o=>o!==mteEditingOv); } else { Object.assign(mteEditingOv,{text:txt,color:mteCurColor,size:mteCurSize,font:mteCurFont,style:mteCurStyle}); } }
@@ -2330,12 +2337,16 @@ function mteRenderOverlays(){
     d.style.fontFamily=mteFontCss(o.font||'classic');
     d.style.fontWeight=((o.font==='elegance')?'600':'700'); d.style.fontStyle=(o.font==='retro')?'italic':'normal';
     d.style.fontSize=((o.size||24)*tscale)+'px';
-    const sty=o.style||((o.outline===false)?'outline':'outline');
+    const sty=o.style||(o.box?'box':(o.outline===false?'plain':'outline'));
     if(sty==='box'){
       d.style.color='transparent'; d.style.webkitTextStroke='0'; d.style.textShadow='none';
       d.innerHTML='<span style="background:'+o.color+';color:'+mteContrast(o.color)+';font-weight:600;padding:0.14em 0.32em;border-radius:0.16em;-webkit-box-decoration-break:clone;box-decoration-break:clone;line-height:1.5">'+esc(o.text)+'</span>';
-    } else {
+    } else if(sty==='outline'){
       d.style.color=o.color; d.style.webkitTextStroke='2px #000'; d.style.paintOrder='stroke fill';
+      d.style.textShadow=(o.font==='neon')?('0 0 6px '+o.color+',0 0 13px '+o.color):'none';
+      d.textContent=o.text;
+    } else {   // 'plain' -- clean text, no outline
+      d.style.color=o.color; d.style.webkitTextStroke='0'; d.style.paintOrder='normal';
       d.style.textShadow=(o.font==='neon')?('0 0 6px '+o.color+',0 0 13px '+o.color):'none';
       d.textContent=o.text;
     }
@@ -2472,7 +2483,7 @@ async function mteSave(){
   // First cancel any earlier render of THIS clip that hasn't finished, so re-saving
   // replaces the pending render instead of stacking another duplicate.
   try{ await sb.from('edit_jobs').delete().eq('video_id',mteId).in('status',['queued','rendering','error']); }catch(e){}
-  const wOverlays=overlays.map(o=>({text:o.text,x:o.x,y:o.y,color:o.color,size:o.size,scale:(o.scale||1),font:(o.font==='classic'?'TikTok Sans':o.font),weight:700,style:(o.style||'outline'),box:(o.style==='box'),stroke:(o.style==='box'?0:2.5),outline:(o.style!=='box')}));
+  const wOverlays=overlays.map(o=>{ const sty=o.style||'plain'; return {text:o.text,x:o.x,y:o.y,color:o.color,size:o.size,scale:(o.scale||1),font:(o.font==='classic'?'TikTok Sans':o.font),weight:700,style:sty,box:(sty==='box'),stroke:(sty==='outline'?2.5:0),outline:(sty==='outline')}; });
   const job={video_id:mteId,storage_path:v.storage_path,filename:v.filename,folder_id:v.folder_id,product_uid:v.product_uid,options:{segments:segs,source_duration:editState.source_duration,overlays:wOverlays,media:media,edited_at:editState.edited_at},status:'queued',requested_by:displayName(state.user)};
   const {error:je}=await sb.from('edit_jobs').insert(job);
   toast(je?'Edits saved (render queue pending)':'Edits saved','ok');
