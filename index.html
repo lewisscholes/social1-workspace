@@ -2256,6 +2256,9 @@ function mteFontCss(key){ if(key==='elegance')return "Georgia,'Times New Roman',
 // between close letters, and sits BEHIND the fill so the white letters keep their full thickness.
 const MTE_OUTLINE_R=0.1;   // halo radius in em (scales with font size)
 function mteOutline(rEm,c){ c=c||'#000'; var o=[],rings=[[rEm,16],[rEm*0.66,12],[rEm*0.33,8]]; for(var k=0;k<rings.length;k++){ var rad=rings[k][0],n=rings[k][1]; for(var i=0;i<n;i++){ var a=2*Math.PI*i/n; o.push((Math.cos(a)*rad).toFixed(3)+'em '+(Math.sin(a)*rad).toFixed(3)+'em 0 '+c); } } return o.join(','); }
+// Escape + wrap emoji clusters so the outline halo applies to LETTERS only, never to emojis.
+var MTE_EMOJI_RE=null; try{ MTE_EMOJI_RE=new RegExp('(?:\\p{Extended_Pictographic}(?:\\uFE0F|\\u200D\\p{Extended_Pictographic}|[\\u{1F3FB}-\\u{1F3FF}])*)+','gu'); }catch(e){ MTE_EMOJI_RE=null; }
+function mteWrapEmoji(t){ t=String(t||''); if(!MTE_EMOJI_RE) return esc(t); MTE_EMOJI_RE.lastIndex=0; var out='',last=0,m; while((m=MTE_EMOJI_RE.exec(t))){ out+=esc(t.slice(last,m.index))+'<span style="text-shadow:none;-webkit-text-stroke:0">'+esc(m[0])+'</span>'; last=m.index+m[0].length; } out+=esc(t.slice(last)); return out; }
 function mteApplyTaStyle(){
   const ta=document.getElementById('mteTa'); if(!ta)return;
   ta.style.fontSize=(mteCurSize*mteTextScale())+'px'; ta.style.fontFamily=mteFontCss(mteCurFont);
@@ -2349,7 +2352,7 @@ function mteRenderOverlays(){
     } else if(sty==='outline'){
       d.style.color=o.color; d.style.webkitTextStroke='0'; d.style.paintOrder='normal';
       d.style.textShadow=mteOutline(MTE_OUTLINE_R)+((o.font==='neon')?(',0 0 6px '+o.color+',0 0 13px '+o.color):'');
-      d.textContent=o.text;
+      d.innerHTML=mteWrapEmoji(o.text);   // halo on letters only; emojis excluded
     } else {   // 'plain' -- clean text, no outline
       d.style.color=o.color; d.style.webkitTextStroke='0'; d.style.paintOrder='normal';
       d.style.textShadow=(o.font==='neon')?('0 0 6px '+o.color+',0 0 13px '+o.color):'none';
