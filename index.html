@@ -329,15 +329,14 @@
   .mte-trim.r{border-radius:0 8px 8px 0}
   .mte-split{position:absolute;top:0;bottom:0;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;z-index:6;pointer-events:none}
   .mte-split-h{width:15px;height:100%;background:rgba(255,255,255,.95);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#000;font-size:10px;font-weight:900;letter-spacing:-1.5px;box-shadow:0 0 0 1.5px rgba(0,0,0,.55)}
-  .mte-gapcut{position:absolute;top:0;bottom:0;width:12px;transform:translateX(-50%);background-color:#fff;background-image:linear-gradient(90deg,transparent 0 4px,rgba(0,0,0,.5) 4px 5.4px,transparent 5.4px 6.6px,rgba(0,0,0,.5) 6.6px 8px,transparent 8px 12px);border-radius:3px;box-shadow:0 0 0 1.4px rgba(0,0,0,.5);z-index:6;pointer-events:none}
-  .mte-ocut{position:absolute;top:0;bottom:0;width:2px;transform:translateX(-50%);background:rgba(255,255,255,.55);border-radius:1px;z-index:1;pointer-events:none}
+  .mte-gapcut{position:absolute;top:5px;bottom:5px;width:16px;transform:translateX(-50%);background:#fff;border-radius:4px;box-shadow:0 0 0 1px rgba(0,0,0,.35);z-index:6;pointer-events:none;display:flex;align-items:center;justify-content:center}
+  .mte-gapcut svg{width:13px;height:13px;fill:#111;display:block}
   .mte-dur{position:absolute;top:5px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-weight:600;padding:2px 6px;border-radius:5px;z-index:8;pointer-events:none;font-variant-numeric:tabular-nums}
   .mte-add{flex:0 0 auto;width:32px;height:66px;border-radius:7px;background:#2a2a2e;border:0;color:#fff;font-size:21px;cursor:pointer;align-self:flex-end}
   .mte-phfix{position:absolute;left:50%;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 5px rgba(0,0,0,.9);transform:translateX(-50%);pointer-events:none;z-index:8;border-radius:2px}
   .mte-otrack{position:relative;height:0;margin-top:0;transition:none}
-  .mte-obar{position:absolute;top:0;height:36px;border-radius:8px;overflow:visible;background:#2a2540;border:1.5px solid #4b4470;box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:0 8px;cursor:pointer;touch-action:none}
-  .mte-obar .othumb{height:26px;width:26px;border-radius:4px;object-fit:cover;flex:none;background:#000;pointer-events:none}
-  .mte-obar .olbl{font-size:11px;color:#cdc9e6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+  .mte-obar{position:absolute;top:0;height:36px;border-radius:8px;overflow:hidden;background:#2a2540 center/auto 100% repeat-x;border:1.5px solid #4b4470;box-sizing:border-box;cursor:pointer;touch-action:none}
+  .mte-obar.sel{overflow:visible}
   .mte-obar.sel{border-color:#fff;background:#3a3360}
   .mte-otrim{position:absolute;top:0;height:100%;width:18px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:700;z-index:3;cursor:ew-resize}
   .mte-otrim.l{left:-1px;border-radius:8px 0 0 8px;background:linear-gradient(90deg,rgba(255,255,255,.22),transparent)}
@@ -1868,9 +1867,9 @@ function mteRenderTL(keepScroll){
   let html='<div class="mte-thumbs" id="mteThumbsL"></div>';
   // transparent segment boxes: thumbnails show through from the layer behind; these carry the seams + white selection outline
   mteSegments.forEach((s,i)=>{ const w=(s.end-s.start)*mtePps; html+='<div class="mte-seg'+(i===mteSelSeg?' sel':'')+'" data-i="'+i+'" style="width:'+w+'px"></div>'; });
-  // a clean visible gap at every internal cut so the divisions are obvious
-  let cum=0;
-  mteSegments.forEach((s,i)=>{ cum+=(s.end-s.start)*mtePps; if(i<mteSegments.length-1){ html+='<div class="mte-gapcut" style="left:'+cum+'px"></div>'; } });
+  // TikTok-style cut handle at each internal cut -- hidden while a clip is selected (the trim frame takes over).
+  if(mteSelSeg<0){ let cum=0; const cutIc='<svg viewBox="0 0 24 24"><path d="M8 7 L11 12 L8 17 Z"/><path d="M16 7 L13 12 L16 17 Z"/></svg>';
+    mteSegments.forEach((s,i)=>{ cum+=(s.end-s.start)*mtePps; if(i<mteSegments.length-1){ html+='<div class="mte-gapcut" style="left:'+cum+'px">'+cutIc+'</div>'; } }); }
   // draggable trim handles + live duration badge on the selected clip
   if(mteSelSeg>=0&&mteSegments[mteSelSeg]){
     let leftX=0; for(let k=0;k<mteSelSeg;k++)leftX+=(mteSegments[k].end-mteSegments[k].start)*mtePps;
@@ -2347,10 +2346,10 @@ function mteRenderOTrack(){
   track.style.width=W+'px'; track.style.marginLeft=pad+'px';
   if(!mteMedia.length){ track.style.height='0'; track.style.marginTop='0'; track.innerHTML=''; return; }
   track.style.height='36px'; track.style.marginTop='6px';
-  const cutHtml=mteCutPoints().map(c=>'<div class="mte-ocut" style="left:'+(c*mtePps)+'px"></div>').join('');   // show the video cuts on the overlay track for alignment
-  track.innerHTML=cutHtml+mteMedia.map((m,i)=>{
+  track.innerHTML=mteMedia.map((m,i)=>{
     const a=(m.start!=null?m.start:0), b=(m.end!=null?m.end:total); const left=a*mtePps, w=Math.max(20,(b-a)*mtePps); const sel=(mteSelMedia===m.id);
-    return '<div class="mte-obar'+(sel?' sel':'')+'" data-i="'+i+'" style="left:'+left+'px;width:'+w+'px">'+(m.url?'<img class="othumb" src="'+esc(m.url)+'">':'')+'<span class="olbl">Image</span>'+(sel?'<div class="mte-otrim l" data-side="l">&#8249;</div><div class="mte-otrim r" data-side="r">&#8250;</div>':'')+'</div>';
+    const bg=m.url?('background-image:url('+esc(m.url)+')'):'';   // the image fills the whole layer (repeats across), like TikTok
+    return '<div class="mte-obar'+(sel?' sel':'')+'" data-i="'+i+'" style="left:'+left+'px;width:'+w+'px;'+bg+'">'+(sel?'<div class="mte-otrim l" data-side="l">&#8249;</div><div class="mte-otrim r" data-side="r">&#8250;</div>':'')+'</div>';
   }).join('');
   [...track.querySelectorAll('.mte-obar')].forEach(el=>{ const m=mteMedia[+el.dataset.i]; if(m)mteOBarBind(el,m); });
 }
