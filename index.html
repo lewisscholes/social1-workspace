@@ -2044,9 +2044,12 @@ function mteBindTl(){
   const gap=document.querySelector('.mte-gap');
   if(gap){
     let gx=0,gy=0,gsl=0,gon=false,gmoved=false,gt=0;
-    gap.addEventListener('touchstart',(e)=>{ gon=true; gmoved=false; gx=e.touches[0].clientX; gy=e.touches[0].clientY; gsl=scroll.scrollLeft; gt=Date.now(); if(mtePlaying){ mteV().pause(); mtePlaying=false; mteStopTick(); mteSyncPlay(); } },{passive:true});
-    gap.addEventListener('touchmove',(e)=>{ if(!gon)return; if(Math.abs(e.touches[0].clientX-gx)+Math.abs(e.touches[0].clientY-gy)>8)gmoved=true; if(e.cancelable)e.preventDefault(); scroll.scrollLeft=gsl-(e.touches[0].clientX-gx); },{passive:false});
-    gap.addEventListener('touchend',()=>{ gon=false; if(!gmoved&&(Date.now()-gt)<350&&(mteSelSeg>=0||mteSelMedia!=null)){ mteSelSeg=-1; mteSelMedia=null; mteRenderMedia(); mteRenderTL(true); } },{passive:true});   // tap the black space = deselect
+    const gdist=(t)=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+    gap.addEventListener('touchstart',(e)=>{ if(e.touches.length===2){ gon=false; mtePinchBase=gdist(e.touches); mtePinchPps=mtePps; return; } gon=true; gmoved=false; gx=e.touches[0].clientX; gy=e.touches[0].clientY; gsl=scroll.scrollLeft; gt=Date.now(); if(mtePlaying){ mteV().pause(); mtePlaying=false; mteStopTick(); mteSyncPlay(); } },{passive:true});
+    gap.addEventListener('touchmove',(e)=>{
+      if(e.touches.length>=2){ gon=false; if(!mtePinchBase){ mtePinchBase=gdist(e.touches); mtePinchPps=mtePps; } if(e.cancelable)e.preventDefault(); mtePps=Math.min(MTE_PPS_MAX,Math.max(mtePpsFit,mtePinchPps*gdist(e.touches)/mtePinchBase)); if(!mtePinchRaf)mtePinchRaf=requestAnimationFrame(()=>{ mtePinchRaf=0; mteResizeTL(); }); return; }   // pinch the black area to zoom the timeline, just like pinching the strip
+      if(!gon)return; if(Math.abs(e.touches[0].clientX-gx)+Math.abs(e.touches[0].clientY-gy)>8)gmoved=true; if(e.cancelable)e.preventDefault(); scroll.scrollLeft=gsl-(e.touches[0].clientX-gx); },{passive:false});
+    gap.addEventListener('touchend',(e)=>{ if(mtePinchBase&&(!e.touches||e.touches.length<2)){ mtePinchBase=0; if(mtePinchRaf){cancelAnimationFrame(mtePinchRaf);mtePinchRaf=0;} mteRenderTL(true); return; } gon=false; if(!gmoved&&(Date.now()-gt)<350&&(mteSelSeg>=0||mteSelMedia!=null)){ mteSelSeg=-1; mteSelMedia=null; mteRenderMedia(); mteRenderTL(true); } },{passive:true});   // tap the black space = deselect
   }
   // Pinch the preview (when a clip is selected, and not on a text overlay) to zoom THAT clip
   const pvz=document.getElementById('mtePv');
