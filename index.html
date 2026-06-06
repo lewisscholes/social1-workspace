@@ -333,9 +333,15 @@
   .mte-dur{position:absolute;top:5px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-weight:600;padding:2px 6px;border-radius:5px;z-index:8;pointer-events:none;font-variant-numeric:tabular-nums}
   .mte-add{flex:0 0 auto;width:32px;height:66px;border-radius:7px;background:#2a2a2e;border:0;color:#fff;font-size:21px;cursor:pointer;align-self:flex-end}
   .mte-phfix{position:absolute;left:50%;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 5px rgba(0,0,0,.9);transform:translateX(-50%);pointer-events:none;z-index:8;border-radius:2px}
-  .mte-bar{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px calc(24px + env(safe-area-inset-bottom))}
+  .mte-bar{flex:0 0 auto;display:flex;flex-direction:column;gap:10px;padding:12px 16px calc(24px + env(safe-area-inset-bottom))}
+  .mte-barrow{display:flex;gap:10px;align-items:center}
   .mte-bar button{background:#1c1c1e;border:0;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:500;cursor:pointer;flex:1 1 0;min-width:0;height:56px;border-radius:11px}
   .mte-bar .mi{font-size:19px;line-height:1}
+  .mte-movs{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:4}
+  .mte-mov{position:absolute;pointer-events:auto;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none}
+  .mte-mov img{display:block;width:100%;height:auto;pointer-events:none;-webkit-user-drag:none}
+  .mte-mov.sel{outline:2px solid #fff;outline-offset:2px;border-radius:2px}
+  .mte-movx{position:absolute;top:-10px;right:-10px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.62);color:#fff;font-size:15px;line-height:22px;text-align:center;padding:0;cursor:pointer;pointer-events:auto}
   .mte-sheet{position:fixed;left:0;right:0;top:0;height:100%;z-index:12;display:none;flex-direction:column;background:rgba(0,0,0,.55)}
   .mte-sheet.open{display:flex}
   .mte-sheet-top{display:flex;align-items:center;gap:12px;padding:max(12px,env(safe-area-inset-top)) 14px 6px}
@@ -567,6 +573,7 @@
         <div class="mte-pv" id="mtePv">
           <video id="mteVideo" preload="auto" playsinline webkit-playsinline></video>
           <video id="mteVideo2" class="off" preload="auto" playsinline webkit-playsinline muted></video>
+          <div class="mte-movs" id="mteMovs"></div>
           <div class="mte-ovs" id="mteOvs"></div>
           <div class="mte-guide-v" id="mteGuideV"></div>
           <div class="mte-guide-h" id="mteGuideH"></div>
@@ -597,9 +604,15 @@
       </div>
       <div class="mte-gap"></div>
       <div class="mte-bar" id="mteBar">
-        <button onclick="mteAddText()"><span class="mi">Aa</span>Text</button>
-        <button onclick="mteSplit()"><span class="mi"><svg class="svic" viewBox="0 0 24 24"><rect x="3" y="6.5" width="6.4" height="11" rx="1.8"/><rect x="14.6" y="6.5" width="6.4" height="11" rx="1.8"/><line x1="12" y1="3.5" x2="12" y2="20.5" stroke-dasharray="2 2.4"/></svg></span>Split</button>
-        <button onclick="mteDeleteSeg()"><span class="mi"><svg class="svic" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></span>Delete</button>
+        <div class="mte-barrow">
+          <button onclick="mteAddText()"><span class="mi">Aa</span>Text</button>
+          <button onclick="mteSplit()"><span class="mi"><svg class="svic" viewBox="0 0 24 24"><rect x="3" y="6.5" width="6.4" height="11" rx="1.8"/><rect x="14.6" y="6.5" width="6.4" height="11" rx="1.8"/><line x1="12" y1="3.5" x2="12" y2="20.5" stroke-dasharray="2 2.4"/></svg></span>Split</button>
+          <button onclick="mteDeleteSeg()"><span class="mi"><svg class="svic" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></span>Delete</button>
+        </div>
+        <div class="mte-barrow">
+          <button onclick="mtePickOverlay()"><span class="mi"><svg class="svic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="M21 15l-5-5L5 21"/></svg></span>Overlay</button>
+        </div>
+        <input id="mteOvFile" type="file" accept="image/*" style="display:none" onchange="mteOnOverlayFile(this.files&&this.files[0]); this.value='';">
       </div>
       <div class="mte-sheet" id="mteSheet">
         <div class="mte-sheet-top">
@@ -1683,7 +1696,7 @@ function epInitTextDrag(){
 
 // keep old refs for other parts of the app
 // ---------- MOBILE TIKTOK-STYLE EDITOR ----------
-let mteId=null, mteDuration=0, mteSegments=[], mteSelSeg=-1, mteThumbs=[], mtePlaying=false, mteTexts=[], mteEditingOv=null, mteOvSeq=0;
+let mteId=null, mteDuration=0, mteSegments=[], mteSelSeg=-1, mteThumbs=[], mtePlaying=false, mteTexts=[], mteEditingOv=null, mteOvSeq=0, mteMedia=[], mteMovSeq=0;
 let mtePps=0, mtePpsFit=0, mteProgScroll=false, mteProgT=0, mteRaf=0, mteMuted=false, mteBound=false, mteSeekTarget=null, mteSeekRaf=0, mteThumbKey='';
 let mteCurColor='#ffffff', mteCurSize=28, mteCurFont='classic', mteCurStyle='outline', mtePinchBase=0, mtePinchPps=0, mtePinchRaf=0, mteThumbRaf=0, mteTrimming=false, mteTrimContentW=0, mteLastScrubSeek=0, mteScrubEndT=0, mteSeeking=false;
 function mteContrast(hex){ const m=/^#?([0-9a-f]{6})$/i.exec(hex||''); if(!m)return '#000'; const n=parseInt(m[1],16); const r=(n>>16)&255,g=(n>>8)&255,b=n&255; return (0.299*r+0.587*g+0.114*b)>150?'#000':'#fff'; }
@@ -1718,7 +1731,7 @@ async function mteAutoSuggest(id){
 
 async function mteOpen(id){
   const v=swVids.find(x=>x.id===id); if(!v) return;
-  mteId=id; mteSelSeg=-1; mteThumbs=[]; mtePlaying=false; mteTexts=[]; mteSegments=[]; mtePps=0; mteMuted=false; mteResetUndo();
+  mteId=id; mteSelSeg=-1; mteThumbs=[]; mtePlaying=false; mteTexts=[]; mteSegments=[]; mteMedia=[]; mteMovSeq=0; mtePps=0; mteMuted=false; mteResetUndo();
   let url=signed[id];
   if(!url){ const {data:s}=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600); url=s&&s.signedUrl; if(url)signed[id]=url; }
   const es=v.edit_state;
@@ -1733,6 +1746,7 @@ async function mteOpen(id){
     if(es&&es.segments&&es.segments.length){ mteSegments=es.segments.map(s=>({start:Math.max(0,s.start),end:Math.min(mteDuration,s.end),zoom:s.zoom||1})).filter(s=>s.end-s.start>0.05); }
     if(!mteSegments.length) mteSegments=[{start:0,end:mteDuration}];
     mteRenderTL(); mteRenderOverlays(); mteUpdTime(); setTimeout(mteBuildThumbs,450);   // let the preview load first, then build the filmstrip
+    mteMedia=[]; if(es&&es.media&&es.media.length){ es.media.forEach(m=>{ const item={id:++mteMovSeq,path:m.path,x:m.x,y:m.y,wfrac:m.wfrac||0.5,url:''}; mteMedia.push(item); sb.storage.from(BUCKET).createSignedUrl(m.path,3600).then(({data})=>{ if(data&&data.signedUrl){ item.url=data.signedUrl; mteRenderMedia(); } }).catch(()=>{}); }); mteRenderMedia(); }
   };
   vid.ontimeupdate=mteOnTimeUpdate; vidB.ontimeupdate=mteOnTimeUpdate;
   vid.onended=null; vidB.onended=null;
@@ -2096,13 +2110,14 @@ function mteSplit(){
 
 // ---------- UNDO / REDO (editor) ----------
 let mteUndoStack=[], mteRedoStack=[];
-function mteSnap(){ return { segs:mteSegments.map(s=>({start:s.start,end:s.end,zoom:s.zoom||1})), texts:mteTexts.map(o=>Object.assign({},o)), sel:mteSelSeg, kept:mteMarkerKept() }; }
+function mteSnap(){ return { segs:mteSegments.map(s=>({start:s.start,end:s.end,zoom:s.zoom||1})), texts:mteTexts.map(o=>Object.assign({},o)), media:mteMedia.map(m=>Object.assign({},m)), sel:mteSelSeg, kept:mteMarkerKept() }; }
 function mtePushUndo(){ mteUndoStack.push(mteSnap()); if(mteUndoStack.length>60)mteUndoStack.shift(); mteRedoStack.length=0; mteUpdUndoBtns(); }
 function mteResetUndo(){ mteUndoStack=[]; mteRedoStack=[]; mteUpdUndoBtns(); }
 function mteUpdUndoBtns(){ const u=document.getElementById('mteUndo'),r=document.getElementById('mteRedo'); if(u)u.style.opacity=mteUndoStack.length?'1':'.3'; if(r)r.style.opacity=mteRedoStack.length?'1':'.3'; }
 function mteRestoreSnap(s){
   mteSegments=s.segs.map(x=>({start:x.start,end:x.end,zoom:x.zoom||1}));
   mteTexts=s.texts.map(o=>Object.assign({},o));
+  mteMedia=(s.media||[]).map(m=>Object.assign({},m)); mteRenderMedia();
   mteSelSeg=(s.sel!=null?s.sel:-1);
   mteRenderTL(); mteRenderOverlays();
   const kp=Math.max(0,Math.min(s.kept||0, mteTotalKept()));
@@ -2258,11 +2273,55 @@ function mteOvDrag(el,o){
   el.addEventListener('mousedown',down); el.addEventListener('touchstart',down,{passive:false});
 }
 
+// ---- Image overlays from the camera roll ----
+function mtePickOverlay(){ const inp=document.getElementById('mteOvFile'); if(inp) inp.click(); }
+async function mteOnOverlayFile(file){
+  if(!file)return;
+  const url=URL.createObjectURL(file);
+  const item={id:++mteMovSeq,url:url,path:null,x:50,y:50,wfrac:0.5,uploading:true};
+  const im=new Image(); im.onload=()=>{ if(im.naturalWidth&&im.naturalHeight){ /* keep natural aspect via img height:auto */ } }; im.src=url;
+  mtePushUndo(); mteMedia.push(item); mteRenderMedia(); toast('Adding overlay...','ok');
+  try{
+    const ext=((file.name||'img').split('.').pop()||'png').toLowerCase().replace(/[^a-z0-9]/g,'')||'png';
+    const path='overlays/'+mteId+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.'+ext;
+    const {error}=await sb.storage.from(BUCKET).upload(path,file,{contentType:(file.type||'image/png'),upsert:true});
+    if(error){ item.uploading=false; toast('Overlay upload failed: '+error.message,'err'); return; }
+    item.path=path; item.uploading=false; toast('Overlay added','ok');
+  }catch(e){ item.uploading=false; toast('Overlay upload failed','err'); }
+}
+function mteRemoveMedia(id){ mtePushUndo(); const m=mteMedia.find(x=>x.id===id); if(m&&m.url&&m.url.indexOf('blob:')===0){ try{URL.revokeObjectURL(m.url);}catch(e){} } mteMedia=mteMedia.filter(x=>x.id!==id); mteRenderMedia(); }
+function mteRenderMedia(){
+  const wrap=document.getElementById('mteMovs'); if(!wrap)return; wrap.innerHTML='';
+  mteMedia.forEach(m=>{
+    const d=document.createElement('div'); d.className='mte-mov';
+    d.style.left=m.x+'%'; d.style.top=m.y+'%'; d.style.width=(m.wfrac*100)+'%'; d.style.transform='translate(-50%,-50%)';
+    d.innerHTML='<img src="'+esc(m.url||'')+'" alt=""><button class="mte-movx" onclick="mteRemoveMedia('+m.id+')" aria-label="Remove">&#215;</button>';
+    mteMovDrag(d,m);
+    wrap.appendChild(d);
+  });
+}
+function mteMovDrag(el,m){
+  const pv=document.getElementById('mtePv');
+  let sx=0,sy=0,ox=0,oy=0,mode=null,baseDist=0,baseW=1;
+  const dist=(t)=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+  const move=(e)=>{
+    if(e.touches&&e.touches.length>=2){ if(mode!=='pinch'){ mode='pinch'; baseDist=dist(e.touches)||1; baseW=m.wfrac; } if(e.cancelable)e.preventDefault(); const d=dist(e.touches); m.wfrac=Math.min(2,Math.max(0.08, baseW*(d/(baseDist||1)))); el.style.width=(m.wfrac*100)+'%'; return; }
+    if(mode==='pinch')return;
+    const p=e.touches?e.touches[0]:e; const r=pv.getBoundingClientRect(); const dx=p.clientX-sx, dy=p.clientY-sy;
+    m.x=Math.min(120,Math.max(-20,ox+dx/r.width*100)); m.y=Math.min(120,Math.max(-20,oy+dy/r.height*100));
+    el.style.left=m.x+'%'; el.style.top=m.y+'%'; if(e.cancelable)e.preventDefault();
+  };
+  const up=(e)=>{ if(e&&e.touches&&e.touches.length>0)return; document.removeEventListener('mousemove',move); document.removeEventListener('touchmove',move); document.removeEventListener('mouseup',up); document.removeEventListener('touchend',up); mode=null; };
+  const down=(e)=>{ if(e.target&&e.target.closest&&e.target.closest('.mte-movx'))return; mtePushUndo(); if(e.touches&&e.touches.length===2){ mode='pinch'; baseDist=dist(e.touches)||1; baseW=m.wfrac; } else { mode='drag'; const p=e.touches?e.touches[0]:e; sx=p.clientX; sy=p.clientY; ox=m.x; oy=m.y; } document.addEventListener('mousemove',move); document.addEventListener('touchmove',move,{passive:false}); document.addEventListener('mouseup',up); document.addEventListener('touchend',up); if(e.cancelable)e.preventDefault(); };
+  el.addEventListener('mousedown',down); el.addEventListener('touchstart',down,{passive:false});
+}
+
 async function mteSave(){
   const v=swVids.find(x=>x.id===mteId); if(!v){ mteClose(); return; }
   const segs=mteSegments.map(s=>({start:Math.round(s.start*100)/100,end:Math.round(s.end*100)/100,zoom:Math.round((s.zoom||1)*1000)/1000}));
   const overlays=mteTexts.map(o=>({text:o.text,x:Math.round(o.x*10)/10,y:Math.round(o.y*10)/10,color:o.color,size:o.size||24,scale:Math.round((o.scale||1)*1000)/1000,font:(o.font||'classic'),style:(o.style||'outline')}));
-  const editState={segments:segs,overlays:overlays,source_duration:Math.round(mteDuration*100)/100,edited_at:new Date().toISOString()};
+  const media=mteMedia.filter(m=>m.path).map(m=>({path:m.path,x:Math.round(m.x*10)/10,y:Math.round(m.y*10)/10,wfrac:Math.round((m.wfrac||0.5)*1000)/1000}));
+  const editState={segments:segs,overlays:overlays,media:media,source_duration:Math.round(mteDuration*100)/100,edited_at:new Date().toISOString()};
   const cap=overlays.length?overlays[0].text:(v.caption_suggested||null);
   // 1) Persist the edit state to the video so it survives, restores on re-open, and shows on the swipe card
   const {error:ue}=await sb.from('videos').update({edit_state:editState,caption_suggested:cap}).eq('id',mteId);
@@ -2274,7 +2333,7 @@ async function mteSave(){
   // replaces the pending render instead of stacking another duplicate.
   try{ await sb.from('edit_jobs').delete().eq('video_id',mteId).in('status',['queued','rendering','error']); }catch(e){}
   const wOverlays=overlays.map(o=>({text:o.text,x:o.x,y:o.y,color:o.color,size:o.size,scale:(o.scale||1),font:(o.font==='classic'?'TikTok Sans':o.font),weight:700,style:(o.style||'outline'),box:(o.style==='box'),stroke:(o.style==='box'?0:2.5),outline:(o.style!=='box')}));
-  const job={video_id:mteId,storage_path:v.storage_path,filename:v.filename,folder_id:v.folder_id,product_uid:v.product_uid,options:{segments:segs,source_duration:editState.source_duration,overlays:wOverlays,edited_at:editState.edited_at},status:'queued',requested_by:displayName(state.user)};
+  const job={video_id:mteId,storage_path:v.storage_path,filename:v.filename,folder_id:v.folder_id,product_uid:v.product_uid,options:{segments:segs,source_duration:editState.source_duration,overlays:wOverlays,media:media,edited_at:editState.edited_at},status:'queued',requested_by:displayName(state.user)};
   const {error:je}=await sb.from('edit_jobs').insert(job);
   toast(je?'Edits saved (render queue pending)':'Edits saved','ok');
   mteClose();
