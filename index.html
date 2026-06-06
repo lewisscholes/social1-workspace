@@ -362,7 +362,7 @@
   .mte-colors2::-webkit-scrollbar{display:none}
   .mte-sheet-body{flex:1;display:flex;align-items:flex-start;justify-content:center;position:relative;padding:9% 60px 0 22px}
   .mte-ta-wrap{position:absolute;left:50%;top:30%;transform:translate(-50%,-50%);max-width:84%;text-align:center;max-height:60vh;overflow-y:auto}
-  .mte-ta{display:inline;outline:0;border:0;background:transparent;color:#fff;font-family:var(--ovfont);font-weight:700;font-size:28px;-webkit-text-stroke:2px #000;paint-order:stroke fill;line-height:1.2;-webkit-box-decoration-break:clone;box-decoration-break:clone;white-space:pre-wrap;overflow-wrap:break-word;word-break:break-word;cursor:text}
+  .mte-ta{display:inline;outline:0;border:0;background:transparent;color:#fff;font-family:var(--ovfont);font-weight:600;font-size:28px;letter-spacing:-0.01em;-webkit-text-stroke:0;line-height:1.2;-webkit-box-decoration-break:clone;box-decoration-break:clone;white-space:pre-wrap;overflow-wrap:break-word;word-break:break-word;cursor:text}
   .mte-ta:empty:before{content:attr(data-ph);opacity:.55}
   .mte-sizewrap{position:absolute;right:16px;top:50%;transform:translateY(-50%);height:44%;display:flex;align-items:center}
   .mte-size{-webkit-appearance:slider-vertical;appearance:slider-vertical;writing-mode:vertical-lr;direction:rtl;width:24px;height:100%;background:transparent;accent-color:#fff;cursor:pointer;touch-action:none}
@@ -1512,29 +1512,27 @@ function swRender(){
       </div>
       <div class="sw-count">${remaining.length} video${remaining.length!==1?'s':''} to review</div>
     </div>`;
+  swApplyOverlaySizes();
   swInitDrag();
 }
 
+// Deck preview overlays -- SAME renderer as the on-video overlay (mteOvParts). Sizes are filled in by
+// swApplyOverlaySizes() once the cards are in the DOM (so o.size scales by the card's real height/640,
+// matching the editor and the export exactly).
 function swOverlayHtml(v){
   const es=v.edit_state;
-  if(es&&es.overlays&&es.overlays.length){
-    return es.overlays.map(o=>{
-      const isBox=(o.style==='box');
-      const fam=(o.font&&o.font!=='classic'&&o.font!=='TikTok Sans')?mteFontCss(o.font):'var(--ovfont)';
-      const fst=(o.font==='retro')?'italic':'normal';
-      const fw=(o.font==='elegance')?'600':'700';
-      const base='left:'+o.x+'%;top:'+o.y+'%;transform:translate(-50%,-50%) scale('+(o.scale||1)+');font-family:'+fam+';font-weight:'+fw+';font-style:'+fst+';font-size:'+(o.size||24)+'px;text-align:center;width:max-content;max-width:84%;overflow-wrap:break-word;word-break:normal;letter-spacing:-0.01em;';
-      if(isBox){
-        return '<div class="sw-text" style="'+base+'color:transparent;line-height:1.5"><span style="background:'+o.color+';color:'+mteContrast(o.color)+';font-weight:600;padding:0.14em 0.32em;border-radius:0.16em;-webkit-box-decoration-break:clone;box-decoration-break:clone">'+esc(o.text)+'</span></div>';
-      }
-      const out=(o.outline!==false)?'-webkit-text-stroke:2px #000;paint-order:stroke fill;':'';
-      const sh=(o.font==='neon')?('text-shadow:0 0 6px '+o.color+',0 0 13px '+o.color+';'):'';
-      return '<div class="sw-text" style="'+base+'color:'+o.color+';'+out+sh+'line-height:1.2">'+esc(o.text)+'</div>';
-    }).join('');
-  }
-  const txt=v.caption_suggested||'';
-  if(!txt)return '';
-  return `<div class="sw-text" style="bottom:24%;left:50%;transform:translateX(-50%);font-family:var(--ovfont);font-size:18px;font-weight:700;color:#fff;-webkit-text-stroke:2.5px #000;paint-order:stroke fill;text-align:center;max-width:85%;padding:4px 8px;letter-spacing:-0.01em;line-height:1.25">${esc(txt)}</div>`;
+  let ovs=null;
+  if(es&&es.overlays&&es.overlays.length) ovs=es.overlays;
+  else if(v.caption_suggested) ovs=[{text:mteClampLines(v.caption_suggested),x:50,y:MTE_OV_TOP,color:'#ffffff',size:24,style:'plain',font:'classic'}];
+  if(!ovs) return '';
+  return ovs.map(o=>{ const p=mteOvParts(o,640); return '<div class="sw-text" data-osize="'+(o.size||24)+'" style="position:absolute;'+p.style+'">'+p.inner+'</div>'; }).join('');
+}
+// Lock each preview overlay's size to the card height (same 640 reference as the editor + worker).
+function swApplyOverlaySizes(){
+  document.querySelectorAll('.sw-card').forEach(card=>{
+    const h=card.clientHeight||0; if(!h) return;
+    card.querySelectorAll('.sw-text').forEach(el=>{ const os=+el.dataset.osize||24; el.style.fontSize=(os*(h/640))+'px'; });
+  });
 }
 
 function swInitDrag(){
@@ -2254,30 +2252,49 @@ function mteFontCss(key){ if(key==='elegance')return "Georgia,'Times New Roman',
 // TikTok-style outline: a rounded, gap-filling black halo (the union of the glyph offset around
 // rings = a rounded dilation). Unlike -webkit-text-stroke it has round corners, merges the gaps
 // between close letters, and sits BEHIND the fill so the white letters keep their full thickness.
-const MTE_OUTLINE_R=0.1;   // halo radius in em (scales with font size)
-function mteOutline(rEm,c){ c=c||'#000'; var o=[],rings=[[rEm,16],[rEm*0.66,12],[rEm*0.33,8]]; for(var k=0;k<rings.length;k++){ var rad=rings[k][0],n=rings[k][1]; for(var i=0;i<n;i++){ var a=2*Math.PI*i/n; o.push((Math.cos(a)*rad).toFixed(3)+'em '+(Math.sin(a)*rad).toFixed(3)+'em 0 '+c); } } return o.join(','); }
+const MTE_OUTLINE_R=0.09;  // halo radius in em (scales with font size) -- locked to TikTok match
+const MTE_WEIGHT=600;      // overlay text weight (locked to TikTok match)
+function mteOutline(rEm,c){ c=c||'#000'; var o=[],rings=[[rEm,20],[rEm*0.72,16],[rEm*0.45,12],[rEm*0.2,8]]; for(var k=0;k<rings.length;k++){ var rad=rings[k][0],n=rings[k][1]; for(var i=0;i<n;i++){ var a=2*Math.PI*i/n; o.push((Math.cos(a)*rad).toFixed(3)+'em '+(Math.sin(a)*rad).toFixed(3)+'em 0 '+c); } } return o.join(','); }
+// ONE canonical overlay renderer used by the on-video overlay, the deck previews, and (via mteApplyTaStyle) the edit box.
+// H = the height in px of the container the text sits in; text is sized o.size*(H/640) so it stays locked to the footage everywhere.
+function mteOvParts(o,H){
+  var fam=(o.font&&o.font!=='classic'&&o.font!=='TikTok Sans')?mteFontCss(o.font):'var(--ovfont)';
+  var fst=(o.font==='retro')?'italic':'normal';
+  var sz=(o.size||24)*((H||640)/640);
+  var sty=o.style||(o.box?'box':(o.outline===false?'plain':'outline'));
+  var pos='left:'+o.x+'%;top:'+o.y+'%;transform:translate(-50%,-50%) scale('+(o.scale||1)+');';
+  var base='font-family:'+fam+';font-weight:'+MTE_WEIGHT+';font-style:'+fst+';font-size:'+sz+'px;text-align:center;width:max-content;max-width:84%;overflow-wrap:break-word;word-break:normal;white-space:pre-wrap;letter-spacing:-0.01em;padding:0;';
+  if(sty==='box'){
+    return {style:pos+base+'color:transparent;line-height:1.5',
+      inner:'<span style="background:'+o.color+';color:'+mteContrast(o.color)+';font-weight:'+MTE_WEIGHT+';padding:0.14em 0.32em;border-radius:0.16em;-webkit-box-decoration-break:clone;box-decoration-break:clone;line-height:1.5">'+mteWrapEmoji(o.text)+'</span>'};
+  }
+  var shadow=(sty==='outline')?mteOutline(MTE_OUTLINE_R):'';
+  if(o.font==='neon') shadow=(shadow?shadow+',':'')+'0 0 6px '+o.color+',0 0 13px '+o.color;
+  var sh=shadow?('text-shadow:'+shadow+';'):'text-shadow:none;';
+  return {style:pos+base+'color:'+o.color+';-webkit-text-stroke:0;paint-order:normal;'+sh+'line-height:1.2',
+    inner:mteWrapEmoji(o.text)};
+}
 // Escape + wrap emoji clusters so the outline halo applies to LETTERS only, never to emojis.
 var MTE_EMOJI_RE=null; try{ MTE_EMOJI_RE=new RegExp('(?:\\p{Extended_Pictographic}(?:\\uFE0F|\\u200D\\p{Extended_Pictographic}|[\\u{1F3FB}-\\u{1F3FF}])*)+','gu'); }catch(e){ MTE_EMOJI_RE=null; }
 function mteWrapEmoji(t){ t=String(t||''); if(!MTE_EMOJI_RE) return esc(t); MTE_EMOJI_RE.lastIndex=0; var out='',last=0,m; while((m=MTE_EMOJI_RE.exec(t))){ out+=esc(t.slice(last,m.index))+'<span style="text-shadow:none;-webkit-text-stroke:0">'+esc(m[0])+'</span>'; last=m.index+m[0].length; } out+=esc(t.slice(last)); return out; }
 function mteApplyTaStyle(){
   const ta=document.getElementById('mteTa'); if(!ta)return;
+  // The edit box must look IDENTICAL to the finished overlay: same weight, size, outline, spacing, line-height.
   ta.style.fontSize=(mteCurSize*mteTextScale())+'px'; ta.style.fontFamily=mteFontCss(mteCurFont);
   ta.style.fontStyle=(mteCurFont==='retro')?'italic':'normal';
+  ta.style.fontWeight=MTE_WEIGHT; ta.style.letterSpacing='-0.01em';
   if(mteCurStyle==='box'){
-    ta.style.fontWeight='700';
     ta.style.color=mteContrast(mteCurColor); ta.style.background=mteCurColor;
     ta.style.webkitTextStroke='0'; ta.style.textShadow='none';
     ta.style.padding='0.14em 0.32em'; ta.style.borderRadius='0.16em'; ta.style.lineHeight='1.5';
     ta.style.caretColor=mteContrast(mteCurColor);
   } else if(mteCurStyle==='outline'){
-    ta.style.fontWeight=(mteCurFont==='elegance')?'600':'700';
     ta.style.color=mteCurColor; ta.style.background='transparent';
     ta.style.webkitTextStroke='0'; ta.style.paintOrder='normal';
     ta.style.padding='0'; ta.style.borderRadius='0'; ta.style.lineHeight='1.2';
     ta.style.textShadow=mteOutline(MTE_OUTLINE_R)+((mteCurFont==='neon')?(',0 0 6px '+mteCurColor+',0 0 13px '+mteCurColor):'');
     ta.style.caretColor=mteCurColor;
   } else {   // 'plain' -- clean text, no outline, no banner
-    ta.style.fontWeight=(mteCurFont==='elegance')?'600':'700';
     ta.style.color=mteCurColor; ta.style.background='transparent';
     ta.style.webkitTextStroke='0'; ta.style.paintOrder='normal';
     ta.style.padding='0'; ta.style.borderRadius='0'; ta.style.lineHeight='1.2';
@@ -2309,7 +2326,7 @@ function mteOpenTextSheet(ov){
   mteApplyTaStyle(); mteRenderOverlays();
   // Place the edit box exactly where the overlay sits, so tapping it doesn't move the text.
   const pv=document.getElementById('mtePv'); const wrap=document.getElementById('mteTaWrap');
-  if(pv&&wrap){ const r=pv.getBoundingClientRect(); const cx=r.left+r.width*((ov.x||50)/100); let cy=r.top+r.height*((ov.y||50)/100); cy=Math.max(96,Math.min(cy,window.innerHeight*0.42)); wrap.style.position='fixed'; wrap.style.left=cx+'px'; wrap.style.top=cy+'px'; wrap.style.transform='translate(-50%,-50%)'; }
+  if(pv&&wrap){ const r=pv.getBoundingClientRect(); const cx=r.left+r.width*((ov.x||50)/100); let cy=r.top+r.height*((ov.y||50)/100); cy=Math.max(96,Math.min(cy,window.innerHeight*0.42)); wrap.style.position='fixed'; wrap.style.left=cx+'px'; wrap.style.top=cy+'px'; wrap.style.transform='translate(-50%,-50%) scale('+(ov.scale||1)+')'; }
   ta.focus(); mtePlaceCaretEnd(ta); mteKbBind();   // focus synchronously so the keyboard opens on the tap
 }
 function mteToggleColors(){ const f=document.getElementById('mteFonts'),c=document.getElementById('mteColors2'); if(!f||!c)return; const show=(c.style.display==='none'||!c.style.display); c.style.display=show?'flex':'none'; f.style.display=show?'none':'flex'; }
@@ -2337,27 +2354,12 @@ function mteTextScale(){ const pv=document.getElementById('mtePv'); const h=(pv&
 function mteRenderOverlays(){
   const wrap=document.getElementById('mteOvs'); if(!wrap)return; wrap.innerHTML='';
   const editingNow=document.getElementById('mteSheet').classList.contains('open');
-  const tscale=mteTextScale();
+  const pv=document.getElementById('mtePv'); const H=(pv&&pv.clientHeight)?pv.clientHeight:640;
   mteTexts.forEach(o=>{
     if(editingNow && o===mteEditingOv) return;   // hide the overlay being edited; the edit box is its live preview
     const d=document.createElement('div'); d.className='mte-ov';
-    d.style.left=o.x+'%'; d.style.top=o.y+'%'; d.style.transform='translate(-50%,-50%) scale('+(o.scale||1)+')';
-    d.style.fontFamily=mteFontCss(o.font||'classic');
-    d.style.fontWeight=((o.font==='elegance')?'600':'700'); d.style.fontStyle=(o.font==='retro')?'italic':'normal';
-    d.style.fontSize=((o.size||24)*tscale)+'px';
-    const sty=o.style||(o.box?'box':(o.outline===false?'plain':'outline'));
-    if(sty==='box'){
-      d.style.color='transparent'; d.style.webkitTextStroke='0'; d.style.textShadow='none';
-      d.innerHTML='<span style="background:'+o.color+';color:'+mteContrast(o.color)+';font-weight:700;padding:0.14em 0.32em;border-radius:0.16em;-webkit-box-decoration-break:clone;box-decoration-break:clone;line-height:1.5">'+mteWrapEmoji(o.text)+'</span>';
-    } else if(sty==='outline'){
-      d.style.color=o.color; d.style.webkitTextStroke='0'; d.style.paintOrder='normal';
-      d.style.textShadow=mteOutline(MTE_OUTLINE_R)+((o.font==='neon')?(',0 0 6px '+o.color+',0 0 13px '+o.color):'');
-      d.innerHTML=mteWrapEmoji(o.text);   // halo on letters only; emojis excluded
-    } else {   // 'plain' -- clean text, no outline
-      d.style.color=o.color; d.style.webkitTextStroke='0'; d.style.paintOrder='normal';
-      d.style.textShadow=(o.font==='neon')?('0 0 6px '+o.color+',0 0 13px '+o.color):'none';
-      d.textContent=o.text;
-    }
+    const p=mteOvParts(o,H);
+    d.style.cssText=p.style; d.innerHTML=p.inner;
     mteOvDrag(d,o);
     wrap.appendChild(d);
   });
@@ -2478,7 +2480,7 @@ function mteOBarBind(el,m){
 async function mteSave(){
   const v=swVids.find(x=>x.id===mteId); if(!v){ mteClose(); return; }
   const segs=mteSegments.map(s=>({start:Math.round(s.start*100)/100,end:Math.round(s.end*100)/100,zoom:Math.round((s.zoom||1)*1000)/1000}));
-  const overlays=mteTexts.map(o=>({text:o.text,x:Math.round(o.x*10)/10,y:Math.round(o.y*10)/10,color:o.color,size:o.size||24,scale:Math.round((o.scale||1)*1000)/1000,font:(o.font||'classic'),style:(o.style||'outline')}));
+  const overlays=mteTexts.map(o=>({text:o.text,x:Math.round(o.x*10)/10,y:Math.round(o.y*10)/10,color:o.color,size:o.size||24,scale:Math.round((o.scale||1)*1000)/1000,font:(o.font||'classic'),style:(o.style||'plain')}));
   const media=mteMedia.filter(m=>m.path).map(m=>({path:m.path,x:Math.round(m.x*10)/10,y:Math.round(m.y*10)/10,wfrac:Math.round((m.wfrac||0.5)*1000)/1000,start:Math.round((m.start!=null?m.start:0)*100)/100,end:Math.round((m.end!=null?m.end:(mteTotalKept()||0))*100)/100}));
   const editState={segments:segs,overlays:overlays,media:media,source_duration:Math.round(mteDuration*100)/100,edited_at:new Date().toISOString()};
   const cap=overlays.length?overlays[0].text:(v.caption_suggested||null);
@@ -2491,7 +2493,7 @@ async function mteSave(){
   // First cancel any earlier render of THIS clip that hasn't finished, so re-saving
   // replaces the pending render instead of stacking another duplicate.
   try{ await sb.from('edit_jobs').delete().eq('video_id',mteId).in('status',['queued','rendering','error']); }catch(e){}
-  const wOverlays=overlays.map(o=>{ const sty=o.style||'plain'; return {text:o.text,x:o.x,y:o.y,color:o.color,size:o.size,scale:(o.scale||1),font:(o.font==='classic'?'TikTok Sans':o.font),weight:700,style:sty,box:(sty==='box'),stroke:(sty==='outline'?2.5:0),outline:(sty==='outline')}; });
+  const wOverlays=overlays.map(o=>{ const sty=o.style||'plain'; return {text:o.text,x:o.x,y:o.y,color:o.color,size:o.size,scale:(o.scale||1),font:(o.font==='classic'?'TikTok Sans':o.font),weight:600,style:sty,box:(sty==='box'),stroke:(sty==='outline'?2.5:0),outline:(sty==='outline')}; });
   const job={video_id:mteId,storage_path:v.storage_path,filename:v.filename,folder_id:v.folder_id,product_uid:v.product_uid,options:{segments:segs,source_duration:editState.source_duration,overlays:wOverlays,media:media,edited_at:editState.edited_at},status:'queued',requested_by:displayName(state.user)};
   const {error:je}=await sb.from('edit_jobs').insert(job);
   toast(je?'Edits saved (render queue pending)':'Edits saved','ok');
