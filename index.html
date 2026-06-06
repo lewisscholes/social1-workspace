@@ -683,6 +683,26 @@
       </div>
 
       <div class="card">
+        <div style="font-weight:700;margin-bottom:6px"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tag"></use></svg> Product details</div>
+        <div class="h-sub" style="margin-bottom:8px">Price, offer and benefits per product. These power the benefit and price/offer overlays for silent music + text videos. Auto-filled by the scraper; edit anything here.</div>
+        <select id="trPdProduct" onchange="trOnSelectProduct()" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit"><option value="">Select a product...</option></select>
+        <div id="trPdFields" class="hide" style="margin-top:10px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <input id="trPdPrice" placeholder="Price (e.g. 12.99)" style="box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit"/>
+            <input id="trPdWas" placeholder="Was / RRP (e.g. 24.99)" style="box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit"/>
+            <input id="trPdDiscount" placeholder="Discount (e.g. 50% off)" style="box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit"/>
+            <input id="trPdOffer" placeholder="Offer (e.g. Buy 1 get 1)" style="box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit"/>
+            <input id="trPdRating" placeholder="Rating (e.g. 4.8)" style="box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit"/>
+            <input id="trPdSold" placeholder="Units sold (e.g. 10K+)" style="box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit"/>
+          </div>
+          <textarea id="trPdBenefits" rows="4" placeholder="Key benefits, one per line (e.g.&#10;Frizz-free in 60 seconds&#10;Heat protection up to 230C&#10;Lasts all day)" style="width:100%;box-sizing:border-box;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit;resize:vertical"></textarea>
+          <textarea id="trPdDesc" rows="3" placeholder="Short product description / listing blurb" style="width:100%;box-sizing:border-box;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit;resize:vertical"></textarea>
+          <div style="margin-top:8px"><button class="btn" onclick="trSaveProductInfo()">Save product details</button> <span id="trPdMsg" class="h-sub"></span></div>
+          <div class="h-sub" id="trPdMeta" style="margin-top:6px"></div>
+        </div>
+      </div>
+
+      <div class="card">
         <div style="font-weight:700;margin-bottom:6px"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-plus"></use></svg> Teach an example</div>
         <div class="h-sub" style="margin-bottom:8px">Add an overlay that works and say when to use it. Taught examples get the highest priority when the AI suggests.</div>
         <textarea id="trExOverlay" rows="2" placeholder="Overlay text (use new lines for multiple lines)" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit;resize:vertical"></textarea>
@@ -822,6 +842,8 @@ async function loadTraining(){
   await loadProducts();
   const psel=document.getElementById('trExProduct');
   if(psel){ const cur=psel.value; psel.innerHTML='<option value="">Any product</option>'+state.products.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join(''); psel.value=cur; }
+  const pdsel=document.getElementById('trPdProduct');
+  if(pdsel){ const cur=pdsel.value; pdsel.innerHTML='<option value="">Select a product...</option>'+state.products.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join(''); pdsel.value=cur; trOnSelectProduct(); }
   try{ const {data}=await sb.from('overlay_guidance').select('guidance').eq('id',1).maybeSingle(); const ta=document.getElementById('trGuidance'); if(ta&&document.activeElement!==ta) ta.value=(data&&data.guidance)||''; }catch(e){}
   try{
     const {data}=await sb.from('overlay_memory').select('id,overlay_text,note,transcript,source,product_uid,updated_at').order('updated_at',{ascending:false}).limit(120);
@@ -839,6 +861,33 @@ async function loadTraining(){
       return '<div style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div style="font-weight:700;white-space:pre-wrap">'+esc(r.overlay_text||'')+'</div><button class="btn ghost" style="flex:0 0 auto;padding:3px 8px" onclick="deleteTrMem(\''+r.id+'\')">Remove</button></div><div class="h-sub" style="margin-top:5px">'+badge+prod+ctxShort+'</div></div>';
     }).join('');
   }catch(e){ toast('Could not load memory: '+(e.message||e),'err'); }
+}
+function trOnSelectProduct(){
+  const id=document.getElementById('trPdProduct').value;
+  const box=document.getElementById('trPdFields');
+  const p=state.products.find(x=>x.id===id);
+  if(!id||!p){ box.classList.add('hide'); return; }
+  box.classList.remove('hide');
+  const set=(k,v)=>{ const el=document.getElementById(k); if(el) el.value=v||''; };
+  set('trPdPrice',p.price); set('trPdWas',p.original_price); set('trPdDiscount',p.discount);
+  set('trPdOffer',p.offer); set('trPdRating',p.rating); set('trPdSold',p.units_sold);
+  set('trPdBenefits',p.benefits); set('trPdDesc',p.description);
+  const meta=document.getElementById('trPdMeta');
+  if(meta){ const parts=[]; if(p.listing_url) parts.push('Listing: '+esc(p.listing_url)); if(p.info_updated_at) parts.push('Updated '+p.info_updated_at.slice(0,16).replace('T',' ')); meta.innerHTML=parts.join(' &middot; '); }
+}
+async function trSaveProductInfo(){
+  const id=document.getElementById('trPdProduct').value;
+  const msg=document.getElementById('trPdMsg');
+  if(!id){ if(msg)msg.textContent='Pick a product first'; return; }
+  const g=k=>{ const el=document.getElementById(k); return el&&el.value.trim()?el.value.trim():null; };
+  const patch={ price:g('trPdPrice'), original_price:g('trPdWas'), discount:g('trPdDiscount'), offer:g('trPdOffer'),
+    rating:g('trPdRating'), units_sold:g('trPdSold'), benefits:g('trPdBenefits'), description:g('trPdDesc'),
+    info_updated_at:new Date().toISOString() };
+  const {error}=await sb.from('products').update(patch).eq('id',id);
+  if(error){ if(msg)msg.textContent='Error: '+error.message; return; }
+  const p=state.products.find(x=>x.id===id); if(p) Object.assign(p,patch);
+  if(msg){ msg.textContent='Saved'; setTimeout(()=>{msg.textContent='';},2500); }
+  trOnSelectProduct();
 }
 async function saveTrGuidance(){
   const ta=document.getElementById('trGuidance'); const msg=document.getElementById('trGuidanceMsg');
@@ -866,7 +915,7 @@ async function deleteTrMem(id){
 
 // ---------- products ----------
 async function loadProducts(){
-  const {data}=await sb.from('products').select('id,name').order('name');
+  const {data}=await sb.from('products').select('id,name,price,original_price,discount,offer,rating,units_sold,benefits,description,listing_url,info_updated_at').order('name');
   state.products=data||[];
   const sel=document.getElementById('fProduct');
   if(sel){ const cur=sel.value; sel.innerHTML='<option value="">All products</option>'+state.products.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join(''); sel.value=cur; }
@@ -1329,6 +1378,7 @@ function toggleMenu(e,id){ e.stopPropagation(); document.querySelectorAll('.menu
     ${isPosted(v)?`<button onclick="unpost('${id}')"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-undo"></use></svg> Unpost</button>`:`<button onclick="markPosted('${id}')"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"></use></svg> Mark posted</button>`}
     ${v.kind!=='edited'?`<button onclick="editVideo('${id}')"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-scissors"></use></svg> Edit video</button>`:''}
     <button onclick="suggestOverlays('${id}')"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sparkles"></use></svg> Suggest overlays</button>
+    <button onclick="openVideoTypeModal('${id}')"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-music"></use></svg> Video type${v.video_type?(' &middot; '+(v.video_type==='music_text'?'Music+Text':'Speech')):' &middot; Auto'}</button>
     <button onclick="openMoveModal('${id}')"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tag"></use></svg> Change product</button>
     <button class="danger" onclick="deleteVideo('${id}')"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trash"></use></svg> Delete</button>`;
   m.classList.toggle('hide');
@@ -1388,6 +1438,24 @@ async function unpost(id){ const {error}=await sb.from('videos').update({posted_
 async function editVideo(id){ const v=state.videos.find(x=>x.id===id); if(!v)return; const row={video_id:id,storage_path:v.storage_path,filename:v.filename,folder_id:v.folder_id,product_uid:v.product_uid,requested_by:displayName(state.user)}; const {error}=await sb.from('edit_jobs').insert(row); if(error){toast('Could not queue edit: '+error.message,'err');return;} toast('Queued for editing — it will appear in the Editor for approval','ok'); }
 function openMoveModal(id){ const opts=state.products.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join(''); showModal(`<h3>Change product</h3><label>Product</label><select id="mv_prod">${opts}</select><div class="actions"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" onclick="moveVideo('${id}')">Save</button></div>`); }
 async function moveVideo(id){ const p=val('mv_prod')||null; const {error}=await sb.from('videos').update({product_uid:p}).eq('id',id); if(error){toast('Failed','err');return;} closeModal(); toast('Updated','ok'); loadBank(); }
+function openVideoTypeModal(id){
+  const v=state.videos.find(x=>x.id===id); if(!v)return;
+  const cur=v.video_type||'auto';
+  const opt=(val,label,desc)=>`<button class="btn ${cur===val?'':'ghost'}" style="width:100%;text-align:left;margin-bottom:8px;display:flex;flex-direction:column;align-items:flex-start;gap:2px" onclick="applyVideoType('${id}','${val}')"><span style="font-weight:700">${label}${cur===val?' (current)':''}</span><span class="h-sub" style="white-space:normal">${desc}</span></button>`;
+  showModal('<h3>Video type</h3><p class="h-sub" style="margin:6px 0 14px">Tells the overlay AI how to write. Music + Text videos get self-contained benefit and price/offer hooks; Speech videos match the spoken moment.</p>'+
+    opt('auto','Auto','Decide from speech -- silent clips become Music + Text automatically.')+
+    opt('speech','Speech','Has a voiceover -- overlays support what is being said.')+
+    opt('music_text','Music + Text','Silent video -- the overlay does all the selling.')+
+    '<div class="actions"><button class="btn ghost" onclick="closeModal()">Close</button></div>');
+}
+async function applyVideoType(id,v){
+  const dbval=(v==='auto')?null:v;
+  const {error}=await sb.from('videos').update({video_type:dbval}).eq('id',id);
+  if(error){ toast('Failed: '+error.message,'err'); return; }
+  const r=state.videos.find(x=>x.id===id); if(r)r.video_type=dbval;
+  const s=(typeof swVids!=='undefined'&&swVids)?swVids.find(x=>x.id===id):null; if(s)s.video_type=dbval;
+  closeModal(); toast('Saved','ok');
+}
 async function deleteVideo(id){ const v=state.videos.find(x=>x.id===id); if(!v)return; if(!confirm('Delete this video permanently?'))return; await sb.storage.from(BUCKET).remove([v.storage_path]); const {error}=await sb.from('videos').delete().eq('id',id); if(error){toast('Failed','err');return;} delete signed[id]; toast('Deleted','ok'); loadBank(); }
 
 // ---------- EDITOR (pending approval) ----------
