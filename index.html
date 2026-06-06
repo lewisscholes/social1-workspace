@@ -1791,6 +1791,9 @@ function mteLockScroll(on){
   else { const b=document.body.style; b.position=''; b.top=''; b.left=''; b.right=''; b.width=''; b.overflow=''; b.background=''; document.documentElement.style.background=''; window.scrollTo(0,__mteScrollY); }
 }
 
+// Auto-loaded overlays sit near the top (TikTok-style hook position) and never exceed 3 lines.
+const MTE_OV_TOP=25;
+function mteClampLines(s){ return String(s||'').split('\n').map(l=>l.trim()).filter(Boolean).slice(0,3).join('\n'); }
 async function mteAutoSuggest(id){
   toast('Loading overlay ideas...','ok');
   try{
@@ -1798,7 +1801,7 @@ async function mteAutoSuggest(id){
     if(error||(data&&data.error)) return; // no data / not configured -- user can tap Suggest overlays
     const {data:vr}=await sb.from('videos').select('caption_suggested').eq('id',id).single();
     if(vr&&vr.caption_suggested&&mteId===id&&!mteTexts.length){
-      mteTexts.push({id:++mteOvSeq,text:vr.caption_suggested,x:50,y:74,color:'#ffffff',size:24,font:'classic',style:'outline'});
+      mteTexts.push({id:++mteOvSeq,text:mteClampLines(vr.caption_suggested),x:50,y:MTE_OV_TOP,color:'#ffffff',size:24,font:'classic',style:'outline'});
       mteRenderOverlays();
       const sv=swVids.find(x=>x.id===id); if(sv)sv.caption_suggested=vr.caption_suggested;
       toast('Overlay idea added','ok');
@@ -1809,11 +1812,12 @@ async function mteAutoSuggest(id){
 async function mteOpen(id){
   const v=swVids.find(x=>x.id===id); if(!v) return;
   mteId=id; mteSelSeg=-1; mteThumbs=[]; mtePlaying=false; mteTexts=[]; mteSegments=[]; mteMedia=[]; mteMovSeq=0; mteSelMedia=null; mtePps=0; mteMuted=false; mteResetUndo();
+  mteRenderOverlays(); mteRenderMedia();   // clear any overlays left on screen from the previous video right away
   let url=signed[id];
   if(!url){ const {data:s}=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600); url=s&&s.signedUrl; if(url)signed[id]=url; }
   const es=v.edit_state;
   if(es&&es.overlays&&es.overlays.length){ mteTexts=es.overlays.map(o=>({id:++mteOvSeq,text:o.text,x:o.x,y:o.y,color:o.color,size:o.size||24,scale:o.scale||1,font:(o.font==='TikTok Sans'?'classic':(o.font||'classic')),style:(o.style||((o.outline===false)?'outline':'outline'))})); }
-  else if(v.caption_suggested){ mteTexts.push({id:++mteOvSeq,text:v.caption_suggested,x:50,y:74,color:'#ffffff',size:24,font:'classic',style:'outline'}); }
+  else if(v.caption_suggested){ mteTexts.push({id:++mteOvSeq,text:mteClampLines(v.caption_suggested),x:50,y:MTE_OV_TOP,color:'#ffffff',size:24,font:'classic',style:'outline'}); }
   if(!mteTexts.length && v.product_uid){ mteAutoSuggest(id); }
   mteActive=0; mteRunIdx=0;
   const vid=document.getElementById('mteVideo'); const vidB=document.getElementById('mteVideo2');
@@ -1823,7 +1827,8 @@ async function mteOpen(id){
     if(es&&es.segments&&es.segments.length){ mteSegments=es.segments.map(s=>({start:Math.max(0,s.start),end:Math.min(mteDuration,s.end),zoom:s.zoom||1})).filter(s=>s.end-s.start>0.05); }
     if(!mteSegments.length) mteSegments=[{start:0,end:mteDuration}];
     mteRenderTL(); mteRenderOverlays(); mteUpdTime(); setTimeout(mteBuildThumbs,450);   // let the preview load first, then build the filmstrip
-    mteMedia=[]; if(es&&es.media&&es.media.length){ const tot=mteTotalKept()||0.001; es.media.forEach(m=>{ const item={id:++mteMovSeq,path:m.path,x:m.x,y:m.y,wfrac:m.wfrac||0.5,start:(m.start!=null?m.start:0),end:(m.end!=null?m.end:tot),url:''}; mteMedia.push(item); sb.storage.from(BUCKET).createSignedUrl(m.path,3600).then(({data})=>{ if(data&&data.signedUrl){ item.url=data.signedUrl; mteRenderMedia(); mteRenderOTrack(); } }).catch(()=>{}); }); mteRenderMedia(); mteRenderOTrack(); }
+    mteMedia=[]; if(es&&es.media&&es.media.length){ const tot=mteTotalKept()||0.001; es.media.forEach(m=>{ const item={id:++mteMovSeq,path:m.path,x:m.x,y:m.y,wfrac:m.wfrac||0.5,start:(m.start!=null?m.start:0),end:(m.end!=null?m.end:tot),url:''}; mteMedia.push(item); sb.storage.from(BUCKET).createSignedUrl(m.path,3600).then(({data})=>{ if(data&&data.signedUrl){ item.url=data.signedUrl; mteRenderMedia(); mteRenderOTrack(); } }).catch(()=>{}); }); }
+    mteRenderMedia(); mteRenderOTrack();   // always render (clears any overlay/track left from the previous video, even when this one has none)
   };
   vid.ontimeupdate=mteOnTimeUpdate; vidB.ontimeupdate=mteOnTimeUpdate;
   vid.onended=null; vidB.onended=null;
