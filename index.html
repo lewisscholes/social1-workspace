@@ -2252,7 +2252,7 @@ function mteFontCss(key){ if(key==='elegance')return "Georgia,'Times New Roman',
 // TikTok-style outline: a rounded, gap-filling black halo (the union of the glyph offset around
 // rings = a rounded dilation). Unlike -webkit-text-stroke it has round corners, merges the gaps
 // between close letters, and sits BEHIND the fill so the white letters keep their full thickness.
-const MTE_OUTLINE_R=0.09;  // halo radius in em (scales with font size) -- locked to TikTok match
+const MTE_OUTLINE_R=0.07;  // halo radius in em (scales with font size) -- locked to TikTok match
 const MTE_WEIGHT=600;      // overlay text weight (locked to TikTok match)
 function mteOutline(rEm,c){ c=c||'#000'; var o=[],rings=[[rEm,20],[rEm*0.72,16],[rEm*0.45,12],[rEm*0.2,8]]; for(var k=0;k<rings.length;k++){ var rad=rings[k][0],n=rings[k][1]; for(var i=0;i<n;i++){ var a=2*Math.PI*i/n; o.push((Math.cos(a)*rad).toFixed(3)+'em '+(Math.sin(a)*rad).toFixed(3)+'em 0 '+c); } } return o.join(','); }
 // ONE canonical overlay renderer used by the on-video overlay, the deck previews, and (via mteApplyTaStyle) the edit box.
