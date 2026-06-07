@@ -762,9 +762,12 @@
         </div>
         <button class="btn" onclick="openFilesUpload()"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-upload"></use></svg> Upload</button>
       </div>
-      <div class="seg" style="margin-bottom:14px">
-        <button id="ftab-uploaded" class="active" onclick="setFilesTab('uploaded')">Uploaded <span class="cnt" id="fcUp">0</span></button>
-        <button id="ftab-downloaded" onclick="setFilesTab('downloaded')">Downloaded <span class="cnt" id="fcDown">0</span></button>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+        <div class="seg">
+          <button id="ftab-uploaded" class="active" onclick="setFilesTab('uploaded')">Uploaded <span class="cnt" id="fcUp">0</span></button>
+          <button id="ftab-downloaded" onclick="setFilesTab('downloaded')">Downloaded <span class="cnt" id="fcDown">0</span></button>
+        </div>
+        <select id="filesAcct" onchange="setFilesAcct(this.value)" style="margin-left:auto;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font:inherit;font-size:13px;background:#fff"><option value="all">All accounts</option></select>
       </div>
       <div id="filesList"></div>
       <div id="filesEmpty" class="h-sub hide" style="padding:18px 0">Nothing here yet. Tap Upload to add videos.</div>
@@ -2777,15 +2780,21 @@ function umRm(i){ window.__umFiles.splice(i,1); umRows(); }
 async function umUpload(){ const f=window.__umFiles||[]; if(!f.length){toast('Add clips','err');return;} const prodId=val('um_prod')||null; const jobs=f.map(x=>({file:x,prod:prodId})); window.__umFiles=[]; closeModal(); toast('Uploading '+jobs.length+' in the background','ok'); bgUpload(jobs); }
 
 // ---------- FILES (temporary file manager: Uploaded / Downloaded) ----------
+const FILE_ACCOUNTS=['@LinkedByLinacre','@YasAndLew','@LinkedByYas'];
 async function loadFiles(){
   if(!state.filesTab) state.filesTab='uploaded';
+  if(!state.filesAcct) state.filesAcct='all';
+  const sel=document.getElementById('filesAcct');
+  if(sel){ sel.innerHTML='<option value="all">All accounts</option>'+FILE_ACCOUNTS.map(a=>'<option value="'+a+'">'+a+'</option>').join(''); sel.value=state.filesAcct; }
   try{ const {data}=await sb.from('temp_files').select('*').order('created_at',{ascending:false}); state.files=data||[]; }
   catch(e){ state.files=[]; }
   renderFiles();
 }
 function setFilesTab(t){ state.filesTab=t; const u=document.getElementById('ftab-uploaded'),d=document.getElementById('ftab-downloaded'); if(u)u.classList.toggle('active',t==='uploaded'); if(d)d.classList.toggle('active',t==='downloaded'); renderFiles(); }
+function setFilesAcct(a){ state.filesAcct=a; renderFiles(); }
 function renderFiles(){
-  const all=state.files||[];
+  let all=state.files||[];
+  if(state.filesAcct&&state.filesAcct!=='all') all=all.filter(f=>f.account===state.filesAcct);
   const up=all.filter(f=>!f.downloaded_at), down=all.filter(f=>f.downloaded_at);
   const cu=document.getElementById('fcUp'); if(cu)cu.textContent=up.length;
   const cd=document.getElementById('fcDown'); if(cd)cd.textContent=down.length;
@@ -2798,10 +2807,11 @@ function fileRow(f){
   const size=f.size_bytes?fmtMB(f.size_bytes):'';
   const date=(f.created_at||'').slice(0,10);
   const done=!!f.downloaded_at;
+  const acct=f.account?'<span class="pill blue" style="margin-left:8px;font-size:11px">'+esc(f.account)+'</span>':'';
   const meta=done?('Downloaded '+(f.downloaded_at||'').slice(0,10)+(f.downloaded_by?(' by '+esc(f.downloaded_by)):'')):(size+(date?(' &middot; '+date):''));
   return '<div class="card" style="display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:10px">'
     +'<div style="flex:0 0 auto;color:var(--blue-d)"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="width:22px;height:22px"><use href="#i-film"></use></svg></div>'
-    +'<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(f.filename||'video')+'</div><div class="h-sub" style="font-size:12px">'+meta+'</div></div>'
+    +'<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(f.filename||'video')+acct+'</div><div class="h-sub" style="font-size:12px">'+meta+'</div></div>'
     +'<button class="btn sm" onclick="downloadTempFile(\''+f.id+'\')"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-download"></use></svg> '+(done?'Re-download':'Download')+'</button>'
     +'<button class="btn ghost sm" onclick="deleteTempFile(\''+f.id+'\')" aria-label="Delete"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trash"></use></svg></button>'
     +'</div>';
@@ -2833,7 +2843,9 @@ function openFilesUpload(preFiles){
   window.__ufFiles=(preFiles&&preFiles.length)?[...preFiles]:[];
   showModal('<h3>Upload videos</h3>'
     +'<div class="h-sub" style="margin:-2px 0 10px">They appear in the Uploaded tab for the team to download.</div>'
-    +'<label class="uploadbtn" for="uf_files"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg> Choose videos</label>'
+    +'<label>Account to post on (applied to all in this upload)</label>'
+    +'<select id="uf_acct">'+FILE_ACCOUNTS.map(a=>'<option value="'+a+'">'+a+'</option>').join('')+'</select>'
+    +'<label class="uploadbtn" for="uf_files" style="margin-top:12px"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg> Choose videos</label>'
     +'<input id="uf_files" type="file" accept="video/*" multiple style="display:none" onchange="ufAdd(this.files)">'
     +'<div id="uf_rows"></div>'
     +'<div class="actions"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn hide" id="uf_go" onclick="ufUpload()">Upload all</button></div>');
@@ -2842,13 +2854,13 @@ function openFilesUpload(preFiles){
 function ufAdd(fl){ for(const f of fl) window.__ufFiles.push(f); ufRows(); }
 function ufRows(){ const w=document.getElementById('uf_rows'); const f=window.__ufFiles||[]; const go=document.getElementById('uf_go'); if(go)go.classList.toggle('hide',!f.length); if(!w)return; w.innerHTML=f.length?('<div class="h-sub" style="margin:8px 0">'+f.length+' clip'+(f.length===1?'':'s')+' ready</div>'+f.map((x,i)=>'<div style="display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:8px;margin:6px 0"><div style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-film"></use></svg> '+esc(x.name)+'</div><button class="cm-arrow" onclick="ufRm('+i+')"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-x"></use></svg></button></div>').join('')):'<div class="h-sub" style="padding:8px 0">No clips added.</div>'; }
 function ufRm(i){ window.__ufFiles.splice(i,1); ufRows(); }
-async function ufUpload(){ const f=window.__ufFiles||[]; if(!f.length){toast('Add clips','err');return;} const jobs=f.map(x=>({file:x})); window.__ufFiles=[]; closeModal(); toast('Uploading '+jobs.length+' in the background','ok'); bgUploadTemp(jobs); }
-async function uploadTempOne(file,onProgress){
+async function ufUpload(){ const f=window.__ufFiles||[]; if(!f.length){toast('Add clips','err');return;} const acct=val('uf_acct')||FILE_ACCOUNTS[0]; const jobs=f.map(x=>({file:x,account:acct})); window.__ufFiles=[]; closeModal(); toast('Uploading '+jobs.length+' to '+acct,'ok'); bgUploadTemp(jobs); }
+async function uploadTempOne(file,account,onProgress){
   const safe=file.name.replace(/[^\w.\-]+/g,'_');
   const path='tempfiles/'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'_'+safe;
   await tusUpload(file,path,onProgress);
   if(onProgress)onProgress(file.size||0,file.size||0);
-  const {error}=await sb.from('temp_files').insert({filename:file.name,storage_path:path,size_bytes:file.size,content_type:file.type||'video/mp4',uploaded_by:displayName(state.user)});
+  const {error}=await sb.from('temp_files').insert({filename:file.name,storage_path:path,size_bytes:file.size,content_type:file.type||'video/mp4',account:account||null,uploaded_by:displayName(state.user)});
   if(error)throw error;
 }
 async function bgUploadTemp(jobs){
