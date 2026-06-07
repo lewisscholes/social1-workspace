@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#000000" />
 <title>Affiliate Editor</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:wght@300..900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js"></script>
 <style>
@@ -2256,7 +2256,8 @@ function mteFontCss(key){ if(key==='elegance')return "Georgia,'Times New Roman',
 // rings = a rounded dilation). Unlike -webkit-text-stroke it has round corners, merges the gaps
 // between close letters, and sits BEHIND the fill so the white letters keep their full thickness.
 const MTE_OUTLINE_R=0.07;  // halo radius in em (scales with font size) -- locked to TikTok match
-const MTE_WEIGHT=600;      // overlay text weight (locked to TikTok match)
+const MTE_WEIGHT=600;          // banner + plain text weight (locked to TikTok match)
+const MTE_OUTLINE_WEIGHT=450;  // outline-style letters are lighter (the halo adds visual weight)
 // Banner (box) style -- one smooth continuous shape (not per-line boxes), locked to TikTok match.
 const MTE_BOX_RAD=0.24, MTE_BOX_PADX=0.30, MTE_BOX_PADY=0.14, MTE_BOX_LH=1.18;
 function mteBoxTextColor(bg){ var c=mteContrast(bg); return (c==='#000')?'#161823':c; }   // softer near-black on a light banner
@@ -2268,11 +2269,13 @@ function mteOvParts(o,H){
   var fst=(o.font==='retro')?'italic':'normal';
   var sz=(o.size||24)*((H||640)/640);
   var sty=o.style||(o.box?'box':(o.outline===false?'plain':'outline'));
+  var wght=(sty==='outline')?MTE_OUTLINE_WEIGHT:MTE_WEIGHT;
+  var wcss='font-weight:'+wght+";font-variation-settings:'wght' "+wght+';';
   var pos='left:'+o.x+'%;top:'+o.y+'%;transform:translate(-50%,-50%) scale('+(o.scale||1)+');';
-  var base='font-family:'+fam+';font-weight:'+MTE_WEIGHT+';font-style:'+fst+';font-size:'+sz+'px;text-align:center;width:max-content;max-width:84%;overflow-wrap:break-word;word-break:normal;white-space:pre-wrap;letter-spacing:-0.01em;padding:0;';
+  var base='font-family:'+fam+';'+wcss+'font-style:'+fst+';font-size:'+sz+'px;text-align:center;width:max-content;max-width:84%;overflow-wrap:break-word;word-break:normal;white-space:pre-wrap;letter-spacing:-0.01em;padding:0;';
   if(sty==='box'){
     var tc=mteBoxTextColor(o.color);
-    var bstyle=pos+'font-family:'+fam+';font-weight:'+MTE_WEIGHT+';font-style:'+fst+';font-size:'+sz+'px;text-align:center;width:max-content;max-width:84%;overflow-wrap:break-word;word-break:normal;white-space:pre-wrap;letter-spacing:-0.01em;line-height:'+MTE_BOX_LH+';padding:'+MTE_BOX_PADY+'em '+MTE_BOX_PADX+'em;color:'+tc+';';
+    var bstyle=pos+'font-family:'+fam+";font-weight:"+MTE_WEIGHT+";font-variation-settings:'wght' "+MTE_WEIGHT+';font-style:'+fst+';font-size:'+sz+'px;text-align:center;width:max-content;max-width:84%;overflow-wrap:break-word;word-break:normal;white-space:pre-wrap;letter-spacing:-0.01em;line-height:'+MTE_BOX_LH+';padding:'+MTE_BOX_PADY+'em '+MTE_BOX_PADX+'em;color:'+tc+';';
     return {style:bstyle, inner:'<span class="mte-boxtxt">'+mteWrapEmoji(o.text)+'</span>', box:true, bg:o.color};
   }
   var shadow=(sty==='outline')?mteOutline(MTE_OUTLINE_R):'';
@@ -2319,7 +2322,8 @@ function mteApplyTaStyle(){
   // The edit box must look IDENTICAL to the finished overlay: same weight, size, outline, spacing, line-height.
   ta.style.fontSize=(mteCurSize*mteTextScale())+'px'; ta.style.fontFamily=mteFontCss(mteCurFont);
   ta.style.fontStyle=(mteCurFont==='retro')?'italic':'normal';
-  ta.style.fontWeight=MTE_WEIGHT; ta.style.letterSpacing='-0.01em';
+  var taW=(mteCurStyle==='outline')?MTE_OUTLINE_WEIGHT:MTE_WEIGHT;
+  ta.style.fontWeight=taW; ta.style.fontVariationSettings="'wght' "+taW; ta.style.letterSpacing='-0.01em';
   if(mteCurStyle==='box'){
     ta.style.color=mteBoxTextColor(mteCurColor); ta.style.background='transparent';
     ta.style.webkitTextStroke='0'; ta.style.textShadow='none';
