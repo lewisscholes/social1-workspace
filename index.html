@@ -37,6 +37,12 @@
   .nav-btn:disabled{color:#aab2c0;cursor:default}
   .nav-btn:disabled:hover{background:transparent}
   .nav-sep{margin-top:auto;border-top:1px solid var(--line);padding-top:8px}
+  .nav-sub{display:none;flex-direction:column;gap:4px}
+  .nav-sub.open{display:flex}
+  .nav-sub .nav-btn{padding-left:30px;font-size:13.5px}
+  .nav-tools .chev{margin-left:auto;display:flex;align-items:center;transition:transform .16s ease}
+  .nav-tools .chev .svic{width:15px;height:15px}
+  .nav-tools.open .chev{transform:rotate(180deg)}
   .side-user{padding:8px;font-size:12px;color:var(--muted)}
   .side-user .nm{font-weight:600;color:var(--ink);font-size:13px}
   /* main */
@@ -434,13 +440,16 @@
     <div class="brand"><span class="logo"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-play"></use></svg></span> Affiliate Editor</div>
     <button class="nav-btn active" id="nav-dashboard" onclick="showView('dashboard')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-home"></use></svg></span> Dashboard</button>
     <button class="nav-btn" id="nav-bank" onclick="showView('bank')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-film"></use></svg></span> Video bank</button>
-    <button class="nav-btn" id="nav-files" onclick="showView('files')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg></span> Files</button>
-    <button class="nav-btn" id="nav-products" onclick="showView('products')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tag"></use></svg></span> Products</button>
-    <button class="nav-btn" id="nav-priority" onclick="showView('priority')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"></use></svg></span> Priority</button>
     <button class="nav-btn" id="nav-editor" onclick="showView('editor')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-scissors"></use></svg></span> Editor</button>
     <button class="nav-btn" id="nav-schedule" onclick="showView('schedule')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-calendar"></use></svg></span> Content Schedule</button>
-    <div class="nav-sep" style="margin-top:14px"></div>
-    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:8px 10px 4px">Tools</div>
+    <button class="nav-btn nav-tools" id="navTools" onclick="toggleToolsNav()"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-more"></use></svg></span> Tools <span class="chev"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevron"></use></svg></span></button>
+    <div class="nav-sub" id="toolsSub">
+      <button class="nav-btn" id="nav-priority" onclick="showView('priority')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"></use></svg></span> Priority</button>
+      <button class="nav-btn" id="nav-products" onclick="showView('products')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tag"></use></svg></span> Products</button>
+      <button class="nav-btn" id="nav-files" onclick="showView('files')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg></span> Files</button>
+    </div>
+    <div class="nav-sep" style="margin-top:auto"></div>
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:8px 10px 4px">More</div>
     <button class="nav-btn" id="nav-overlays" onclick="showView('overlays')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"></use></svg></span> Overlay generator</button>
     <button class="nav-btn" id="nav-training" onclick="showView('training')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cap"></use></svg></span> Overlay Training</button>
     <button class="nav-btn" id="nav-team" onclick="showView('team')" style="display:none"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-users"></use></svg></span> Team &amp; Access</button>
@@ -842,7 +851,6 @@
   <nav class="bottomnav">
     <button id="bnav-dashboard" onclick="showView('dashboard')" class="active"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-home"></use></svg></span>Dashboard</button>
     <button id="bnav-bank" onclick="showView('bank')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-film"></use></svg></span>Bank</button>
-    <button id="bnav-files" onclick="showView('files')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg></span>Files</button>
     <button class="bnav-plus" onclick="openUploadManager()" aria-label="Quick upload"><span class="plusic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-plus"></use></svg></span></button>
     <button id="bnav-editor" onclick="showView('editor')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-scissors"></use></svg></span>Editor</button>
     <button id="bnav-schedule" onclick="showView('schedule')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-calendar"></use></svg></span>Schedule</button>
@@ -874,6 +882,10 @@ function prodName(id){ const p=state.products.find(x=>x.id===id); return p?p.nam
 function showView(v){
   state.currentView=v;
   ['dashboard','bank','files','products','priority','editor','schedule','overlays','training','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
+  var inTools=['priority','products','files'].indexOf(v)>=0;
+  var nt=document.getElementById('navTools'); if(nt) nt.classList.toggle('active', inTools);
+  if(inTools) toggleToolsNav(true);
+  closeDrawer();
   if(v==='dashboard') loadDashboard();
   if(v==='files') loadFiles();
   if(v==='products') loadProductsView();
@@ -888,6 +900,7 @@ function showView(v){
 }
 function toggleDrawer(){ const s=document.querySelector('.sidebar'), sc=document.getElementById('scrim'); if(s)s.classList.toggle('open'); if(sc)sc.classList.toggle('open'); }
 function closeDrawer(){ const s=document.querySelector('.sidebar'), sc=document.getElementById('scrim'); if(s)s.classList.remove('open'); if(sc)sc.classList.remove('open'); }
+function toggleToolsNav(force){ var t=document.getElementById('navTools'), s=document.getElementById('toolsSub'); if(!t||!s)return; var open=(force===undefined)?!s.classList.contains('open'):force; s.classList.toggle('open',open); t.classList.toggle('open',open); }
 
 // ---------- CONTENT SCHEDULE ----------
 async function loadSchedule(){
