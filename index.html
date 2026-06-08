@@ -77,6 +77,32 @@
   .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
   .seg button{border:0;background:#fff;padding:8px 13px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
   .seg button.active{background:var(--blue);color:#fff}
+  /* To Film board */
+  .tf-filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:13px}
+  .tf-prodfilter{flex:1 1 100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font:inherit;font-size:13px}
+  .tf-goals{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+  .tf-card{display:block;padding:13px 14px;margin-bottom:10px;border:1px solid var(--line);border-radius:12px}
+  .tf-prodname{font-weight:700;font-size:15px}
+  .tf-angle{font-size:13px;margin-top:2px}
+  .tf-meta{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+  .tf-badge{font-size:11px;font-weight:600;border:1px solid var(--line);border-radius:7px;padding:2px 7px;color:#445}
+  .tf-pill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px}
+  .tf-foot{margin:2px 0 10px}
+  .tf-watch{font-size:13px;font-weight:600;color:#1850c4;text-decoration:none}
+  .tf-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .tf-btn{flex:0 0 auto}
+  .tf-checks{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .tf-box{width:36px;height:36px;border:1.5px solid #c7ccd8;border-radius:9px;background:#fff;font:inherit;font-size:14px;font-weight:700;color:#6b7280;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .tf-box.on{background:#0f9d58;border-color:#0f9d58;color:#fff}
+  .tf-box .svic{width:18px;height:18px}
+  /* Priority kanban */
+  .pri-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+  .pri-col{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;min-height:120px}
+  .pri-col.drag{border-color:var(--blue);background:#f3f7ff}
+  .pri-h{font-weight:700;font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .pri-h .cnt{background:#eef1f6;color:#5b6170;border-radius:999px;font-size:11px;padding:1px 8px;font-weight:600}
+  .pri-item{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-bottom:8px;background:#fff;cursor:grab}
+  .pri-item:active{cursor:grabbing}
   .spacer{flex:1}
   table{width:100%;border-collapse:collapse;font-size:13px}
   thead th{position:sticky;top:0;background:#f8fafc;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap;user-select:none;font-weight:600;color:#475569}
@@ -410,6 +436,7 @@
     <button class="nav-btn" id="nav-bank" onclick="showView('bank')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-film"></use></svg></span> Video bank</button>
     <button class="nav-btn" id="nav-files" onclick="showView('files')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg></span> Files</button>
     <button class="nav-btn" id="nav-products" onclick="showView('products')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tag"></use></svg></span> Products</button>
+    <button class="nav-btn" id="nav-priority" onclick="showView('priority')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"></use></svg></span> Priority</button>
     <button class="nav-btn" id="nav-editor" onclick="showView('editor')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-scissors"></use></svg></span> Editor</button>
     <button class="nav-btn" id="nav-schedule" onclick="showView('schedule')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-calendar"></use></svg></span> Content Schedule</button>
     <div class="nav-sep" style="margin-top:14px"></div>
@@ -791,6 +818,25 @@
       <div id="productsList"></div>
       <div id="productsEmpty" class="h-sub hide" style="padding:18px 0">Nothing here yet.</div>
     </section>
+
+    <section id="view-priority" class="hide">
+      <div class="head">
+        <div>
+          <h2 class="h-title">Priority</h2>
+          <div class="h-sub">Drag products into Prioritised (or tap the button). Prioritised products jump to the front of the editor queue when their videos are saved.</div>
+        </div>
+      </div>
+      <div class="pri-cols">
+        <div class="pri-col" id="priNotCol" data-pri="0">
+          <div class="pri-h">Not prioritised <span class="cnt" id="priNotCnt">0</span></div>
+          <div id="priNotList"></div>
+        </div>
+        <div class="pri-col" id="priCol" data-pri="1">
+          <div class="pri-h">Prioritised <span class="cnt" id="priCnt">0</span></div>
+          <div id="priList"></div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <nav class="bottomnav">
@@ -827,10 +873,11 @@ function prodName(id){ const p=state.products.find(x=>x.id===id); return p?p.nam
 // ---------- nav ----------
 function showView(v){
   state.currentView=v;
-  ['dashboard','bank','files','products','editor','schedule','overlays','training','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
+  ['dashboard','bank','files','products','priority','editor','schedule','overlays','training','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
   if(v==='dashboard') loadDashboard();
   if(v==='files') loadFiles();
   if(v==='products') loadProductsView();
+  if(v==='priority') loadPriorityView();
   if(v==='bank') loadBank();
   if(v==='editor') loadEditor();
   if(v==='schedule') loadSchedule();
@@ -986,6 +1033,7 @@ async function loadDashboard(refresh){
   document.getElementById('dashSub').textContent=state.results.length+' competitor videos · deduped, updated on each re-scrape';
   loadJobs();
   renderDash();
+  await loadTicks();
   renderToFilm();
   if(refresh) toast('Refreshed','ok');
 }
@@ -996,68 +1044,97 @@ function tfProduct(pid){ return (state.products||[]).find(p=>p.id===pid); }
 function tfAcctOf(vtype){ return (vtype==='music+captions')?TF_ACCT_LINACRE:TF_ACCT_YAS; }
 function tfStyleOf(vtype){ return (vtype==='music+captions')?'Text on screen':'Talking'; }
 function tfFmt(n){ if(!n)return '0'; if(n>=1e6)return (n/1e6).toFixed(1).replace(/\.0$/,'')+'M'; if(n>=1e3)return Math.round(n/1e3)+'k'; return ''+Math.round(n); }
-function tfPostedDays(s){ if(!s)return null; s=(''+s).trim().toLowerCase(); let m; if(/^now|just now/.test(s))return 0; if((m=s.match(/(\d+)\s*h/)))return (+m[1])/24; if((m=s.match(/(\d+)\s*d/)))return +m[1]; if((m=s.match(/(\d+)\s*w/)))return (+m[1])*7; if((m=s.match(/(\d+)\s*mo/)))return (+m[1])*30; const d=Date.parse(s); if(!isNaN(d))return Math.max(0,Math.round((Date.now()-d)/86400000)); return null; }
-function tfTimeMax(){ return ({'24h':1,'3d':3,'30d':30})[state.tfTime]||99999; }
+function tfToday(){ return new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10); }
+function tfPostedDays(s){ if(!s)return null; s=(''+s).trim().toLowerCase(); if(/^(today|just now|now)/.test(s))return 0; if(/^yesterday/.test(s))return 1; var m;
+  if((m=s.match(/(\d+)\s*month/)))return (+m[1])*30;
+  if((m=s.match(/(\d+)\s*week/)))return (+m[1])*7;
+  if((m=s.match(/(\d+)\s*day/)))return +m[1];
+  if((m=s.match(/(\d+)\s*h/)))return Math.max(0,Math.round((+m[1])/24));
+  var d=Date.parse(s); if(!isNaN(d)){ var dd=Math.round((Date.now()-d)/86400000); if(dd<0)dd+=365; return dd; }
+  return null; }
+function tfRecency(days){ if(days==null)return ''; if(days<1)return 'today'; if(days===1)return '1d ago'; if(days<7)return days+'d ago'; if(days<31)return Math.round(days/7)+'w ago'; return Math.round(days/30)+'mo ago'; }
+function tfTimeMax(){ return ({'7d':7,'30d':30})[state.tfTime]||999999; }
+function tfIdeaKey(pid,angle){ return pid+'|'+angle.slice(0,30).toLowerCase(); }
+var tfTicks={};
+async function loadTicks(){ try{ var r=await sb.from('film_ticks').select('idea_key,count').eq('day',tfToday()); tfTicks={}; (r.data||[]).forEach(function(t){tfTicks[t.idea_key]=t.count||0;}); }catch(e){ tfTicks={}; } }
 function tfIdeas(){
-  const acctF=state.tfAcct||'all', tmax=tfTimeMax(); const out=[], seen=new Set();
-  (state.results||[]).forEach(r=>{
+  var acctF=state.tfAcct||'all', tmax=tfTimeMax(), pf=(state.tfProd||'').toLowerCase().trim();
+  var out=[], seen=new Set();
+  (state.results||[]).forEach(function(r){
     if(!r.product_uid) return;
-    const ovs=(r.raw&&Array.isArray(r.raw.textOverlays))?r.raw.textOverlays:(r.text_overlays?[r.text_overlays]:[]);
-    let angle=String(ovs.find(x=>String(x).trim())||r.caption||'').replace(/\s+/g,' ').trim();
-    if(!angle) return; if(angle.length>72) angle=angle.slice(0,72)+'…';
-    const acct=tfAcctOf(r.video_type);
+    var ovs=(r.raw&&Array.isArray(r.raw.textOverlays))?r.raw.textOverlays:(r.text_overlays?[r.text_overlays]:[]);
+    var angle=String((ovs.find(function(x){return String(x).trim();}))||r.caption||'').replace(/\s+/g,' ').trim();
+    if(!angle) return; if(angle.length>72) angle=angle.slice(0,72)+'...';
+    var acct=tfAcctOf(r.video_type);
     if(acctF!=='all' && acct!==acctF) return;
-    if(state.tfTime && state.tfTime!=='all'){ const days=tfPostedDays(r.posted_date); if(days==null||days>tmax) return; }
-    const key=r.product_uid+'|'+angle.slice(0,30).toLowerCase(); if(seen.has(key)) return; seen.add(key);
-    out.push({pid:r.product_uid, vtype:r.video_type, acct, views:parseNum(r.views)||0, gmv:parseNum(r.creator_gmv)||0, angle, link:r.tiktok_url});
+    var days=tfPostedDays(r.posted_date);
+    if(state.tfTime && state.tfTime!=='all'){ if(days==null||days>tmax) return; }
+    var p=tfProduct(r.product_uid); var pname=p?p.name:'';
+    if(pf && pname.toLowerCase().indexOf(pf)<0) return;
+    var key=tfIdeaKey(r.product_uid,angle); if(seen.has(key)) return; seen.add(key);
+    out.push({pid:r.product_uid, vtype:r.video_type, acct:acct, views:parseNum(r.views)||0, gmv:parseNum(r.creator_gmv)||0, angle:angle, link:r.tiktok_url, days:days, key:key, pname:pname});
   });
-  out.sort((a,b)=>(b.views-a.views)||(b.gmv-a.gmv));
+  out.sort(function(a,b){return (b.views-a.views)||(b.gmv-a.gmv);});
   return out;
 }
 function setTfTime(t){ state.tfTime=t; renderToFilm(); }
 function setTfAcct(a){ state.tfAcct=a; renderToFilm(); }
+function setTfProd(v){ state.tfProd=v; renderToFilm(); }
 function renderToFilm(){
-  const card=document.getElementById('toFilmCard'); if(!card) return;
-  if(!state.tfTime)state.tfTime='all'; if(!state.tfAcct)state.tfAcct='all';
-  const ideas=tfIdeas();
-  if(!ideas.length){ card.style.display='none'; return; }
+  var card=document.getElementById('toFilmCard'); if(!card) return;
   card.style.display='';
-  const owned=ideas.filter(x=>{const p=tfProduct(x.pid);return p&&p.owned;});
-  const samples=ideas.filter(x=>{const p=tfProduct(x.pid);return !(p&&p.owned);});
-  const linOwned=owned.filter(x=>x.acct===TF_ACCT_LINACRE).length, yasOwned=owned.filter(x=>x.acct===TF_ACCT_YAS).length;
-  const seg=(kind,opts)=>'<span class="seg">'+opts.map(o=>'<button class="'+(o[0]===(kind==='time'?state.tfTime:state.tfAcct)?'active':'')+'" onclick="'+(kind==='time'?'setTfTime':'setTfAcct')+'(\''+o[0]+'\')">'+o[1]+'</button>').join('')+'</span>';
-  const goal=(nm,sub,have,target,col)=>'<div style="flex:1;min-width:150px;border:1px solid var(--line);border-radius:12px;padding:11px 13px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:14px">'+nm+'</span><span class="h-sub" style="font-size:13px">'+have+' / '+target+'</span></div><div class="h-sub" style="font-size:12px">'+sub+'</div><div style="height:8px;background:#eef1f6;border-radius:999px;margin-top:8px;overflow:hidden"><div style="height:100%;width:'+Math.min(100,Math.round(have/target*100))+'%;background:'+col+';border-radius:999px"></div></div></div>';
-  let h='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px">'
-    +'<div><div style="font-weight:700;font-size:16px"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-3px"><use href="#i-film"></use></svg> To film today</div><div class="h-sub" style="font-size:12px">Top angles from your Social One scrapes &middot; owned = film now, trending &amp; not owned = request a sample</div></div>'
-    +'<div style="display:flex;gap:8px;flex-wrap:wrap">'+seg('time',[['all','All'],['24h','24h'],['3d','3d'],['30d','30d']])+seg('acct',[['all','All'],[TF_ACCT_LINACRE,'Linacre'],[TF_ACCT_YAS,'Yas']])+'</div></div>';
-  h+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px">'+goal('@LinkedByLinacre','BOF · text on screen',linOwned,25,'#2f6df6')+goal('@LinkedByYas','TOF · talking',yasOwned,10,'#0f9d58')+'</div>';
-  h+='<div style="font-weight:700;font-size:13px;color:#3a4152;margin:18px 0 9px">What you can film <span style="background:#eef1f6;color:#5b6170;border-radius:999px;font-size:11px;padding:1px 8px;font-weight:600">owned · '+owned.length+'</span></div>';
-  h+= owned.length? owned.slice(0,15).map(tfCard).join('') : '<div class="h-sub" style="padding:4px 0 12px">No owned products match yet. Mark a product owned below or in Products.</div>';
-  h+='<div style="font-weight:700;font-size:13px;color:#3a4152;margin:18px 0 9px">Request samples <span style="background:#eef1f6;color:#5b6170;border-radius:999px;font-size:11px;padding:1px 8px;font-weight:600">trending · not owned · '+samples.length+'</span></div>';
-  h+= samples.length? samples.slice(0,15).map(tfCard).join('') : '<div class="h-sub" style="padding:4px 0">Nothing to request right now.</div>';
+  if(!state.tfTime)state.tfTime='all'; if(!state.tfAcct)state.tfAcct='all';
+  var ideas=tfIdeas();
+  var ownedAll=ideas.filter(function(x){var p=tfProduct(x.pid);return p&&p.owned;});
+  var samples=ideas.filter(function(x){var p=tfProduct(x.pid);return !(p&&p.owned);});
+  var todo=ownedAll.filter(function(x){return (tfTicks[x.key]||0)<3;});
+  var done=ownedAll.filter(function(x){return (tfTicks[x.key]||0)>=3;});
+  var linOwned=ownedAll.filter(function(x){return x.acct===TF_ACCT_LINACRE;}).length, yasOwned=ownedAll.filter(function(x){return x.acct===TF_ACCT_YAS;}).length;
+  var seg=function(kind,opts){return '<span class="seg">'+opts.map(function(o){return '<button class="'+(o[0]===(kind==='time'?state.tfTime:state.tfAcct)?'active':'')+'" onclick="'+(kind==='time'?'setTfTime':'setTfAcct')+'(\''+o[0]+'\')">'+o[1]+'</button>';}).join('')+'</span>';};
+  var goal=function(nm,sub,have,target,col){return '<div style="flex:1 1 220px;border:1px solid var(--line);border-radius:12px;padding:11px 13px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:14px">'+nm+'</span><span class="h-sub" style="font-size:13px">'+have+' / '+target+'</span></div><div class="h-sub" style="font-size:12px">'+sub+'</div><div style="height:8px;background:#eef1f6;border-radius:999px;margin-top:8px;overflow:hidden"><div style="height:100%;width:'+Math.min(100,Math.round(have/target*100))+'%;background:'+col+';border-radius:999px"></div></div></div>';};
+  var h='<div style="font-weight:700;font-size:16px;margin-bottom:11px"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-3px"><use href="#i-film"></use></svg> To film today</div>';
+  h+='<div class="tf-filters">'+seg('time',[['all','All'],['7d','7d'],['30d','30d']])+seg('acct',[['all','All'],[TF_ACCT_LINACRE,'Linacre'],[TF_ACCT_YAS,'Yas']])
+    +'<input value="'+esc(state.tfProd||'')+'" oninput="setTfProd(this.value)" placeholder="Filter by product..." class="tf-prodfilter"></div>';
+  h+='<div class="tf-goals">'+goal('@LinkedByLinacre','BOF '+String.fromCharCode(183)+' text on screen',linOwned,25,'#2f6df6')+goal('@LinkedByYas','TOF '+String.fromCharCode(183)+' talking',yasOwned,10,'#0f9d58')+'</div>';
+  h+=tfSection('What you can film','owned '+String.fromCharCode(183)+' '+todo.length, todo,'owned','No owned products match. Mark products owned to fill this.');
+  if(done.length) h+=tfSection('Done for the day','done '+String.fromCharCode(183)+' '+done.length, done,'done','');
+  h+=tfSection('Request samples','trending, not owned '+String.fromCharCode(183)+' '+samples.length, samples,'sample','Nothing to request right now.');
   card.innerHTML=h;
 }
-function tfCard(x){
-  const p=tfProduct(x.pid); const owned=p&&p.owned; const pname=p?p.name:'(product)';
-  const acctCol = x.acct===TF_ACCT_LINACRE?['#e6f1fb','#0c447c']:['#e1f5ee','#0f6e56'];
-  const perf='<span style="font-size:11px;font-weight:600;border:1px solid var(--line);border-radius:7px;padding:2px 7px;color:#445">'+tfFmt(x.views)+' views</span>'+(x.gmv?'<span style="font-size:11px;font-weight:600;border:1px solid var(--line);border-radius:7px;padding:2px 7px;color:#445">£'+tfFmt(x.gmv)+' GMV</span>':'');
-  const tags='<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:'+acctCol[0]+';color:'+acctCol[1]+'">'+x.acct+'</span><span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:#f0ecff;color:#4a3fb8">'+tfStyleOf(x.vtype)+'</span>';
-  const watch=x.link?'<a href="'+esc(x.link)+'" target="_blank" rel="noopener" style="font-size:13px;font-weight:600;color:#1850c4">Watch winning ↗</a>':'';
-  let actions;
-  if(owned){
-    actions='<button class="btn ghost sm" onclick="tfTogglePriority(\''+x.pid+'\')">'+(p&&p.priority?'★ Priority on':'☆ Prioritise')+'</button>';
+function tfSection(title,badge,list,mode,emptyMsg){
+  var h='<div style="font-weight:700;font-size:13px;color:#3a4152;margin:18px 0 9px">'+title+' <span style="background:#eef1f6;color:#5b6170;border-radius:999px;font-size:11px;padding:1px 8px;font-weight:600">'+badge+'</span></div>';
+  h+= list.length? list.slice(0,20).map(function(x){return tfCard(x,mode);}).join('') : '<div class="h-sub" style="padding:4px 0 12px">'+emptyMsg+'</div>';
+  return h;
+}
+function tfCard(x,mode){
+  var acctCol = x.acct===TF_ACCT_LINACRE?['#e6f1fb','#0c447c']:['#e1f5ee','#0f6e56'];
+  var rec=tfRecency(x.days);
+  var perf='<span class="tf-badge">'+tfFmt(x.views)+' views</span>'+(x.gmv?'<span class="tf-badge">'+String.fromCharCode(163)+tfFmt(x.gmv)+' GMV</span>':'')+(rec?'<span class="tf-badge">'+rec+'</span>':'');
+  var tags='<span class="tf-pill" style="background:'+acctCol[0]+';color:'+acctCol[1]+'">'+x.acct+'</span><span class="tf-pill" style="background:#f0ecff;color:#4a3fb8">'+tfStyleOf(x.vtype)+'</span>';
+  var watch=x.link?'<a class="tf-watch" href="'+esc(x.link)+'" target="_blank" rel="noopener">Watch winning '+String.fromCharCode(8599)+'</a>':'';
+  var bottom='';
+  if(mode==='sample'){
+    var tl=x.link?'<a class="btn sm tf-btn" style="text-decoration:none" href="'+esc(x.link)+'" target="_blank" rel="noopener"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-play"></use></svg> Open in TikTok</a>':'';
+    bottom='<div class="tf-actions">'+tl+'<button class="btn sm tf-btn" onclick="tfMarkOwned(\''+x.pid+'\')">Mark owned</button></div>';
   } else {
-    const tl=x.link?'<a class="btn sm" style="text-decoration:none" href="'+esc(x.link)+'" target="_blank" rel="noopener"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-play"></use></svg> Open in TikTok</a>':'';
-    actions=tl+'<button class="btn sm" onclick="tfMarkOwned(\''+x.pid+'\')">Mark owned</button>';
+    var c=tfTicks[x.key]||0; var boxes='<div class="tf-checks">';
+    for(var i=1;i<=3;i++){ boxes+='<button class="tf-box'+(i<=c?' on':'')+'" onclick="tfSetTick(\''+encodeURIComponent(x.key)+'\','+i+',\''+x.pid+'\',\''+x.acct+'\',\''+encodeURIComponent(x.angle)+'\')">'+(i<=c?'<svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"></use></svg>':i)+'</button>'; }
+    boxes+='<span class="h-sub" style="font-size:12px;margin-left:2px">filmed '+c+'/3</span></div>';
+    bottom=boxes;
   }
-  return '<div class="card" style="display:flex;gap:12px;padding:12px 14px;margin-bottom:10px;border:1px solid var(--line)">'
-    +'<div style="flex:1;min-width:0">'
-      +'<div style="font-weight:700;font-size:15px">'+esc(x.angle)+'</div>'
-      +'<div class="h-sub" style="font-size:13px;margin-top:2px">'+esc(pname)+'</div>'
-      +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">'+perf+'</div>'
-      +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+tags+'</div>'
-      +'<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">'+watch+actions+'</div>'
-    +'</div></div>';
+  return '<div class="card tf-card">'
+    +'<div class="tf-prodname">'+esc(x.pname||'(product)')+'</div>'
+    +'<div class="h-sub tf-angle">'+esc(x.angle)+'</div>'
+    +'<div class="tf-meta">'+perf+'</div>'
+    +'<div class="tf-meta">'+tags+'</div>'
+    +(watch?'<div class="tf-foot">'+watch+'</div>':'')
+    +bottom
+    +'</div>';
+}
+async function tfSetTick(key,n,pid,acct,angleEnc){
+  key=decodeURIComponent(key);
+  var c=tfTicks[key]||0; c=(c===n)?n-1:n; tfTicks[key]=c; renderToFilm();
+  try{ await sb.from('film_ticks').upsert({idea_key:key,day:tfToday(),count:c,product_uid:pid,account:acct,angle:decodeURIComponent(angleEnc).slice(0,120),updated_at:new Date().toISOString()},{onConflict:'idea_key,day'}); }catch(e){}
 }
 async function tfMarkOwned(pid){
   const {error}=await sb.from('products').update({owned:true}).eq('id',pid);
@@ -1101,6 +1178,34 @@ function setProductLinkModal(id){ const p=tfProduct(id); if(!p)return; showModal
 async function saveProductLink(id){ const v=val('pl_in').trim(); const {error}=await sb.from('products').update({source_link:v||null}).eq('id',id); if(error){toast('Failed','err');return;} const p=tfProduct(id); if(p)p.source_link=v; closeModal(); toast('Saved','ok'); renderProductsView(); }
 function addProductModal(){ showModal('<h3>Add product</h3><label>Name</label><input id="ap_name" placeholder="e.g. Inkey List Body Stick" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:9px"><label style="margin-top:10px;display:block">TikTok link (optional)</label><input id="ap_link" placeholder="https://www.tiktok.com/..." style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:9px"><label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:14px"><input type="checkbox" id="ap_owned" checked> We own this product</label><div class="actions"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" onclick="addProductSave()">Add</button></div>'); }
 async function addProductSave(){ const name=val('ap_name').trim(); if(!name){toast('Enter a name','err');return;} const link=val('ap_link').trim()||null; const owned=document.getElementById('ap_owned').checked; const {data,error}=await sb.from('products').insert({name,source_link:link,owned}).select('*').single(); if(error){toast('Failed: '+error.message,'err');return;} (state.products||(state.products=[])).push(data); closeModal(); toast('Product added','ok'); renderProductsView(); }
+
+// ---------- PRIORITY (kanban) ----------
+async function loadPriorityView(){ await loadProducts(); renderPriority(); }
+function renderPriority(){
+  var all=state.products||[];
+  var notP=all.filter(function(p){return !p.priority;}), yesP=all.filter(function(p){return p.priority;});
+  var nc=document.getElementById('priNotCnt'); if(nc)nc.textContent=notP.length;
+  var yc=document.getElementById('priCnt'); if(yc)yc.textContent=yesP.length;
+  var nl=document.getElementById('priNotList'); if(nl)nl.innerHTML=notP.length?notP.map(function(p){return priItem(p,0);}).join(''):'<div class="h-sub">All products prioritised.</div>';
+  var yl=document.getElementById('priList'); if(yl)yl.innerHTML=yesP.length?yesP.map(function(p){return priItem(p,1);}).join(''):'<div class="h-sub">Drag products here to prioritise.</div>';
+  priBindDrag();
+}
+function priItem(p,isPri){
+  return '<div class="pri-item" draggable="true" data-id="'+p.id+'"><span style="flex:1;min-width:0;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.name)+'</span>'
+    +'<button class="btn ghost sm" style="padding:3px 9px;flex:0 0 auto" onclick="movePriority(\''+p.id+'\','+(isPri?0:1)+')">'+(isPri?'Remove':'Prioritise')+'</button></div>';
+}
+async function movePriority(id,val){ const {error}=await sb.from('products').update({priority:!!val}).eq('id',id); if(error){toast('Failed','err');return;} const p=(state.products||[]).find(function(x){return x.id===id;}); if(p)p.priority=!!val; renderPriority(); }
+var _priDragId=null;
+function priBindDrag(){
+  document.querySelectorAll('#view-priority .pri-item').forEach(function(el){
+    el.ondragstart=function(e){ _priDragId=el.dataset.id; if(e.dataTransfer)e.dataTransfer.effectAllowed='move'; };
+  });
+  ['priNotCol','priCol'].forEach(function(cid){ var col=document.getElementById(cid); if(!col)return;
+    col.ondragover=function(e){ e.preventDefault(); col.classList.add('drag'); };
+    col.ondragleave=function(){ col.classList.remove('drag'); };
+    col.ondrop=function(e){ e.preventDefault(); col.classList.remove('drag'); if(_priDragId){ movePriority(_priDragId, +col.dataset.pri); _priDragId=null; } };
+  });
+}
 
 // Top-line = our own activity for ONE selected date range: Uploaded / Edited / Posted
 async function renderOwnMetrics(){
