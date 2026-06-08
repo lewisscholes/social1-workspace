@@ -92,8 +92,18 @@
   .seg button{border:0;background:#fff;padding:8px 13px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
   .seg button.active{background:var(--blue);color:#fff}
   /* To Film board */
-  .tf-filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:13px}
-  .tf-prodfilter{flex:1 1 100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font:inherit;font-size:13px}
+  #toFilmCard{overflow:hidden}
+  .tf-filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:13px;min-width:0}
+  .tf-prodfilter{flex:1 1 100%;width:100%;min-width:0;max-width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font:inherit;font-size:13px}
+  /* distinct sections */
+  .tf-sect{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+  .tf-sect.first{margin-top:8px;padding-top:4px;border-top:0}
+  .tf-sect.samples{background:#fffdf6;border:1px solid #f0e3c2;border-radius:14px;padding:14px 14px 4px;margin-top:24px}
+  .tf-secth{display:flex;align-items:center;gap:9px;font-weight:800;font-size:15px;color:#19202e;margin:0 0 4px}
+  .tf-secth-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .tf-secth-badge{background:#eef1f6;color:#5b6170;border-radius:999px;font-size:11px;padding:2px 9px;font-weight:600}
+  .tf-secth-sub{color:var(--muted);font-size:12px;margin:0 0 11px}
+  .tf-card-sample{background:#fff;border-color:#ecdfbe}
   .tf-goals{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px}
   .tf-card{display:block;padding:13px 14px;margin-bottom:10px;border:1px solid var(--line);border-radius:12px}
   .tf-prodname{font-weight:700;font-size:15px}
@@ -1195,15 +1205,20 @@ function renderToFilm(){
   h+='<div class="tf-filters">'+seg([['all','All'],[TF_ACCT_LINACRE,'LBL'],[TF_ACCT_YAS,'SWY']])
     +'<select class="tf-prodfilter" onchange="setTfProd(this.value)">'+popts+'</select></div>';
   h+='<div class="tf-goals">'+goal('@LinkedByLinacre','BOF '+String.fromCharCode(183)+' text on screen',linFilmed,25,'#2f6df6')+goal('@LinkedByYas','TOF '+String.fromCharCode(183)+' talking',yasFilmed,10,'#0f9d58')+'</div>';
-  h+=tfSection('What you can film','owned '+String.fromCharCode(183)+' '+todo.length, todo,'owned','No owned products match. Mark products owned to fill this.');
-  if(done.length) h+=tfSection('Done for the day','done '+String.fromCharCode(183)+' '+done.length, done,'done','');
-  h+=tfSection('Request samples','trending, not owned '+String.fromCharCode(183)+' '+samples.length, samples,'sample','Nothing to request right now.');
+  h+=tfSection('What you can film','owned '+String.fromCharCode(183)+' '+todo.length, todo,'owned','No owned products match. Mark products owned to fill this.',{accent:'#0f9d58', first:true});
+  if(done.length) h+=tfSection('Done for the day','done '+String.fromCharCode(183)+' '+done.length, done,'done','',{accent:'#9aa1b2'});
+  h+=tfSection('Request samples','not owned '+String.fromCharCode(183)+' '+samples.length, samples,'sample','Nothing to request right now.',{accent:'#e08a1e', samples:true, sub:'Trending products you do not own yet -- request a sample to film them.'});
   card.innerHTML=h;
   setFilmedMetric();
 }
-function tfSection(title,badge,list,mode,emptyMsg){
-  var h='<div style="font-weight:700;font-size:13px;color:#3a4152;margin:18px 0 9px">'+title+' <span style="background:#eef1f6;color:#5b6170;border-radius:999px;font-size:11px;padding:1px 8px;font-weight:600">'+badge+'</span></div>';
+function tfSection(title,badge,list,mode,emptyMsg,opts){
+  opts=opts||{};
+  var cls='tf-sect'+(opts.first?' first':'')+(opts.samples?' samples':'');
+  var h='<div class="'+cls+'">';
+  h+='<div class="tf-secth"><span class="tf-secth-dot" style="background:'+(opts.accent||'#3a4152')+'"></span>'+title+' <span class="tf-secth-badge">'+badge+'</span></div>';
+  if(opts.sub) h+='<div class="tf-secth-sub">'+opts.sub+'</div>';
   h+= list.length? list.slice(0,20).map(function(x){return tfCard(x,mode);}).join('') : '<div class="h-sub" style="padding:4px 0 12px">'+emptyMsg+'</div>';
+  h+='</div>';
   return h;
 }
 function tfCard(x,mode){
@@ -1224,7 +1239,7 @@ function tfCard(x,mode){
     boxes+='<span class="h-sub" style="font-size:12px;margin-left:2px">filmed '+c+'/3</span></div>';
     bottom=boxes;
   }
-  return '<div class="card tf-card">'
+  return '<div class="card tf-card'+(mode==='sample'?' tf-card-sample':'')+'">'
     +'<div class="tf-prodname">'+esc(x.pname||'(product)')+'</div>'
     +'<div class="tf-meta">'+perf+'</div>'
     +'<div class="tf-meta">'+tags+'</div>'
