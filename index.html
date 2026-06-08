@@ -409,6 +409,7 @@
     <button class="nav-btn active" id="nav-dashboard" onclick="showView('dashboard')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-home"></use></svg></span> Dashboard</button>
     <button class="nav-btn" id="nav-bank" onclick="showView('bank')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-film"></use></svg></span> Video bank</button>
     <button class="nav-btn" id="nav-files" onclick="showView('files')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg></span> Files</button>
+    <button class="nav-btn" id="nav-products" onclick="showView('products')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tag"></use></svg></span> Products</button>
     <button class="nav-btn" id="nav-editor" onclick="showView('editor')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-scissors"></use></svg></span> Editor</button>
     <button class="nav-btn" id="nav-schedule" onclick="showView('schedule')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-calendar"></use></svg></span> Content Schedule</button>
     <div class="nav-sep" style="margin-top:14px"></div>
@@ -439,6 +440,7 @@
         </div>
       </div>
       <div class="metrics" id="dashMetrics"></div>
+      <div class="card" id="toFilmCard" style="display:none"></div>
       <div class="card">
         <div class="toolbar">
           <input id="fHandle" placeholder="Handle contains…" oninput="renderDash()">
@@ -772,6 +774,23 @@
       <div id="filesList"></div>
       <div id="filesEmpty" class="h-sub hide" style="padding:18px 0">Nothing here yet. Tap Upload to add videos.</div>
     </section>
+
+    <!-- PRODUCTS (owned vs not owned) -->
+    <section id="view-products" class="hide">
+      <div class="head">
+        <div>
+          <h2 class="h-title">Products</h2>
+          <div class="h-sub">What we own vs what's trending that we should request. Owned products feed the "To film" list; not-owned ones feed "Request samples".</div>
+        </div>
+        <button class="btn" onclick="addProductModal()"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-plus"></use></svg> Add product</button>
+      </div>
+      <div class="seg" style="margin-bottom:14px">
+        <button id="ptab-owned" class="active" onclick="setProdTab('owned')">Owned <span class="cnt" id="pcOwned">0</span></button>
+        <button id="ptab-not" onclick="setProdTab('not')">Not owned <span class="cnt" id="pcNot">0</span></button>
+      </div>
+      <div id="productsList"></div>
+      <div id="productsEmpty" class="h-sub hide" style="padding:18px 0">Nothing here yet.</div>
+    </section>
   </main>
 
   <nav class="bottomnav">
@@ -808,9 +827,10 @@ function prodName(id){ const p=state.products.find(x=>x.id===id); return p?p.nam
 // ---------- nav ----------
 function showView(v){
   state.currentView=v;
-  ['dashboard','bank','files','editor','schedule','overlays','training','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
+  ['dashboard','bank','files','products','editor','schedule','overlays','training','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
   if(v==='dashboard') loadDashboard();
   if(v==='files') loadFiles();
+  if(v==='products') loadProductsView();
   if(v==='bank') loadBank();
   if(v==='editor') loadEditor();
   if(v==='schedule') loadSchedule();
@@ -940,7 +960,7 @@ async function deleteTrMem(id){
 
 // ---------- products ----------
 async function loadProducts(){
-  const {data}=await sb.from('products').select('id,name,price,original_price,discount,offer,rating,units_sold,benefits,description,listing_url,info_updated_at').order('name');
+  const {data}=await sb.from('products').select('id,name,price,original_price,discount,offer,rating,units_sold,benefits,description,listing_url,info_updated_at,owned,priority,source_link').order('name');
   state.products=data||[];
   const sel=document.getElementById('fProduct');
   if(sel){ const cur=sel.value; sel.innerHTML='<option value="">All products</option>'+state.products.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join(''); sel.value=cur; }
@@ -966,8 +986,121 @@ async function loadDashboard(refresh){
   document.getElementById('dashSub').textContent=state.results.length+' competitor videos · deduped, updated on each re-scrape';
   loadJobs();
   renderDash();
+  renderToFilm();
   if(refresh) toast('Refreshed','ok');
 }
+
+// ---------- TO FILM (dashboard) ----------
+const TF_ACCT_LINACRE='@LinkedByLinacre', TF_ACCT_YAS='@LinkedByYas';
+function tfProduct(pid){ return (state.products||[]).find(p=>p.id===pid); }
+function tfAcctOf(vtype){ return (vtype==='music+captions')?TF_ACCT_LINACRE:TF_ACCT_YAS; }
+function tfStyleOf(vtype){ return (vtype==='music+captions')?'Text on screen':'Talking'; }
+function tfFmt(n){ if(!n)return '0'; if(n>=1e6)return (n/1e6).toFixed(1).replace(/\.0$/,'')+'M'; if(n>=1e3)return Math.round(n/1e3)+'k'; return ''+Math.round(n); }
+function tfPostedDays(s){ if(!s)return null; s=(''+s).trim().toLowerCase(); let m; if(/^now|just now/.test(s))return 0; if((m=s.match(/(\d+)\s*h/)))return (+m[1])/24; if((m=s.match(/(\d+)\s*d/)))return +m[1]; if((m=s.match(/(\d+)\s*w/)))return (+m[1])*7; if((m=s.match(/(\d+)\s*mo/)))return (+m[1])*30; const d=Date.parse(s); if(!isNaN(d))return Math.max(0,Math.round((Date.now()-d)/86400000)); return null; }
+function tfTimeMax(){ return ({'24h':1,'3d':3,'30d':30})[state.tfTime]||99999; }
+function tfIdeas(){
+  const acctF=state.tfAcct||'all', tmax=tfTimeMax(); const out=[], seen=new Set();
+  (state.results||[]).forEach(r=>{
+    if(!r.product_uid) return;
+    const ovs=(r.raw&&Array.isArray(r.raw.textOverlays))?r.raw.textOverlays:(r.text_overlays?[r.text_overlays]:[]);
+    let angle=String(ovs.find(x=>String(x).trim())||r.caption||'').replace(/\s+/g,' ').trim();
+    if(!angle) return; if(angle.length>72) angle=angle.slice(0,72)+'…';
+    const acct=tfAcctOf(r.video_type);
+    if(acctF!=='all' && acct!==acctF) return;
+    if(state.tfTime && state.tfTime!=='all'){ const days=tfPostedDays(r.posted_date); if(days==null||days>tmax) return; }
+    const key=r.product_uid+'|'+angle.slice(0,30).toLowerCase(); if(seen.has(key)) return; seen.add(key);
+    out.push({pid:r.product_uid, vtype:r.video_type, acct, views:parseNum(r.views)||0, gmv:parseNum(r.creator_gmv)||0, angle, link:r.tiktok_url});
+  });
+  out.sort((a,b)=>(b.views-a.views)||(b.gmv-a.gmv));
+  return out;
+}
+function setTfTime(t){ state.tfTime=t; renderToFilm(); }
+function setTfAcct(a){ state.tfAcct=a; renderToFilm(); }
+function renderToFilm(){
+  const card=document.getElementById('toFilmCard'); if(!card) return;
+  if(!state.tfTime)state.tfTime='all'; if(!state.tfAcct)state.tfAcct='all';
+  const ideas=tfIdeas();
+  if(!ideas.length){ card.style.display='none'; return; }
+  card.style.display='';
+  const owned=ideas.filter(x=>{const p=tfProduct(x.pid);return p&&p.owned;});
+  const samples=ideas.filter(x=>{const p=tfProduct(x.pid);return !(p&&p.owned);});
+  const linOwned=owned.filter(x=>x.acct===TF_ACCT_LINACRE).length, yasOwned=owned.filter(x=>x.acct===TF_ACCT_YAS).length;
+  const seg=(kind,opts)=>'<span class="seg">'+opts.map(o=>'<button class="'+(o[0]===(kind==='time'?state.tfTime:state.tfAcct)?'active':'')+'" onclick="'+(kind==='time'?'setTfTime':'setTfAcct')+'(\''+o[0]+'\')">'+o[1]+'</button>').join('')+'</span>';
+  const goal=(nm,sub,have,target,col)=>'<div style="flex:1;min-width:150px;border:1px solid var(--line);border-radius:12px;padding:11px 13px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:14px">'+nm+'</span><span class="h-sub" style="font-size:13px">'+have+' / '+target+'</span></div><div class="h-sub" style="font-size:12px">'+sub+'</div><div style="height:8px;background:#eef1f6;border-radius:999px;margin-top:8px;overflow:hidden"><div style="height:100%;width:'+Math.min(100,Math.round(have/target*100))+'%;background:'+col+';border-radius:999px"></div></div></div>';
+  let h='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px">'
+    +'<div><div style="font-weight:700;font-size:16px"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-3px"><use href="#i-film"></use></svg> To film today</div><div class="h-sub" style="font-size:12px">Top angles from your Social One scrapes &middot; owned = film now, trending &amp; not owned = request a sample</div></div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap">'+seg('time',[['all','All'],['24h','24h'],['3d','3d'],['30d','30d']])+seg('acct',[['all','All'],[TF_ACCT_LINACRE,'Linacre'],[TF_ACCT_YAS,'Yas']])+'</div></div>';
+  h+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px">'+goal('@LinkedByLinacre','BOF · text on screen',linOwned,25,'#2f6df6')+goal('@LinkedByYas','TOF · talking',yasOwned,10,'#0f9d58')+'</div>';
+  h+='<div style="font-weight:700;font-size:13px;color:#3a4152;margin:18px 0 9px">What you can film <span style="background:#eef1f6;color:#5b6170;border-radius:999px;font-size:11px;padding:1px 8px;font-weight:600">owned · '+owned.length+'</span></div>';
+  h+= owned.length? owned.slice(0,15).map(tfCard).join('') : '<div class="h-sub" style="padding:4px 0 12px">No owned products match yet. Mark a product owned below or in Products.</div>';
+  h+='<div style="font-weight:700;font-size:13px;color:#3a4152;margin:18px 0 9px">Request samples <span style="background:#eef1f6;color:#5b6170;border-radius:999px;font-size:11px;padding:1px 8px;font-weight:600">trending · not owned · '+samples.length+'</span></div>';
+  h+= samples.length? samples.slice(0,15).map(tfCard).join('') : '<div class="h-sub" style="padding:4px 0">Nothing to request right now.</div>';
+  card.innerHTML=h;
+}
+function tfCard(x){
+  const p=tfProduct(x.pid); const owned=p&&p.owned; const pname=p?p.name:'(product)';
+  const acctCol = x.acct===TF_ACCT_LINACRE?['#e6f1fb','#0c447c']:['#e1f5ee','#0f6e56'];
+  const perf='<span style="font-size:11px;font-weight:600;border:1px solid var(--line);border-radius:7px;padding:2px 7px;color:#445">'+tfFmt(x.views)+' views</span>'+(x.gmv?'<span style="font-size:11px;font-weight:600;border:1px solid var(--line);border-radius:7px;padding:2px 7px;color:#445">£'+tfFmt(x.gmv)+' GMV</span>':'');
+  const tags='<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:'+acctCol[0]+';color:'+acctCol[1]+'">'+x.acct+'</span><span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:#f0ecff;color:#4a3fb8">'+tfStyleOf(x.vtype)+'</span>';
+  const watch=x.link?'<a href="'+esc(x.link)+'" target="_blank" rel="noopener" style="font-size:13px;font-weight:600;color:#1850c4">Watch winning ↗</a>':'';
+  let actions;
+  if(owned){
+    actions='<button class="btn ghost sm" onclick="tfTogglePriority(\''+x.pid+'\')">'+(p&&p.priority?'★ Priority on':'☆ Prioritise')+'</button>';
+  } else {
+    const tl=x.link?'<a class="btn sm" style="text-decoration:none" href="'+esc(x.link)+'" target="_blank" rel="noopener"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-play"></use></svg> Open in TikTok</a>':'';
+    actions=tl+'<button class="btn sm" onclick="tfMarkOwned(\''+x.pid+'\')">Mark owned</button>';
+  }
+  return '<div class="card" style="display:flex;gap:12px;padding:12px 14px;margin-bottom:10px;border:1px solid var(--line)">'
+    +'<div style="flex:1;min-width:0">'
+      +'<div style="font-weight:700;font-size:15px">'+esc(x.angle)+'</div>'
+      +'<div class="h-sub" style="font-size:13px;margin-top:2px">'+esc(pname)+'</div>'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">'+perf+'</div>'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+tags+'</div>'
+      +'<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">'+watch+actions+'</div>'
+    +'</div></div>';
+}
+async function tfMarkOwned(pid){
+  const {error}=await sb.from('products').update({owned:true}).eq('id',pid);
+  if(error){ toast('Failed: '+error.message,'err'); return; }
+  const p=tfProduct(pid); if(p)p.owned=true;
+  toast('Marked owned — added to Products','ok'); renderToFilm();
+}
+async function tfTogglePriority(pid){
+  const p=tfProduct(pid); const np=!(p&&p.priority);
+  const {error}=await sb.from('products').update({priority:np}).eq('id',pid);
+  if(error){ toast('Failed','err'); return; }
+  if(p)p.priority=np;
+  toast(np?'Priority on — its uploads skip the edit queue':'Priority off','ok'); renderToFilm();
+}
+
+// ---------- PRODUCTS view (owned vs not owned) ----------
+async function loadProductsView(){ if(!state.prodTab)state.prodTab='owned'; await loadProducts(); renderProductsView(); }
+function setProdTab(t){ state.prodTab=t; const a=document.getElementById('ptab-owned'),b=document.getElementById('ptab-not'); if(a)a.classList.toggle('active',t==='owned'); if(b)b.classList.toggle('active',t==='not'); renderProductsView(); }
+function renderProductsView(){
+  const all=state.products||[]; const owned=all.filter(p=>p.owned), not=all.filter(p=>!p.owned);
+  const co=document.getElementById('pcOwned'); if(co)co.textContent=owned.length;
+  const cn=document.getElementById('pcNot'); if(cn)cn.textContent=not.length;
+  const list=(state.prodTab==='not')?not:owned;
+  const wrap=document.getElementById('productsList'); const empty=document.getElementById('productsEmpty');
+  if(empty)empty.classList.toggle('hide',list.length>0);
+  if(wrap)wrap.innerHTML=list.map(prodRow).join('');
+}
+function prodRow(p){
+  const link=p.source_link||p.listing_url||'';
+  const linkHtml=link?'<a href="'+esc(link)+'" target="_blank" rel="noopener" style="font-size:12px;font-weight:600;color:#1850c4">link ↗</a>':'<span class="h-sub" style="font-size:12px">no link</span>';
+  return '<div class="card" style="display:flex;align-items:center;gap:10px;padding:12px 14px;margin-bottom:10px;flex-wrap:wrap">'
+    +'<div style="flex:1;min-width:140px"><div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.name)+(p.priority?' <span style="color:#d8961e">★</span>':'')+'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-top:5px">'+linkHtml+'<button class="btn ghost sm" style="padding:3px 8px" onclick="setProductLinkModal(\''+p.id+'\')">'+(link?'Edit link':'Add link')+'</button></div></div>'
+    +'<button class="btn ghost sm" onclick="togglePriority(\''+p.id+'\')">'+(p.priority?'★ Priority':'☆ Priority')+'</button>'
+    +'<button class="btn sm" onclick="toggleOwned(\''+p.id+'\')">'+(p.owned?'Owned ✓':'Mark owned')+'</button>'
+    +'</div>';
+}
+async function toggleOwned(id){ const p=tfProduct(id); const v=!(p&&p.owned); const {error}=await sb.from('products').update({owned:v}).eq('id',id); if(error){toast('Failed','err');return;} if(p)p.owned=v; toast(v?'Marked owned':'Marked not owned','ok'); renderProductsView(); }
+async function togglePriority(id){ const p=tfProduct(id); const v=!(p&&p.priority); const {error}=await sb.from('products').update({priority:v}).eq('id',id); if(error){toast('Failed','err');return;} if(p)p.priority=v; toast(v?'Priority on':'Priority off','ok'); renderProductsView(); }
+function setProductLinkModal(id){ const p=tfProduct(id); if(!p)return; showModal('<h3>Product link</h3><div class="h-sub" style="margin:-2px 0 10px">Paste the TikTok product or video link (best for the in-app open button).</div><input id="pl_in" placeholder="https://www.tiktok.com/..." value="'+esc(p.source_link||'')+'" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:9px"><div class="actions"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveProductLink(\''+id+'\')">Save</button></div>'); }
+async function saveProductLink(id){ const v=val('pl_in').trim(); const {error}=await sb.from('products').update({source_link:v||null}).eq('id',id); if(error){toast('Failed','err');return;} const p=tfProduct(id); if(p)p.source_link=v; closeModal(); toast('Saved','ok'); renderProductsView(); }
+function addProductModal(){ showModal('<h3>Add product</h3><label>Name</label><input id="ap_name" placeholder="e.g. Inkey List Body Stick" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:9px"><label style="margin-top:10px;display:block">TikTok link (optional)</label><input id="ap_link" placeholder="https://www.tiktok.com/..." style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:9px"><label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:14px"><input type="checkbox" id="ap_owned" checked> We own this product</label><div class="actions"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" onclick="addProductSave()">Add</button></div>'); }
+async function addProductSave(){ const name=val('ap_name').trim(); if(!name){toast('Enter a name','err');return;} const link=val('ap_link').trim()||null; const owned=document.getElementById('ap_owned').checked; const {data,error}=await sb.from('products').insert({name,source_link:link,owned}).select('*').single(); if(error){toast('Failed: '+error.message,'err');return;} (state.products||(state.products=[])).push(data); closeModal(); toast('Product added','ok'); renderProductsView(); }
 
 // Top-line = our own activity for ONE selected date range: Uploaded / Edited / Posted
 async function renderOwnMetrics(){
@@ -2587,7 +2720,8 @@ async function mteSave(){
   // replaces the pending render instead of stacking another duplicate.
   try{ await sb.from('edit_jobs').delete().eq('video_id',mteId).in('status',['queued','rendering','error']); }catch(e){}
   const wOverlays=overlays.map(o=>{ const sty=o.style||'plain'; return {text:o.text,x:o.x,y:o.y,color:o.color,size:o.size,scale:(o.scale||1),font:(o.font==='classic'?'TikTok Sans':o.font),weight:600,style:sty,box:(sty==='box'),stroke:(sty==='outline'?2.5:0),outline:(sty==='outline')}; });
-  const job={video_id:mteId,storage_path:v.storage_path,filename:v.filename,folder_id:v.folder_id,product_uid:v.product_uid,options:{segments:segs,source_duration:editState.source_duration,overlays:wOverlays,media:media,edited_at:editState.edited_at},status:'queued',requested_by:displayName(state.user)};
+  const _pp=(state.products||[]).find(x=>x.id===v.product_uid); const _prio=(_pp&&_pp.priority)?1:0;
+  const job={video_id:mteId,storage_path:v.storage_path,filename:v.filename,folder_id:v.folder_id,product_uid:v.product_uid,priority:_prio,options:{segments:segs,source_duration:editState.source_duration,overlays:wOverlays,media:media,edited_at:editState.edited_at},status:'queued',requested_by:displayName(state.user)};
   const {error:je}=await sb.from('edit_jobs').insert(job);
   toast(je?'Edits saved (render queue pending)':'Edits saved','ok');
   mteClose();
