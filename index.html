@@ -1058,27 +1058,34 @@ function tfIdeaKey(pid,angle){ return pid+'|'+angle.slice(0,30).toLowerCase(); }
 function tfJs(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/[\r\n]+/g,' '); }
 var tfTicks={};
 async function loadTicks(){ try{ var r=await sb.from('film_ticks').select('idea_key,count').eq('day',tfToday()); tfTicks={}; (r.data||[]).forEach(function(t){tfTicks[t.idea_key]=t.count||0;}); }catch(e){ tfTicks={}; } }
+// One card per PRODUCT + ACCOUNT. Each card's 3 checkboxes = 3 videos to film.
+// The representative (winning) video = highest views for that product+account.
 function tfIdeas(){
-  var acctF=state.tfAcct||'all', tmax=tfTimeMax(), pf=(state.tfProd||'').toLowerCase().trim();
-  var out=[], seen=new Set();
+  var acctF=state.tfAcct||'all', pf=(state.tfProd||'').toLowerCase().trim();
+  var groups={};
   (state.results||[]).forEach(function(r){
     if(!r.product_uid) return;
-    var ovs=(r.raw&&Array.isArray(r.raw.textOverlays))?r.raw.textOverlays:(r.text_overlays?[r.text_overlays]:[]);
-    var angle=String((ovs.find(function(x){return String(x).trim();}))||r.caption||'').replace(/\s+/g,' ').trim();
-    if(!angle) return; if(angle.length>72) angle=angle.slice(0,72)+'...';
     var acct=tfAcctOf(r.video_type);
     if(acctF!=='all' && acct!==acctF) return;
-    var days=tfPostedDays(r.posted_date);
-    if(state.tfTime && state.tfTime!=='all'){ if(days==null||days>tmax) return; }
     var p=tfProduct(r.product_uid); var pname=p?p.name:'';
     if(pf && pname.toLowerCase().indexOf(pf)<0) return;
-    var key=tfIdeaKey(r.product_uid,angle); if(seen.has(key)) return; seen.add(key);
-    out.push({pid:r.product_uid, vtype:r.video_type, acct:acct, views:parseNum(r.views)||0, gmv:parseNum(r.creator_gmv)||0, angle:angle, link:r.tiktok_url, days:days, key:key, pname:pname});
+    var views=parseNum(r.views)||0, gmv=parseNum(r.creator_gmv)||0;
+    var ovs=(r.raw&&Array.isArray(r.raw.textOverlays))?r.raw.textOverlays:(r.text_overlays?[r.text_overlays]:[]);
+    var angle=String((ovs.find(function(x){return String(x).trim();}))||r.caption||'').replace(/\s+/g,' ').trim();
+    if(angle.length>90) angle=angle.slice(0,90)+'...';
+    var key=r.product_uid+'|'+acct;
+    var g=groups[key];
+    if(!g || views>g.views){
+      groups[key]={pid:r.product_uid, vtype:r.video_type, acct:acct, views:views, gmv:gmv, angle:angle, link:r.tiktok_url, days:tfPostedDays(r.posted_date), key:key, pname:pname};
+    }
   });
+  var out=Object.keys(groups).map(function(k){return groups[k];});
   out.sort(function(a,b){return (b.views-a.views)||(b.gmv-a.gmv);});
   return out;
 }
-function setTfTime(t){ state.tfTime=t; renderToFilm(); }
+function tfFilmed(acct){ var s=0; Object.keys(tfTicks).forEach(function(k){ if(k.substring(k.indexOf('|')+1)===acct) s+=(tfTicks[k]||0); }); return s; }
+function tfFilmedTotal(){ var s=0; Object.keys(tfTicks).forEach(function(k){ s+=(tfTicks[k]||0); }); return s; }
+function setFilmedMetric(){ var el=document.getElementById('statFilmed'); if(el) el.textContent=tfFilmedTotal(); }
 function setTfAcct(a){ state.tfAcct=a; renderToFilm(); }
 function setTfProd(v){ state.tfProd=v; renderToFilm(); }
 function renderToFilm(){
@@ -1090,17 +1097,18 @@ function renderToFilm(){
   var samples=ideas.filter(function(x){var p=tfProduct(x.pid);return !(p&&p.owned);});
   var todo=ownedAll.filter(function(x){return (tfTicks[x.key]||0)<3;});
   var done=ownedAll.filter(function(x){return (tfTicks[x.key]||0)>=3;});
-  var linOwned=ownedAll.filter(function(x){return x.acct===TF_ACCT_LINACRE;}).length, yasOwned=ownedAll.filter(function(x){return x.acct===TF_ACCT_YAS;}).length;
-  var seg=function(kind,opts){return '<span class="seg">'+opts.map(function(o){return '<button class="'+(o[0]===(kind==='time'?state.tfTime:state.tfAcct)?'active':'')+'" onclick="'+(kind==='time'?'setTfTime':'setTfAcct')+'(\''+o[0]+'\')">'+o[1]+'</button>';}).join('')+'</span>';};
-  var goal=function(nm,sub,have,target,col){return '<div style="flex:1 1 220px;border:1px solid var(--line);border-radius:12px;padding:11px 13px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:14px">'+nm+'</span><span class="h-sub" style="font-size:13px">'+have+' / '+target+'</span></div><div class="h-sub" style="font-size:12px">'+sub+'</div><div style="height:8px;background:#eef1f6;border-radius:999px;margin-top:8px;overflow:hidden"><div style="height:100%;width:'+Math.min(100,Math.round(have/target*100))+'%;background:'+col+';border-radius:999px"></div></div></div>';};
+  var linFilmed=tfFilmed(TF_ACCT_LINACRE), yasFilmed=tfFilmed(TF_ACCT_YAS);
+  var seg=function(opts){return '<span class="seg">'+opts.map(function(o){return '<button class="'+(o[0]===state.tfAcct?'active':'')+'" onclick="setTfAcct(\''+o[0]+'\')">'+o[1]+'</button>';}).join('')+'</span>';};
+  var goal=function(nm,sub,have,target,col){return '<div style="flex:1 1 220px;border:1px solid var(--line);border-radius:12px;padding:11px 13px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:14px">'+nm+'</span><span class="h-sub" style="font-size:13px">'+have+' / '+target+' filmed</span></div><div class="h-sub" style="font-size:12px">'+sub+'</div><div style="height:8px;background:#eef1f6;border-radius:999px;margin-top:8px;overflow:hidden"><div style="height:100%;width:'+Math.min(100,Math.round(have/target*100))+'%;background:'+col+';border-radius:999px"></div></div></div>';};
   var h='<div style="font-weight:700;font-size:16px;margin-bottom:11px"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-3px"><use href="#i-film"></use></svg> To film today</div>';
-  h+='<div class="tf-filters">'+seg('time',[['all','All'],['7d','7d'],['30d','30d']])+seg('acct',[['all','All'],[TF_ACCT_LINACRE,'Linacre'],[TF_ACCT_YAS,'Yas']])
+  h+='<div class="tf-filters">'+seg([['all','All'],[TF_ACCT_LINACRE,'Linacre'],[TF_ACCT_YAS,'Yas']])
     +'<input value="'+esc(state.tfProd||'')+'" oninput="setTfProd(this.value)" placeholder="Filter by product..." class="tf-prodfilter"></div>';
-  h+='<div class="tf-goals">'+goal('@LinkedByLinacre','BOF '+String.fromCharCode(183)+' text on screen',linOwned,25,'#2f6df6')+goal('@LinkedByYas','TOF '+String.fromCharCode(183)+' talking',yasOwned,10,'#0f9d58')+'</div>';
+  h+='<div class="tf-goals">'+goal('@LinkedByLinacre','BOF '+String.fromCharCode(183)+' text on screen',linFilmed,25,'#2f6df6')+goal('@LinkedByYas','TOF '+String.fromCharCode(183)+' talking',yasFilmed,10,'#0f9d58')+'</div>';
   h+=tfSection('What you can film','owned '+String.fromCharCode(183)+' '+todo.length, todo,'owned','No owned products match. Mark products owned to fill this.');
   if(done.length) h+=tfSection('Done for the day','done '+String.fromCharCode(183)+' '+done.length, done,'done','');
   h+=tfSection('Request samples','trending, not owned '+String.fromCharCode(183)+' '+samples.length, samples,'sample','Nothing to request right now.');
   card.innerHTML=h;
+  setFilmedMetric();
 }
 function tfSection(title,badge,list,mode,emptyMsg){
   var h='<div style="font-weight:700;font-size:13px;color:#3a4152;margin:18px 0 9px">'+title+' <span style="background:#eef1f6;color:#5b6170;border-radius:999px;font-size:11px;padding:1px 8px;font-weight:600">'+badge+'</span></div>';
@@ -1115,7 +1123,8 @@ function tfCard(x,mode){
   var watch=x.link?'<a class="tf-watch" href="'+esc(x.link)+'" target="_blank" rel="noopener">Watch winning '+String.fromCharCode(8599)+'</a>':'';
   var bottom='';
   if(mode==='sample'){
-    var tl=x.link?'<a class="btn sm tf-btn" style="text-decoration:none" href="'+esc(x.link)+'" target="_blank" rel="noopener"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-play"></use></svg> Open in TikTok</a>':'';
+    var p=tfProduct(x.pid); var plink=(p&&(p.source_link||p.listing_url))||x.link;
+    var tl=plink?'<a class="btn sm tf-btn" style="text-decoration:none" href="'+esc(plink)+'" target="_blank" rel="noopener"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-play"></use></svg> Open in TikTok</a>':'';
     bottom='<div class="tf-actions">'+tl+'<button class="btn sm tf-btn" onclick="tfMarkOwned(\''+x.pid+'\')">Mark owned</button></div>';
   } else {
     var c=tfTicks[x.key]||0; var boxes='<div class="tf-checks">';
@@ -1125,7 +1134,6 @@ function tfCard(x,mode){
   }
   return '<div class="card tf-card">'
     +'<div class="tf-prodname">'+esc(x.pname||'(product)')+'</div>'
-    +'<div class="h-sub tf-angle">'+esc(x.angle)+'</div>'
     +'<div class="tf-meta">'+perf+'</div>'
     +'<div class="tf-meta">'+tags+'</div>'
     +(watch?'<div class="tf-foot">'+watch+'</div>':'')
@@ -1225,7 +1233,8 @@ function renderDashMetrics(){
   const ranges=[[1,'Today'],[7,'Last 7 days'],[14,'14 days'],[30,'30 days']];
   const toggle='<div class="rangetoggle">'+ranges.map(r=>'<button class="rtbtn'+(r[0]===d?' on':'')+'" onclick="setDashRange('+r[0]+')">'+r[1]+'</button>').join('')+'</div>';
   const stat=(l,v)=>'<div class="dstat"><div class="dval">'+v+'</div><div class="dlbl">'+l+'</div></div>';
-  document.getElementById('dashMetrics').innerHTML=toggle+'<div class="dbox">'+stat('Uploaded',up)+stat('Edited',ed)+stat('Posted',po)+'</div>';
+  const filmed='<div class="dstat"><div class="dval" id="statFilmed">'+(window.tfFilmedTotal?tfFilmedTotal():0)+'</div><div class="dlbl">Filmed</div></div>';
+  document.getElementById('dashMetrics').innerHTML=toggle+'<div class="dbox">'+stat('Uploaded',up)+stat('Edited',ed)+stat('Posted',po)+filmed+'</div>';
 }
 function setDashRange(d){ state.dashRange=d; renderDashMetrics(); }
 function flatScraped(r){
