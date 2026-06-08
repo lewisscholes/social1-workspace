@@ -1055,6 +1055,7 @@ function tfPostedDays(s){ if(!s)return null; s=(''+s).trim().toLowerCase(); if(/
 function tfRecency(days){ if(days==null)return ''; if(days<1)return 'today'; if(days===1)return '1d ago'; if(days<7)return days+'d ago'; if(days<31)return Math.round(days/7)+'w ago'; return Math.round(days/30)+'mo ago'; }
 function tfTimeMax(){ return ({'7d':7,'30d':30})[state.tfTime]||999999; }
 function tfIdeaKey(pid,angle){ return pid+'|'+angle.slice(0,30).toLowerCase(); }
+function tfJs(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/[\r\n]+/g,' '); }
 var tfTicks={};
 async function loadTicks(){ try{ var r=await sb.from('film_ticks').select('idea_key,count').eq('day',tfToday()); tfTicks={}; (r.data||[]).forEach(function(t){tfTicks[t.idea_key]=t.count||0;}); }catch(e){ tfTicks={}; } }
 function tfIdeas(){
@@ -1118,7 +1119,7 @@ function tfCard(x,mode){
     bottom='<div class="tf-actions">'+tl+'<button class="btn sm tf-btn" onclick="tfMarkOwned(\''+x.pid+'\')">Mark owned</button></div>';
   } else {
     var c=tfTicks[x.key]||0; var boxes='<div class="tf-checks">';
-    for(var i=1;i<=3;i++){ boxes+='<button class="tf-box'+(i<=c?' on':'')+'" onclick="tfSetTick(\''+encodeURIComponent(x.key)+'\','+i+',\''+x.pid+'\',\''+x.acct+'\',\''+encodeURIComponent(x.angle)+'\')">'+(i<=c?'<svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"></use></svg>':i)+'</button>'; }
+    for(var i=1;i<=3;i++){ boxes+='<button class="tf-box'+(i<=c?' on':'')+'" onclick="tfSetTick(\''+tfJs(x.key)+'\','+i+',\''+x.pid+'\',\''+x.acct+'\',\''+tfJs(x.angle)+'\')">'+(i<=c?'<svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"></use></svg>':i)+'</button>'; }
     boxes+='<span class="h-sub" style="font-size:12px;margin-left:2px">filmed '+c+'/3</span></div>';
     bottom=boxes;
   }
@@ -1131,10 +1132,9 @@ function tfCard(x,mode){
     +bottom
     +'</div>';
 }
-async function tfSetTick(key,n,pid,acct,angleEnc){
-  key=decodeURIComponent(key);
+async function tfSetTick(key,n,pid,acct,angle){
   var c=tfTicks[key]||0; c=(c===n)?n-1:n; tfTicks[key]=c; renderToFilm();
-  try{ await sb.from('film_ticks').upsert({idea_key:key,day:tfToday(),count:c,product_uid:pid,account:acct,angle:decodeURIComponent(angleEnc).slice(0,120),updated_at:new Date().toISOString()},{onConflict:'idea_key,day'}); }catch(e){}
+  try{ await sb.from('film_ticks').upsert({idea_key:key,day:tfToday(),count:c,product_uid:pid,account:acct,angle:String(angle||'').slice(0,120),updated_at:new Date().toISOString()},{onConflict:'idea_key,day'}); }catch(e){}
 }
 async function tfMarkOwned(pid){
   const {error}=await sb.from('products').update({owned:true}).eq('id',pid);
