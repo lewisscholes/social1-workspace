@@ -27,7 +27,7 @@
   #app{display:flex;height:100vh;overflow:hidden}
   a{color:var(--blue);text-decoration:none}
   /* sidebar */
-  .sidebar{width:232px;flex:0 0 232px;background:var(--sidebar);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:16px 12px;gap:4px}
+  .sidebar{width:232px;flex:0 0 232px;background:var(--sidebar);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:16px 12px;gap:4px;overflow-y:auto}
   .brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:16px;padding:6px 8px 16px}
   .brand .logo{width:30px;height:30px;border-radius:9px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;box-shadow:0 5px 13px rgba(255,59,84,.36)}
   .nav-btn{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:transparent;border:0;color:#454b63;padding:11px 12px;border-radius:11px;cursor:pointer;font-size:14px;font-weight:500;transition:background .12s ease,color .12s ease}
@@ -305,6 +305,19 @@
   .drawer-btn{display:none}
   .scrim{display:none;position:fixed;inset:0;background:rgba(10,12,30,.45);z-index:75}
   .scrim.open{display:block}
+  /* tools bottom sheet (mobile) */
+  .tsheet-scrim{display:none;position:fixed;inset:0;background:rgba(10,12,30,.4);z-index:85}
+  .tsheet-scrim.open{display:block}
+  .tsheet{position:fixed;left:0;right:0;bottom:0;background:#fff;border-radius:22px 22px 0 0;box-shadow:0 -16px 44px rgba(10,12,30,.26);padding:8px 16px calc(18px + env(safe-area-inset-bottom));z-index:90;transform:translateY(115%);transition:transform .26s cubic-bezier(.22,1,.36,1)}
+  .tsheet.open{transform:translateY(0)}
+  .tsheet-grab{width:42px;height:5px;border-radius:3px;background:#dfe3ec;margin:6px auto 12px}
+  .tsheet-title{font-weight:800;font-size:17px}
+  .tsheet-sub{color:var(--muted);font-size:12.5px;margin:2px 0 10px}
+  .tsheet-item{display:flex;align-items:center;gap:13px;width:100%;background:none;border:0;font-family:inherit;font-size:15px;font-weight:600;color:var(--ink);padding:13px 6px;border-radius:12px;cursor:pointer;text-align:left}
+  .tsheet-item:active{background:#f2f5fa}
+  .tsheet-item .ti{flex:0 0 auto;width:36px;height:36px;border-radius:11px;background:#eef1f6;display:flex;align-items:center;justify-content:center}
+  .tsheet-item .ti .svic{width:19px;height:19px;color:#4a5163}
+  @media (min-width:821px){ .tsheet,.tsheet-scrim{display:none!important} }
   /* content schedule calendar */
   .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
   .cal-title{font-weight:800;font-size:16px;color:var(--ink)}
@@ -442,17 +455,16 @@
     <button class="nav-btn" id="nav-bank" onclick="showView('bank')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-film"></use></svg></span> Video bank</button>
     <button class="nav-btn" id="nav-editor" onclick="showView('editor')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-scissors"></use></svg></span> Editor</button>
     <button class="nav-btn" id="nav-schedule" onclick="showView('schedule')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-calendar"></use></svg></span> Content Schedule</button>
+    <div class="nav-sep" style="margin-top:auto"></div>
     <button class="nav-btn nav-tools" id="navTools" onclick="toggleToolsNav()"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-more"></use></svg></span> Tools <span class="chev"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevron"></use></svg></span></button>
     <div class="nav-sub" id="toolsSub">
       <button class="nav-btn" id="nav-priority" onclick="showView('priority')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"></use></svg></span> Priority</button>
       <button class="nav-btn" id="nav-products" onclick="showView('products')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tag"></use></svg></span> Products</button>
       <button class="nav-btn" id="nav-files" onclick="showView('files')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg></span> Files</button>
+      <button class="nav-btn" id="nav-overlays" onclick="showView('overlays')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"></use></svg></span> Overlay generator</button>
+      <button class="nav-btn" id="nav-training" onclick="showView('training')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cap"></use></svg></span> Overlay Training</button>
+      <button class="nav-btn" id="nav-team" onclick="showView('team')" style="display:none"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-users"></use></svg></span> Team &amp; Access</button>
     </div>
-    <div class="nav-sep" style="margin-top:auto"></div>
-    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:8px 10px 4px">More</div>
-    <button class="nav-btn" id="nav-overlays" onclick="showView('overlays')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"></use></svg></span> Overlay generator</button>
-    <button class="nav-btn" id="nav-training" onclick="showView('training')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cap"></use></svg></span> Overlay Training</button>
-    <button class="nav-btn" id="nav-team" onclick="showView('team')" style="display:none"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-users"></use></svg></span> Team &amp; Access</button>
     <div class="side-user" style="margin-top:auto">
       <div class="nm" id="sideName"></div>
       <div style="display:flex;gap:8px;margin-top:6px">
@@ -851,10 +863,23 @@
   <nav class="bottomnav">
     <button id="bnav-dashboard" onclick="showView('dashboard')" class="active"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-home"></use></svg></span>Dashboard</button>
     <button id="bnav-bank" onclick="showView('bank')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-film"></use></svg></span>Bank</button>
-    <button class="bnav-plus" onclick="openUploadManager()" aria-label="Quick upload"><span class="plusic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-plus"></use></svg></span></button>
+    <button class="bnav-plus" onclick="openToolsSheet()" aria-label="Tools menu"><span class="plusic" style="display:flex;align-items:center;justify-content:center"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="width:24px;height:24px"><use href="#i-more"></use></svg></span></button>
     <button id="bnav-editor" onclick="showView('editor')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-scissors"></use></svg></span>Editor</button>
     <button id="bnav-schedule" onclick="showView('schedule')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-calendar"></use></svg></span>Schedule</button>
   </nav>
+
+  <div class="tsheet-scrim" id="tsheetScrim" onclick="closeToolsSheet()"></div>
+  <div class="tsheet" id="tsheet" role="dialog" aria-label="Tools">
+    <div class="tsheet-grab"></div>
+    <div class="tsheet-title">Tools</div>
+    <div class="tsheet-sub">Everything outside the daily workflow</div>
+    <button class="tsheet-item" onclick="toolsGo('priority')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"></use></svg></span> Priority</button>
+    <button class="tsheet-item" onclick="toolsGo('products')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tag"></use></svg></span> Products</button>
+    <button class="tsheet-item" onclick="toolsGo('files')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg></span> Files</button>
+    <button class="tsheet-item" onclick="toolsGo('overlays')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"></use></svg></span> Overlay generator</button>
+    <button class="tsheet-item" onclick="toolsGo('training')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cap"></use></svg></span> Overlay Training</button>
+    <button class="tsheet-item" id="tsheet-team" onclick="toolsGo('team')" style="display:none"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-users"></use></svg></span> Team &amp; Access</button>
+  </div>
 </div>
 
 <div id="modal" class="modal hide"><div class="box" id="modalBox"></div></div>
@@ -882,10 +907,10 @@ function prodName(id){ const p=state.products.find(x=>x.id===id); return p?p.nam
 function showView(v){
   state.currentView=v;
   ['dashboard','bank','files','products','priority','editor','schedule','overlays','training','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
-  var inTools=['priority','products','files'].indexOf(v)>=0;
+  var inTools=['priority','products','files','overlays','training','team'].indexOf(v)>=0;
   var nt=document.getElementById('navTools'); if(nt) nt.classList.toggle('active', inTools);
   if(inTools) toggleToolsNav(true);
-  closeDrawer();
+  closeDrawer(); closeToolsSheet();
   if(v==='dashboard') loadDashboard();
   if(v==='files') loadFiles();
   if(v==='products') loadProductsView();
@@ -901,6 +926,9 @@ function showView(v){
 function toggleDrawer(){ const s=document.querySelector('.sidebar'), sc=document.getElementById('scrim'); if(s)s.classList.toggle('open'); if(sc)sc.classList.toggle('open'); }
 function closeDrawer(){ const s=document.querySelector('.sidebar'), sc=document.getElementById('scrim'); if(s)s.classList.remove('open'); if(sc)sc.classList.remove('open'); }
 function toggleToolsNav(force){ var t=document.getElementById('navTools'), s=document.getElementById('toolsSub'); if(!t||!s)return; var open=(force===undefined)?!s.classList.contains('open'):force; s.classList.toggle('open',open); t.classList.toggle('open',open); }
+function openToolsSheet(){ var s=document.getElementById('tsheet'), sc=document.getElementById('tsheetScrim'); if(sc)sc.classList.add('open'); if(s)s.classList.add('open'); }
+function closeToolsSheet(){ var s=document.getElementById('tsheet'), sc=document.getElementById('tsheetScrim'); if(s)s.classList.remove('open'); if(sc)sc.classList.remove('open'); }
+function toolsGo(v){ closeToolsSheet(); showView(v); }
 
 // ---------- CONTENT SCHEDULE ----------
 async function loadSchedule(){
@@ -3186,7 +3214,7 @@ function toggleAuthMode(){ authMode=authMode==='login'?'signup':'login'; const s
 function authPrimary(){ authMode==='signup'?doSignup():doLogin(); }
 async function ownProfile(uid){ const{data}=await sb.from('profiles').select('*').eq('id',uid).maybeSingle(); return data; }
 async function gateBySession(session){ let prof=await ownProfile(session.user.id); if(!prof){ await sb.from('profiles').upsert({id:session.user.id,email:session.user.email,status:'pending',last_seen:new Date().toISOString()}); prof=await ownProfile(session.user.id); } else { sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',session.user.id); } state.user={id:session.user.id,email:session.user.email,first_name:prof?prof.first_name:null,status:prof?prof.status:'pending',role:prof?(prof.role||'user'):'user'}; state.isAdmin=state.user.role==='admin'&&state.user.status==='approved'; if(state.user.status==='approved') enterApp(); else setView('pending'); }
-async function enterApp(){ state.viewAs=state.user.id; ['authName','authEmail','authPass'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';}); setView('app'); document.getElementById('sideName').textContent=displayName(state.user)+(state.isAdmin?' (admin)':''); document.getElementById('nav-team').style.display=state.isAdmin?'':'none'; document.getElementById('teamLink').style.display=state.isAdmin?'':'none'; initViews(); await loadProducts(); if(!state.user.first_name) promptName(); showView('dashboard'); }
+async function enterApp(){ state.viewAs=state.user.id; ['authName','authEmail','authPass'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';}); setView('app'); document.getElementById('sideName').textContent=displayName(state.user)+(state.isAdmin?' (admin)':''); document.getElementById('nav-team').style.display=state.isAdmin?'':'none'; document.getElementById('teamLink').style.display=state.isAdmin?'':'none'; var tst=document.getElementById('tsheet-team'); if(tst)tst.style.display=state.isAdmin?'':'none'; initViews(); await loadProducts(); if(!state.user.first_name) promptName(); showView('dashboard'); }
 function showLogin(){ state.user=null; if(authMode==='signup')toggleAuthMode(); setView('login'); }
 async function refreshAuth(){ const{data}=await sb.auth.getSession(); if(data.session) await gateBySession(data.session); else showLogin(); }
 async function doLogin(){ authMsg(''); const email=val('authEmail').trim(),pw=document.getElementById('authPass').value; if(!email||!pw){authMsg('Enter email and password');return;} const{data,error}=await sb.auth.signInWithPassword({email,password:pw}); if(error){authMsg(error.message);return;} gateBySession(data.session); }
