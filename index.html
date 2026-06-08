@@ -1045,14 +1045,24 @@ function tfAcctOf(vtype){ return (vtype==='music+captions')?TF_ACCT_LINACRE:TF_A
 function tfStyleOf(vtype){ return (vtype==='music+captions')?'Text on screen':'Talking'; }
 function tfFmt(n){ if(!n)return '0'; if(n>=1e6)return (n/1e6).toFixed(1).replace(/\.0$/,'')+'M'; if(n>=1e3)return Math.round(n/1e3)+'k'; return ''+Math.round(n); }
 function tfToday(){ return new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10); }
+var TF_MONS={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
 function tfPostedDays(s){ if(!s)return null; s=(''+s).trim().toLowerCase(); if(/^(today|just now|now)/.test(s))return 0; if(/^yesterday/.test(s))return 1; var m;
   if((m=s.match(/(\d+)\s*month/)))return (+m[1])*30;
   if((m=s.match(/(\d+)\s*week/)))return (+m[1])*7;
   if((m=s.match(/(\d+)\s*day/)))return +m[1];
-  if((m=s.match(/(\d+)\s*h/)))return Math.max(0,Math.round((+m[1])/24));
-  var d=Date.parse(s); if(!isNaN(d)){ var dd=Math.round((Date.now()-d)/86400000); if(dd<0)dd+=365; return dd; }
+  if((m=s.match(/(\d+)\s*hour/)))return Math.max(0,Math.round((+m[1])/24));
+  // "Mon DD" (e.g. Apr 27) -- assume current year; if that lands in the future, use last year
+  if((m=s.match(/^([a-z]{3})[a-z]*\.?\s+(\d{1,2})\b/)) && TF_MONS[m[1]]!=null){
+    var now=new Date(), y=now.getFullYear();
+    var dt=new Date(y, TF_MONS[m[1]], +m[2]);
+    if(dt.getTime() > now.getTime()+86400000) dt=new Date(y-1, TF_MONS[m[1]], +m[2]);
+    var dd=Math.round((Date.now()-dt.getTime())/86400000); return dd<0?0:dd;
+  }
+  // full date with an explicit 4-digit year
+  if(/\d{4}/.test(s)){ var d=Date.parse(s); if(!isNaN(d)){ var dd2=Math.round((Date.now()-d)/86400000); return dd2<0?0:dd2; } }
   return null; }
-function tfRecency(days){ if(days==null)return ''; if(days<1)return 'today'; if(days===1)return '1d ago'; if(days<7)return days+'d ago'; if(days<31)return Math.round(days/7)+'w ago'; return Math.round(days/30)+'mo ago'; }
+function tfRecency(days){ if(days==null)return ''; if(days<1)return 'today'; if(days===1)return '1d ago'; if(days<7)return days+'d ago'; if(days<31)return Math.round(days/7)+'w ago'; if(days<365)return Math.round(days/30)+'mo ago'; return Math.round(days/365)+'y ago'; }
+function tfPerDay(views,days){ if(!views||days==null)return ''; return '~'+tfFmt(Math.round(views/Math.max(1,days)))+'/day avg'; }
 function tfTimeMax(){ return ({'7d':7,'30d':30})[state.tfTime]||999999; }
 function tfIdeaKey(pid,angle){ return pid+'|'+angle.slice(0,30).toLowerCase(); }
 function tfJs(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/[\r\n]+/g,' '); }
@@ -1118,7 +1128,8 @@ function tfSection(title,badge,list,mode,emptyMsg){
 function tfCard(x,mode){
   var acctCol = x.acct===TF_ACCT_LINACRE?['#e6f1fb','#0c447c']:['#e1f5ee','#0f6e56'];
   var rec=tfRecency(x.days);
-  var perf='<span class="tf-badge">'+tfFmt(x.views)+' views</span>'+(x.gmv?'<span class="tf-badge">'+String.fromCharCode(163)+tfFmt(x.gmv)+' GMV</span>':'')+(rec?'<span class="tf-badge">'+rec+'</span>':'');
+  var vel=tfPerDay(x.views,x.days);
+  var perf='<span class="tf-badge">'+tfFmt(x.views)+' views</span>'+(x.gmv?'<span class="tf-badge">'+String.fromCharCode(163)+tfFmt(x.gmv)+' GMV</span>':'')+(rec?'<span class="tf-badge">'+rec+'</span>':'')+(vel?'<span class="tf-badge" style="background:#fff6e9;border-color:#f4d8a8;color:#8a5b00">'+vel+'</span>':'');
   var tags='<span class="tf-pill" style="background:'+acctCol[0]+';color:'+acctCol[1]+'">'+x.acct+'</span><span class="tf-pill" style="background:#f0ecff;color:#4a3fb8">'+tfStyleOf(x.vtype)+'</span>';
   var watch=x.link?'<a class="tf-watch" href="'+esc(x.link)+'" target="_blank" rel="noopener">Watch winning '+String.fromCharCode(8599)+'</a>':'';
   var bottom='';
