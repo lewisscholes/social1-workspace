@@ -1348,12 +1348,16 @@ function renderRuns(){
     if(r.mode==='products'||r.mode==='both') parts.push(r.num_products+' products x '+r.videos_per_product+' vids');
     if(r.mode==='videos'||r.mode==='both') parts.push(r.num_videos+' videos');
     var res=r.result?(' &middot; '+((r.result.insert||0))+' new, '+((r.result.update||0))+' updated'):'';
+    var freq=parseFloat(r.frequency_hours)||0;
+    var freqBadge=freq>0?'<span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;background:#eef0ff;color:#4a3fb8">Every '+freq+'h</span>':'';
+    var stop=(freq>0 && r.status!=='cancelled')?'<button class="btn ghost sm" style="padding:3px 9px;flex:0 0 auto" onclick="stopRun(\''+r.id+'\')">Stop</button>':'';
     return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line2)">'
-      +scBadge(r.status)
+      +scBadge(r.status)+freqBadge
       +'<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px;text-transform:capitalize">'+esc(r.mode)+' &middot; '+esc(parts.join(' + '))+'</div>'
-      +'<div class="h-sub" style="font-size:12px">'+scAgo(r.created_at)+res+(r.error?(' &middot; '+esc(String(r.error).slice(0,60))):'')+'</div></div></div>';
+      +'<div class="h-sub" style="font-size:12px">'+scAgo(r.created_at)+res+(r.error?(' &middot; '+esc(String(r.error).slice(0,60))):'')+'</div></div>'+stop+'</div>';
   }).join('');
 }
+async function stopRun(id){ var {error}=await sb.from('scraper_runs').update({frequency_hours:0,status:'cancelled',next_run_at:null}).eq('id',id); if(error){toast('Failed','err');return;} toast('Schedule stopped','ok'); loadScraperView(); }
 function setScrapeTab(t){ scState.tab=t; document.getElementById('sctab-products').classList.toggle('active',t==='products'); document.getElementById('sctab-videos').classList.toggle('active',t==='videos'); renderScraperList(); }
 function renderScraperList(){
   var wrap=document.getElementById('scraperList'), empty=document.getElementById('scraperEmpty');
@@ -1394,6 +1398,9 @@ function openRunModal(){
     +'<div class="seg" id="run_mode" style="margin:6px 0 12px"><button type="button" class="active" data-m="videos" onclick="runPick(this)">Videos</button><button type="button" data-m="products" onclick="runPick(this)">Products</button><button type="button" data-m="both" onclick="runPick(this)">Both</button></div>'
     +'<div id="run_videos_fields"><label style="font-size:13px;font-weight:600">Videos to scan (videos page)</label><input id="run_num_videos" type="number" value="50" min="1" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:9px;margin:6px 0 12px"></div>'
     +'<div id="run_products_fields" style="display:none"><label style="font-size:13px;font-weight:600">Products to scan</label><input id="run_num_products" type="number" value="20" min="1" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:9px;margin:6px 0 10px"><label style="font-size:13px;font-weight:600">Videos per product</label><input id="run_vpp" type="number" value="20" min="1" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:9px;margin:6px 0 12px"></div>'
+    +'<label style="font-size:13px;font-weight:600">Schedule</label>'
+    +'<select id="run_freq" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:9px;margin:6px 0 12px;font:inherit"><option value="0">Run once now</option><option value="1">Every hour</option><option value="3">Every 3 hours</option><option value="6">Every 6 hours</option><option value="12">Every 12 hours</option><option value="24">Every day</option></select>'
+    +'<div class="h-sub" style="font-size:12px;margin:-6px 0 12px">A scheduled run fires immediately, then re-queues itself to the listener on that interval.</div>'
     +'<div class="actions"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" onclick="createRun()">Queue run</button></div>');
   scState.runMode='videos';
 }
@@ -1406,14 +1413,16 @@ function runPick(btn){
 }
 async function createRun(){
   var m=scState.runMode||'videos';
+  var freq=parseFloat(val('run_freq'))||0;
   var row={mode:m, status:'queued',
     num_videos:parseInt(val('run_num_videos'))||0,
     num_products:parseInt(val('run_num_products'))||0,
-    videos_per_product:parseInt(val('run_vpp'))||0};
+    videos_per_product:parseInt(val('run_vpp'))||0,
+    frequency_hours:freq};
   if(state.user) row.created_by=state.user.id;
   var {error}=await sb.from('scraper_runs').insert(row);
   if(error){ toast('Failed: '+error.message,'err'); return; }
-  closeModal(); toast('Run queued -- the workhorse will pick it up','ok'); loadScraperView();
+  closeModal(); toast(freq>0?('Scheduled -- runs now, then every '+freq+'h'):'Run queued -- the workhorse will pick it up','ok'); loadScraperView();
 }
 
 // Top-line = our own activity for ONE selected date range: Uploaded / Edited / Posted
