@@ -28,7 +28,10 @@
   a{color:var(--blue);text-decoration:none}
   /* sidebar */
   .sidebar{width:232px;flex:0 0 232px;background:var(--sidebar);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:16px 12px;gap:4px;overflow:hidden}
-  .nav-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:4px;margin-top:2px}
+  .nav-workflow{display:flex;flex-direction:column;gap:9px;margin-top:2px}
+  .nav-workflow .nav-btn{padding-top:12px;padding-bottom:12px}
+  .nav-grow{flex:1 1 auto;min-height:18px}
+  .nav-scroll{flex:0 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:4px;margin-top:2px}
   .nav-scroll::-webkit-scrollbar{width:7px}
   .nav-scroll::-webkit-scrollbar-thumb{background:#d7dbe6;border-radius:6px}
   .grp-l{font-size:10.5px;font-weight:700;color:#9aa1b2;text-transform:uppercase;letter-spacing:.06em;padding:9px 10px 3px}
@@ -456,10 +459,14 @@
   <div class="scrim" id="scrim" onclick="closeDrawer()"></div>
   <aside class="sidebar">
     <div class="brand"><span class="logo"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-play"></use></svg></span> Affiliate Editor</div>
-    <button class="nav-btn active" id="nav-dashboard" onclick="showView('dashboard')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-home"></use></svg></span> Dashboard</button>
-    <button class="nav-btn" id="nav-bank" onclick="showView('bank')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-film"></use></svg></span> Video bank</button>
-    <button class="nav-btn" id="nav-editor" onclick="showView('editor')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-scissors"></use></svg></span> Editor</button>
-    <button class="nav-btn" id="nav-schedule" onclick="showView('schedule')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-calendar"></use></svg></span> Content Schedule</button>
+    <div class="grp-l">Workflow</div>
+    <div class="nav-workflow">
+      <button class="nav-btn active" id="nav-dashboard" onclick="showView('dashboard')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-home"></use></svg></span> Dashboard</button>
+      <button class="nav-btn" id="nav-bank" onclick="showView('bank')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-film"></use></svg></span> Video bank</button>
+      <button class="nav-btn" id="nav-editor" onclick="showView('editor')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-scissors"></use></svg></span> Editor</button>
+      <button class="nav-btn" id="nav-schedule" onclick="showView('schedule')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-calendar"></use></svg></span> Content Schedule</button>
+    </div>
+    <div class="nav-grow"></div>
     <div class="nav-sep"></div>
     <div class="nav-scroll" id="toolsPanel">
       <div class="grp-l">Tools</div>
