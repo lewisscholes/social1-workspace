@@ -473,6 +473,7 @@
       <button class="nav-btn" id="nav-priority" onclick="showView('priority')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"></use></svg></span> Priority</button>
       <button class="nav-btn" id="nav-products" onclick="showView('products')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tag"></use></svg></span> Products</button>
       <button class="nav-btn" id="nav-files" onclick="showView('files')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg></span> Files</button>
+      <button class="nav-btn" id="nav-scraper" onclick="showView('scraper')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-inbox"></use></svg></span> Scraper Results</button>
       <button class="nav-btn" id="nav-overlays" onclick="showView('overlays')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"></use></svg></span> Overlay generator</button>
       <button class="nav-btn" id="nav-training" onclick="showView('training')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cap"></use></svg></span> Overlay Training</button>
       <div id="adminGroup" style="display:none">
@@ -874,6 +875,29 @@
         </div>
       </div>
     </section>
+
+    <section id="view-scraper" class="hide">
+      <div class="head">
+        <div>
+          <h2 class="h-title">Scraper Results</h2>
+          <div class="h-sub">Run the Social One + TikTok scraper top-to-bottom. Results land here and feed the dashboard.</div>
+        </div>
+        <div class="h-actions">
+          <button class="btn" onclick="openRunModal()"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-plus"></use></svg> New run</button>
+          <button class="btn ghost" onclick="loadScraperView(true)"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-refresh"></use></svg> Refresh</button>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div style="font-weight:700;font-size:14px;margin-bottom:9px">Recent runs</div>
+        <div id="runsList"><div class="h-sub">No runs yet.</div></div>
+      </div>
+      <div class="seg" style="margin-bottom:14px">
+        <button id="sctab-products" class="active" onclick="setScrapeTab('products')">Products <span class="cnt" id="scProdCnt">0</span></button>
+        <button id="sctab-videos" onclick="setScrapeTab('videos')">Videos <span class="cnt" id="scVidCnt">0</span></button>
+      </div>
+      <div id="scraperList"></div>
+      <div id="scraperEmpty" class="h-sub hide" style="padding:18px 0">Nothing scraped yet. Create a run to populate this.</div>
+    </section>
   </main>
 
   <nav class="bottomnav">
@@ -922,13 +946,14 @@ function prodName(id){ const p=state.products.find(x=>x.id===id); return p?p.nam
 // ---------- nav ----------
 function showView(v){
   state.currentView=v;
-  ['dashboard','bank','files','products','priority','editor','schedule','overlays','training','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
+  ['dashboard','bank','files','products','priority','scraper','editor','schedule','overlays','training','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
   var na=document.getElementById('nav-access'); if(na) na.classList.toggle('active', v==='team');
   closeDrawer(); closeToolsSheet();
   if(v==='dashboard') loadDashboard();
   if(v==='files') loadFiles();
   if(v==='products') loadProductsView();
   if(v==='priority') loadPriorityView();
+  if(v==='scraper') loadScraperView();
   if(v==='bank') loadBank();
   if(v==='editor') loadEditor();
   if(v==='schedule') loadSchedule();
@@ -1280,6 +1305,115 @@ function priBindDrag(){
     col.ondragleave=function(){ col.classList.remove('drag'); };
     col.ondrop=function(e){ e.preventDefault(); col.classList.remove('drag'); if(_priDragId){ movePriority(_priDragId, +col.dataset.pri); _priDragId=null; } };
   });
+}
+
+// ---------- SCRAPER RESULTS ----------
+var scState={tab:'products', runs:[], vids:[], runTimer:null};
+function scAgo(iso){ if(!iso)return ''; var d=Math.floor((Date.now()-new Date(iso).getTime())/1000); if(d<60)return 'just now'; if(d<3600)return Math.floor(d/60)+'m ago'; if(d<86400)return Math.floor(d/3600)+'h ago'; return Math.floor(d/86400)+'d ago'; }
+async function loadScraperView(refresh){
+  if(!scState.tab)scState.tab='products';
+  await loadProducts();
+  try{
+    var rr=await sb.from('scraper_runs').select('*').order('created_at',{ascending:false}).limit(8);
+    scState.runs=rr.data||[];
+  }catch(e){ scState.runs=[]; }
+  try{
+    var vv=await sb.from('scraped_videos').select('id,handle,views,creator_gmv,transcript,text_overlays,product_uid,tiktok_url,posted_date,video_type,last_scraped_at').order('last_scraped_at',{ascending:false}).limit(120);
+    scState.vids=vv.data||[];
+  }catch(e){ scState.vids=[]; }
+  renderRuns(); renderScraperList();
+  // live-poll runs while any are active
+  if(scState.runTimer) clearInterval(scState.runTimer);
+  if((scState.runs||[]).some(function(r){return r.status==='queued'||r.status==='running';})){
+    scState.runTimer=setInterval(scPollRuns, 5000);
+  }
+  if(refresh) toast('Refreshed','ok');
+}
+async function scPollRuns(){
+  if(state.currentView!=='scraper'){ clearInterval(scState.runTimer); return; }
+  try{ var rr=await sb.from('scraper_runs').select('*').order('created_at',{ascending:false}).limit(8); scState.runs=rr.data||[]; renderRuns(); }catch(e){}
+  if(!(scState.runs||[]).some(function(r){return r.status==='queued'||r.status==='running';})){ clearInterval(scState.runTimer); loadScraperView(); }
+}
+function scBadge(st){
+  var m={queued:['#fff6e9','#8a5b00','Queued'],running:['#e6f1fb','#0c447c','Running'],done:['#e7f7ee','#0f6e56','Done'],error:['#fceeee','#a32d2d','Error']};
+  var c=m[st]||['#eef1f6','#5b6170',st||'-'];
+  return '<span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;background:'+c[0]+';color:'+c[1]+'">'+c[2]+'</span>';
+}
+function renderRuns(){
+  var el=document.getElementById('runsList'); if(!el)return;
+  var rs=scState.runs||[];
+  if(!rs.length){ el.innerHTML='<div class="h-sub">No runs yet. Click "New run" to create one.</div>'; return; }
+  el.innerHTML=rs.map(function(r){
+    var parts=[];
+    if(r.mode==='products'||r.mode==='both') parts.push(r.num_products+' products x '+r.videos_per_product+' vids');
+    if(r.mode==='videos'||r.mode==='both') parts.push(r.num_videos+' videos');
+    var res=r.result?(' &middot; '+((r.result.insert||0))+' new, '+((r.result.update||0))+' updated'):'';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line2)">'
+      +scBadge(r.status)
+      +'<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px;text-transform:capitalize">'+esc(r.mode)+' &middot; '+esc(parts.join(' + '))+'</div>'
+      +'<div class="h-sub" style="font-size:12px">'+scAgo(r.created_at)+res+(r.error?(' &middot; '+esc(String(r.error).slice(0,60))):'')+'</div></div></div>';
+  }).join('');
+}
+function setScrapeTab(t){ scState.tab=t; document.getElementById('sctab-products').classList.toggle('active',t==='products'); document.getElementById('sctab-videos').classList.toggle('active',t==='videos'); renderScraperList(); }
+function renderScraperList(){
+  var wrap=document.getElementById('scraperList'), empty=document.getElementById('scraperEmpty');
+  var prods=(state.products||[]).filter(function(p){return p.details&&p.details.social1_id;});
+  var co=document.getElementById('scProdCnt'); if(co)co.textContent=prods.length;
+  var cv=document.getElementById('scVidCnt'); if(cv)cv.textContent=(scState.vids||[]).length;
+  var rows;
+  if(scState.tab==='videos') rows=(scState.vids||[]).map(scVidRow);
+  else rows=prods.map(scProdRow);
+  if(empty) empty.classList.toggle('hide', rows.length>0);
+  if(wrap) wrap.innerHTML=rows.join('');
+}
+function scProdRow(p){
+  var d=p.details||{};
+  var badges='<span class="tf-badge">'+esc(d.social1_views||'?')+' views</span><span class="tf-badge">'+esc(d.social1_gmv||'?')+' GMV</span><span class="tf-badge">'+esc(d.social1_videos||'?')+' videos</span>';
+  return '<div class="card" style="padding:12px 14px;margin-bottom:9px"><div style="font-weight:700;font-size:14px">'+esc(p.name)+'</div><div class="tf-meta">'+badges+'</div></div>';
+}
+function scProdName(uid){ var p=(state.products||[]).find(function(x){return x.id===uid;}); return p?p.name:''; }
+function scVidRow(v){
+  var hasTr=v.transcript&&v.transcript.length>20, hasOv=v.text_overlays&&v.text_overlays.length>0;
+  var pills='<span class="tf-badge">'+esc(v.views||'?')+' views</span>'+(v.creator_gmv?'<span class="tf-badge">'+esc(v.creator_gmv)+' GMV</span>':'')
+    +(v.posted_date?'<span class="tf-badge">'+esc(v.posted_date)+'</span>':'')
+    +(hasTr?'<span class="tf-badge" style="background:#e7f7ee;border-color:#bfe6cf;color:#0f6e56">transcript</span>':'')
+    +(hasOv?'<span class="tf-badge" style="background:#f0ecff;border-color:#d9cffb;color:#4a3fb8">overlay</span>':'');
+  var prod=scProdName(v.product_uid);
+  var watch=v.tiktok_url?'<a class="tf-watch" href="'+esc(v.tiktok_url)+'" target="_blank" rel="noopener">Open ↗</a>':'';
+  return '<div class="card" style="padding:12px 14px;margin-bottom:9px">'
+    +'<div style="display:flex;justify-content:space-between;gap:10px"><div style="font-weight:700;font-size:14px">'+esc(v.handle||'(video)')+'</div>'+watch+'</div>'
+    +(prod?'<div class="h-sub" style="font-size:12px;margin-top:2px">'+esc(prod)+'</div>':'')
+    +'<div class="tf-meta">'+pills+'</div>'
+    +(hasTr?'<div class="h-sub" style="font-size:12px;margin-top:4px">'+esc(v.transcript.slice(0,160))+(v.transcript.length>160?'...':'')+'</div>':'')
+    +'</div>';
+}
+function openRunModal(){
+  showModal('<h3>New scraper run</h3>'
+    +'<div class="h-sub" style="margin:-2px 0 12px">Runs top-to-bottom from the highest performers. No products are hand-picked.</div>'
+    +'<label style="font-size:13px;font-weight:600">What to scrape</label>'
+    +'<div class="seg" id="run_mode" style="margin:6px 0 12px"><button type="button" class="active" data-m="videos" onclick="runPick(this)">Videos</button><button type="button" data-m="products" onclick="runPick(this)">Products</button><button type="button" data-m="both" onclick="runPick(this)">Both</button></div>'
+    +'<div id="run_videos_fields"><label style="font-size:13px;font-weight:600">Videos to scan (videos page)</label><input id="run_num_videos" type="number" value="50" min="1" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:9px;margin:6px 0 12px"></div>'
+    +'<div id="run_products_fields" style="display:none"><label style="font-size:13px;font-weight:600">Products to scan</label><input id="run_num_products" type="number" value="20" min="1" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:9px;margin:6px 0 10px"><label style="font-size:13px;font-weight:600">Videos per product</label><input id="run_vpp" type="number" value="20" min="1" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:9px;margin:6px 0 12px"></div>'
+    +'<div class="actions"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" onclick="createRun()">Queue run</button></div>');
+  scState.runMode='videos';
+}
+function runPick(btn){
+  scState.runMode=btn.dataset.m;
+  [].forEach.call(btn.parentNode.children,function(b){b.classList.toggle('active',b===btn);});
+  var m=scState.runMode;
+  document.getElementById('run_videos_fields').style.display=(m==='videos'||m==='both')?'':'none';
+  document.getElementById('run_products_fields').style.display=(m==='products'||m==='both')?'':'none';
+}
+async function createRun(){
+  var m=scState.runMode||'videos';
+  var row={mode:m, status:'queued',
+    num_videos:parseInt(val('run_num_videos'))||0,
+    num_products:parseInt(val('run_num_products'))||0,
+    videos_per_product:parseInt(val('run_vpp'))||0};
+  if(state.user) row.created_by=state.user.id;
+  var {error}=await sb.from('scraper_runs').insert(row);
+  if(error){ toast('Failed: '+error.message,'err'); return; }
+  closeModal(); toast('Run queued -- the workhorse will pick it up','ok'); loadScraperView();
 }
 
 // Top-line = our own activity for ONE selected date range: Uploaded / Edited / Posted
