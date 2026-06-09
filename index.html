@@ -1159,6 +1159,7 @@ function tfIdeaKey(pid,angle){ return pid+'|'+angle.slice(0,30).toLowerCase(); }
 function tfJs(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/[\r\n]+/g,' '); }
 var TF_MAX=5, SAMPLE_LIMIT=10, SAMPLE_RECENCY_DAYS=10;
 var tfTicks={}, tfTickRows=[], tfSamplePicks={};
+function tfLocalDay(iso){ if(!iso)return null; var d=new Date(iso); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
 function tfActiveDay(){ if(!state.tfDay)state.tfDay=tfToday(); return state.tfDay; }
 function tfIsToday(){ return tfActiveDay()===tfToday(); }
 function tfDayLabel(){ var t=tfToday(); var y=new Date(Date.now()-86400000-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10); if(tfActiveDay()===t)return 'Today'; if(tfActiveDay()===y)return 'Yesterday'; return new Date(tfActiveDay()+'T00:00:00').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'}); }
@@ -1248,7 +1249,8 @@ function tfSamples(){
     var p=tfProduct(r.product_uid); if(p&&p.owned) return;
     if(r.source && r.source!=='videos') return;
     if(tfSamplePicks[r.product_uid]==='no') return;
-    var days=tfPostedDays(r.posted_date); if(days==null || days>SAMPLE_RECENCY_DAYS) return;
+    if(tfLocalDay(r.last_scraped_at)!==tfToday()) return;   // only today's Social One scrape
+    var days=tfPostedDays(r.posted_date);
     var pname=p?p.name:''; if(pf && pname.toLowerCase().indexOf(pf)<0) return;
     var views=parseNum(r.views)||0, gmv=parseNum(r.creator_gmv)||0;
     var ovs=(r.raw&&Array.isArray(r.raw.textOverlays))?r.raw.textOverlays:(r.text_overlays?[r.text_overlays]:[]);
@@ -1263,11 +1265,11 @@ function tfSamples(){
 function tfSamplesSection(){
   var samples=tfSamples();
   var skipped=Object.keys(tfSamplePicks).filter(function(k){return tfSamplePicks[k]==='no';}).length;
-  var sub='Top trending products on Social One today that you do not own. Pick Yes to order a sample, No to skip. Max '+SAMPLE_LIMIT+'/day.';
+  var sub='Today&#39;s top trending products from Social One that you do not own. Refreshes with each daily scrape. Pick Yes to order, No to skip. Max '+SAMPLE_LIMIT+'/day.';
   if(skipped) sub+=' &middot; <a onclick="sampleResetNo()" style="cursor:pointer;color:#1850c4">'+skipped+' skipped, reset</a>';
   var h='<div class="tf-sect samples"><div class="tf-secth"><span class="tf-secth-dot" style="background:#e08a1e"></span>Request samples <span class="tf-secth-badge">today '+String.fromCharCode(183)+' '+samples.length+'</span></div>';
   h+='<div class="tf-secth-sub">'+sub+'</div>';
-  h+= samples.length? samples.map(tfSampleCard).join('') : '<div class="h-sub" style="padding:4px 0 8px">No fresh trending products to request today.</div>';
+  h+= samples.length? samples.map(tfSampleCard).join('') : '<div class="h-sub" style="padding:4px 0 8px">Nothing scraped from Social One today yet -- run the videos scraper to populate today&#39;s samples.</div>';
   h+='</div>';
   return h;
 }
