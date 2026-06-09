@@ -104,6 +104,7 @@
   .tf-secth-badge{background:#eef1f6;color:#5b6170;border-radius:999px;font-size:11px;padding:2px 9px;font-weight:600}
   .tf-secth-sub{color:var(--muted);font-size:12px;margin:0 0 11px}
   .tf-card-sample{background:#fff;border-color:#ecdfbe}
+  .tf-card-yes{border-color:#bfe6cf;box-shadow:0 0 0 2px #e7f7ee inset}
   .tf-goals{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px}
   .tf-card{display:block;padding:13px 14px;margin-bottom:10px;border:1px solid var(--line);border-radius:12px}
   .tf-prodname{font-weight:700;font-size:15px}
@@ -1156,8 +1157,16 @@ function tfPerDay(views,days){ if(!views||days==null)return ''; return '~'+tfFmt
 function tfTimeMax(){ return ({'7d':7,'30d':30})[state.tfTime]||999999; }
 function tfIdeaKey(pid,angle){ return pid+'|'+angle.slice(0,30).toLowerCase(); }
 function tfJs(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/[\r\n]+/g,' '); }
-var tfTicks={};
-async function loadTicks(){ try{ var r=await sb.from('film_ticks').select('idea_key,count').eq('day',tfToday()); tfTicks={}; (r.data||[]).forEach(function(t){tfTicks[t.idea_key]=t.count||0;}); }catch(e){ tfTicks={}; } }
+var TF_MAX=5, SAMPLE_LIMIT=10, SAMPLE_RECENCY_DAYS=10;
+var tfTicks={}, tfTickRows=[], tfSamplePicks={};
+function tfActiveDay(){ if(!state.tfDay)state.tfDay=tfToday(); return state.tfDay; }
+function tfIsToday(){ return tfActiveDay()===tfToday(); }
+function tfDayLabel(){ var t=tfToday(); var y=new Date(Date.now()-86400000-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10); if(tfActiveDay()===t)return 'Today'; if(tfActiveDay()===y)return 'Yesterday'; return new Date(tfActiveDay()+'T00:00:00').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'}); }
+function tfShiftDay(d){ var dt=new Date(tfActiveDay()+'T00:00:00'); dt.setDate(dt.getDate()+d); var nd=dt.toISOString().slice(0,10); if(nd>tfToday())return; state.tfDay=nd; loadTicks().then(renderToFilm); }
+async function loadTicks(){
+  try{ var r=await sb.from('film_ticks').select('idea_key,count,product_uid,account,angle').eq('day',tfActiveDay()); tfTickRows=r.data||[]; tfTicks={}; tfTickRows.forEach(function(t){tfTicks[t.idea_key]=t.count||0;}); }catch(e){ tfTicks={}; tfTickRows=[]; }
+  try{ var sp=await sb.from('sample_picks').select('product_uid,decision').eq('day',tfToday()); tfSamplePicks={}; (sp.data||[]).forEach(function(p){tfSamplePicks[p.product_uid]=p.decision;}); }catch(e){ tfSamplePicks={}; }
+}
 // One card per PRODUCT + ACCOUNT. Each card's 3 checkboxes = 3 videos to film.
 // The representative (winning) video = highest views for that product+account.
 function tfIdeas(){
@@ -1191,25 +1200,102 @@ function setTfProd(v){ state.tfProd=v; renderToFilm(); }
 function renderToFilm(){
   var card=document.getElementById('toFilmCard'); if(!card) return;
   card.style.display='';
-  if(!state.tfTime)state.tfTime='all'; if(!state.tfAcct)state.tfAcct='all';
+  if(!state.tfAcct)state.tfAcct='all';
+  var isToday=tfIsToday();
+  var linFilmed=tfFilmed(TF_ACCT_LINACRE), yasFilmed=tfFilmed(TF_ACCT_YAS);
+  var goal=function(nm,sub,have,target,col){return '<div style="flex:1 1 220px;border:1px solid var(--line);border-radius:12px;padding:11px 13px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:14px">'+nm+'</span><span class="h-sub" style="font-size:13px">'+have+' / '+target+' filmed</span></div><div class="h-sub" style="font-size:12px">'+sub+'</div><div style="height:8px;background:#eef1f6;border-radius:999px;margin-top:8px;overflow:hidden"><div style="height:100%;width:'+Math.min(100,Math.round(have/target*100))+'%;background:'+col+';border-radius:999px"></div></div></div>';};
+  var h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:11px">'
+    +'<div style="font-weight:700;font-size:16px"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-3px"><use href="#i-film"></use></svg> To film</div>'
+    +'<span style="flex:1"></span>'
+    +'<button class="btn ghost sm" style="padding:4px 11px;font-size:16px;line-height:1" onclick="tfShiftDay(-1)" aria-label="Previous day">&lsaquo;</button>'
+    +'<span style="font-weight:700;font-size:13px;min-width:84px;text-align:center">'+tfDayLabel()+'</span>'
+    +'<button class="btn ghost sm" style="padding:4px 11px;font-size:16px;line-height:1"'+(isToday?' disabled':'')+' onclick="tfShiftDay(1)" aria-label="Next day">&rsaquo;</button></div>';
+  h+='<div class="tf-goals">'+goal('@LinkedByLinacre','BOF '+String.fromCharCode(183)+' text on screen',linFilmed,25,'#2f6df6')+goal('@LinkedByYas','TOF '+String.fromCharCode(183)+' talking',yasFilmed,10,'#0f9d58')+'</div>';
+  if(!isToday){ h+=tfHistory(); card.innerHTML=h; return; }
+  var seg=function(opts){return '<span class="seg">'+opts.map(function(o){return '<button class="'+(o[0]===state.tfAcct?'active':'')+'" onclick="setTfAcct(\''+o[0]+'\')">'+o[1]+'</button>';}).join('')+'</span>';};
+  var popts='<option value="">All products</option>'+(state.products||[]).slice().sort(function(a,b){return (a.name||'').localeCompare(b.name||'');}).map(function(p){return '<option value="'+esc(p.name)+'"'+(((state.tfProd||'')===p.name)?' selected':'')+'>'+esc(p.name)+'</option>';}).join('');
+  h+='<div class="tf-filters" style="margin-top:12px">'+seg([['all','All'],[TF_ACCT_LINACRE,'LBL'],[TF_ACCT_YAS,'SWY']])
+    +'<select class="tf-prodfilter" onchange="setTfProd(this.value)">'+popts+'</select></div>';
   var ideas=tfIdeas();
   var ownedAll=ideas.filter(function(x){var p=tfProduct(x.pid);return p&&p.owned;});
-  var samples=ideas.filter(function(x){var p=tfProduct(x.pid);return !(p&&p.owned);});
-  var todo=ownedAll.filter(function(x){return (tfTicks[x.key]||0)<3;});
-  var done=ownedAll.filter(function(x){return (tfTicks[x.key]||0)>=3;});
-  var linFilmed=tfFilmed(TF_ACCT_LINACRE), yasFilmed=tfFilmed(TF_ACCT_YAS);
-  var seg=function(opts){return '<span class="seg">'+opts.map(function(o){return '<button class="'+(o[0]===state.tfAcct?'active':'')+'" onclick="setTfAcct(\''+o[0]+'\')">'+o[1]+'</button>';}).join('')+'</span>';};
-  var goal=function(nm,sub,have,target,col){return '<div style="flex:1 1 220px;border:1px solid var(--line);border-radius:12px;padding:11px 13px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:14px">'+nm+'</span><span class="h-sub" style="font-size:13px">'+have+' / '+target+' filmed</span></div><div class="h-sub" style="font-size:12px">'+sub+'</div><div style="height:8px;background:#eef1f6;border-radius:999px;margin-top:8px;overflow:hidden"><div style="height:100%;width:'+Math.min(100,Math.round(have/target*100))+'%;background:'+col+';border-radius:999px"></div></div></div>';};
-  var h='<div style="font-weight:700;font-size:16px;margin-bottom:11px"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-3px"><use href="#i-film"></use></svg> To film today</div>';
-  var popts='<option value="">All products</option>'+(state.products||[]).slice().sort(function(a,b){return (a.name||'').localeCompare(b.name||'');}).map(function(p){return '<option value="'+esc(p.name)+'"'+(((state.tfProd||'')===p.name)?' selected':'')+'>'+esc(p.name)+'</option>';}).join('');
-  h+='<div class="tf-filters">'+seg([['all','All'],[TF_ACCT_LINACRE,'LBL'],[TF_ACCT_YAS,'SWY']])
-    +'<select class="tf-prodfilter" onchange="setTfProd(this.value)">'+popts+'</select></div>';
-  h+='<div class="tf-goals">'+goal('@LinkedByLinacre','BOF '+String.fromCharCode(183)+' text on screen',linFilmed,25,'#2f6df6')+goal('@LinkedByYas','TOF '+String.fromCharCode(183)+' talking',yasFilmed,10,'#0f9d58')+'</div>';
+  var todo=ownedAll.filter(function(x){return (tfTicks[x.key]||0)<TF_MAX;});
+  var done=ownedAll.filter(function(x){return (tfTicks[x.key]||0)>=TF_MAX;});
   h+=tfSection('What you can film','owned '+String.fromCharCode(183)+' '+todo.length, todo,'owned','No owned products match. Mark products owned to fill this.',{accent:'#0f9d58', first:true});
   if(done.length) h+=tfSection('Done for the day','done '+String.fromCharCode(183)+' '+done.length, done,'done','',{accent:'#9aa1b2'});
-  h+=tfSection('Request samples','not owned '+String.fromCharCode(183)+' '+samples.length, samples,'sample','Nothing to request right now.',{accent:'#e08a1e', samples:true, sub:'Trending products you do not own yet -- request a sample to film them.'});
+  h+=tfSamplesSection();
   card.innerHTML=h;
   setFilmedMetric();
+}
+function tfHistory(){
+  var rows=(tfTickRows||[]).filter(function(t){return (t.count||0)>0;}).sort(function(a,b){return (b.count||0)-(a.count||0);});
+  if(!rows.length) return '<div class="h-sub" style="padding:14px 0">Nothing was filmed on this day.</div>';
+  var h='<div class="tf-sect first"><div class="tf-secth"><span class="tf-secth-dot" style="background:#0f9d58"></span>Filmed this day <span class="tf-secth-badge">'+rows.length+'</span></div>';
+  h+='<div class="tf-secth-sub">A record of what was filmed -- read only.</div>';
+  h+=rows.map(function(t){
+    var p=tfProduct(t.product_uid); var nm=(p&&p.name)||'(product)';
+    var ac=t.account||''; var acctCol=ac===TF_ACCT_LINACRE?['#e6f1fb','#0c447c']:['#e1f5ee','#0f6e56'];
+    return '<div class="card tf-card"><div class="tf-prodname">'+esc(nm)+'</div>'+(t.angle?'<div class="h-sub" style="font-size:12px;margin-top:2px">'+esc(t.angle)+'</div>':'')
+      +'<div class="tf-meta">'+(ac?'<span class="tf-pill" style="background:'+acctCol[0]+';color:'+acctCol[1]+'">'+esc(ac)+'</span>':'')+'<span class="tf-badge">filmed '+(t.count||0)+'</span></div></div>';
+  }).join('');
+  h+='</div>';
+  return h;
+}
+// Request samples: top trending NOT-owned products from the videos scrape, recent only, max 10/day.
+function tfSamples(){
+  var pf=(state.tfProd||'').toLowerCase().trim(); var groups={};
+  (state.results||[]).forEach(function(r){
+    if(!r.product_uid) return;
+    var p=tfProduct(r.product_uid); if(p&&p.owned) return;
+    if(r.source && r.source!=='videos') return;
+    if(tfSamplePicks[r.product_uid]==='no') return;
+    var days=tfPostedDays(r.posted_date); if(days==null || days>SAMPLE_RECENCY_DAYS) return;
+    var pname=p?p.name:''; if(pf && pname.toLowerCase().indexOf(pf)<0) return;
+    var views=parseNum(r.views)||0, gmv=parseNum(r.creator_gmv)||0;
+    var ovs=(r.raw&&Array.isArray(r.raw.textOverlays))?r.raw.textOverlays:(r.text_overlays?[r.text_overlays]:[]);
+    var angle=String((ovs.find(function(x){return String(x).trim();}))||r.caption||'').replace(/\s+/g,' ').trim();
+    var g=groups[r.product_uid];
+    if(!g||views>g.views) groups[r.product_uid]={pid:r.product_uid,vtype:r.video_type,acct:tfAcctOf(r.video_type),views:views,gmv:gmv,angle:angle,link:r.tiktok_url,days:days,pname:pname,decision:tfSamplePicks[r.product_uid]||null};
+  });
+  var out=Object.keys(groups).map(function(k){return groups[k];});
+  out.sort(function(a,b){ if((b.decision==='yes')-(a.decision==='yes'))return (b.decision==='yes')-(a.decision==='yes'); return (b.views-a.views)||(b.gmv-a.gmv); });
+  return out.slice(0,SAMPLE_LIMIT);
+}
+function tfSamplesSection(){
+  var samples=tfSamples();
+  var skipped=Object.keys(tfSamplePicks).filter(function(k){return tfSamplePicks[k]==='no';}).length;
+  var sub='Top trending products on Social One today that you do not own. Pick Yes to order a sample, No to skip. Max '+SAMPLE_LIMIT+'/day.';
+  if(skipped) sub+=' &middot; <a onclick="sampleResetNo()" style="cursor:pointer;color:#1850c4">'+skipped+' skipped, reset</a>';
+  var h='<div class="tf-sect samples"><div class="tf-secth"><span class="tf-secth-dot" style="background:#e08a1e"></span>Request samples <span class="tf-secth-badge">today '+String.fromCharCode(183)+' '+samples.length+'</span></div>';
+  h+='<div class="tf-secth-sub">'+sub+'</div>';
+  h+= samples.length? samples.map(tfSampleCard).join('') : '<div class="h-sub" style="padding:4px 0 8px">No fresh trending products to request today.</div>';
+  h+='</div>';
+  return h;
+}
+function tfSampleCard(x){
+  var acctCol=x.acct===TF_ACCT_LINACRE?['#e6f1fb','#0c447c']:['#e1f5ee','#0f6e56'];
+  var rec=tfRecency(x.days), vel=tfPerDay(x.views,x.days);
+  var why='<span class="tf-badge">'+tfFmt(x.views)+' views</span>'+(x.gmv?'<span class="tf-badge">'+String.fromCharCode(163)+tfFmt(x.gmv)+' GMV</span>':'')+(rec?'<span class="tf-badge">'+rec+'</span>':'')+(vel?'<span class="tf-badge" style="background:#fff6e9;border-color:#f4d8a8;color:#8a5b00">'+vel+'</span>':'');
+  var tags='<span class="tf-pill" style="background:'+acctCol[0]+';color:'+acctCol[1]+'">'+x.acct+'</span><span class="tf-pill" style="background:#f0ecff;color:#4a3fb8">'+tfStyleOf(x.vtype)+'</span>';
+  var watch=x.link?'<a class="tf-watch" href="'+esc(x.link)+'" target="_blank" rel="noopener">Watch winning '+String.fromCharCode(8599)+'</a>':'';
+  var actions;
+  if(x.decision==='yes'){
+    actions='<span class="tf-pill" style="background:#e7f7ee;color:#0f6e56"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;vertical-align:-2px"><use href="#i-check"></use></svg> Ordering</span><button class="btn ghost sm" onclick="sampleDecide(\''+x.pid+'\',\'\')">Undo</button>';
+  } else {
+    actions='<button class="btn sm" onclick="sampleDecide(\''+x.pid+'\',\'yes\')">Yes, order</button><button class="btn ghost sm" onclick="sampleDecide(\''+x.pid+'\',\'no\')">No</button>';
+  }
+  return '<div class="card tf-card tf-card-sample'+(x.decision==='yes'?' tf-card-yes':'')+'"><div class="tf-prodname">'+esc(x.pname||'(product)')+'</div>'
+    +'<div class="tf-meta">'+why+'</div><div class="tf-meta">'+tags+'</div>'
+    +(watch?'<div class="tf-foot">'+watch+'</div>':'')+'<div class="tf-actions">'+actions+'</div></div>';
+}
+async function sampleDecide(pid,decision){
+  if(!decision){ delete tfSamplePicks[pid]; renderToFilm(); try{ await sb.from('sample_picks').delete().eq('product_uid',pid).eq('day',tfToday()); }catch(e){} return; }
+  tfSamplePicks[pid]=decision; renderToFilm();
+  try{ await sb.from('sample_picks').upsert({product_uid:pid,day:tfToday(),decision:decision,created_at:new Date().toISOString()},{onConflict:'product_uid,day'}); }catch(e){}
+}
+async function sampleResetNo(){
+  var ids=Object.keys(tfSamplePicks).filter(function(k){return tfSamplePicks[k]==='no';});
+  ids.forEach(function(k){ delete tfSamplePicks[k]; }); renderToFilm();
+  try{ await sb.from('sample_picks').delete().eq('day',tfToday()).eq('decision','no'); }catch(e){}
 }
 function tfSection(title,badge,list,mode,emptyMsg,opts){
   opts=opts||{};
@@ -1228,23 +1314,15 @@ function tfCard(x,mode){
   var perf='<span class="tf-badge">'+tfFmt(x.views)+' views</span>'+(rec?'<span class="tf-badge">'+rec+'</span>':'')+(vel?'<span class="tf-badge" style="background:#fff6e9;border-color:#f4d8a8;color:#8a5b00">'+vel+'</span>':'');
   var tags='<span class="tf-pill" style="background:'+acctCol[0]+';color:'+acctCol[1]+'">'+x.acct+'</span><span class="tf-pill" style="background:#f0ecff;color:#4a3fb8">'+tfStyleOf(x.vtype)+'</span>';
   var watch=x.link?'<a class="tf-watch" href="'+esc(x.link)+'" target="_blank" rel="noopener">Watch winning '+String.fromCharCode(8599)+'</a>':'';
-  var bottom='';
-  if(mode==='sample'){
-    var p=tfProduct(x.pid); var plink=(p&&(p.source_link||p.listing_url))||x.link;
-    var tl=plink?'<a class="btn sm tf-btn" style="text-decoration:none" href="'+esc(plink)+'" target="_blank" rel="noopener"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-play"></use></svg> Open in TikTok</a>':'';
-    bottom='<div class="tf-actions">'+tl+'<button class="btn sm tf-btn" onclick="tfMarkOwned(\''+x.pid+'\')">Mark owned</button></div>';
-  } else {
-    var c=tfTicks[x.key]||0; var boxes='<div class="tf-checks">';
-    for(var i=1;i<=3;i++){ boxes+='<button class="tf-box'+(i<=c?' on':'')+'" onclick="tfSetTick(\''+tfJs(x.key)+'\','+i+',\''+x.pid+'\',\''+x.acct+'\',\''+tfJs(x.angle)+'\')">'+(i<=c?'<svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"></use></svg>':i)+'</button>'; }
-    boxes+='<span class="h-sub" style="font-size:12px;margin-left:2px">filmed '+c+'/3</span></div>';
-    bottom=boxes;
-  }
-  return '<div class="card tf-card'+(mode==='sample'?' tf-card-sample':'')+'">'
+  var c=tfTicks[x.key]||0; var boxes='<div class="tf-checks">';
+  for(var i=1;i<=TF_MAX;i++){ boxes+='<button class="tf-box'+(i<=c?' on':'')+'" onclick="tfSetTick(\''+tfJs(x.key)+'\','+i+',\''+x.pid+'\',\''+x.acct+'\',\''+tfJs(x.angle)+'\')">'+(i<=c?'<svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"></use></svg>':i)+'</button>'; }
+  boxes+='<span class="h-sub" style="font-size:12px;margin-left:2px">filmed '+c+'/'+TF_MAX+'</span></div>';
+  return '<div class="card tf-card">'
     +'<div class="tf-prodname">'+esc(x.pname||'(product)')+'</div>'
     +'<div class="tf-meta">'+perf+'</div>'
     +'<div class="tf-meta">'+tags+'</div>'
     +(watch?'<div class="tf-foot">'+watch+'</div>':'')
-    +bottom
+    +boxes
     +'</div>';
 }
 async function tfSetTick(key,n,pid,acct,angle){
@@ -1318,11 +1396,11 @@ async function addProductSave(){
 // ---------- PRIORITY (kanban) ----------
 async function loadPriorityView(){ await loadProducts(); renderPriority(); }
 function renderPriority(){
-  var all=state.products||[];
+  var all=(state.products||[]).filter(function(p){return p.owned;});  // owned products only
   var notP=all.filter(function(p){return !p.priority;}), yesP=all.filter(function(p){return p.priority;});
   var nc=document.getElementById('priNotCnt'); if(nc)nc.textContent=notP.length;
   var yc=document.getElementById('priCnt'); if(yc)yc.textContent=yesP.length;
-  var nl=document.getElementById('priNotList'); if(nl)nl.innerHTML=notP.length?notP.map(function(p){return priItem(p,0);}).join(''):'<div class="h-sub">All products prioritised.</div>';
+  var nl=document.getElementById('priNotList'); if(nl)nl.innerHTML=notP.length?notP.map(function(p){return priItem(p,0);}).join(''):'<div class="h-sub">No owned products yet. Mark products owned to prioritise them.</div>';
   var yl=document.getElementById('priList'); if(yl)yl.innerHTML=yesP.length?yesP.map(function(p){return priItem(p,1);}).join(''):'<div class="h-sub">Drag products here to prioritise.</div>';
   priBindDrag();
 }
