@@ -1157,7 +1157,7 @@ function tfPerDay(views,days){ if(!views||days==null)return ''; return '~'+tfFmt
 function tfTimeMax(){ return ({'7d':7,'30d':30})[state.tfTime]||999999; }
 function tfIdeaKey(pid,angle){ return pid+'|'+angle.slice(0,30).toLowerCase(); }
 function tfJs(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/[\r\n]+/g,' '); }
-var TF_WEEK_CAP=5, SAMPLE_LIMIT=10, SAMPLE_RECENCY_DAYS=10;
+var TF_WEEK_CAP=5, TF_DAY_CAP=2, SAMPLE_LIMIT=10, SAMPLE_RECENCY_DAYS=10;
 var TF_QUOTA={}; TF_QUOTA[TF_ACCT_LINACRE]=25; TF_QUOTA[TF_ACCT_YAS]=10;
 var tfTicks={}, tfTickRows=[], tfWeek={}, tfSamplePicks={};
 function tfLocalDay(iso){ if(!iso)return null; var d=new Date(iso); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
@@ -1228,9 +1228,9 @@ function tfPlan(acct){
   elig=fresh.concat(rest);
   var targets={}, total=0;
   elig.forEach(function(x){ targets[x.key]=x.today; total+=x.today; });
-  for(var cap=1; cap<=TF_WEEK_CAP && total<quota; cap++){
+  for(var cap=1; cap<=TF_DAY_CAP && total<quota; cap++){   // never more than TF_DAY_CAP of one video in a day
     for(var i=0;i<elig.length && total<quota;i++){
-      var x=elig[i], lim=Math.min(cap, x.maxToday);
+      var x=elig[i], lim=Math.min(cap, TF_DAY_CAP, x.maxToday);
       if(targets[x.key]<lim){ targets[x.key]++; total++; }
     }
   }
@@ -1266,7 +1266,11 @@ function renderToFilm(){
   if(pf) planned=planned.filter(function(x){return (x.pname||'').toLowerCase().indexOf(pf)>=0;});
   var todo=planned.filter(function(x){return (tfTicks[x.key]||0)<x.target;});
   var done=planned.filter(function(x){return (tfTicks[x.key]||0)>=x.target;});
-  h+=tfSection('To film today','plan '+String.fromCharCode(183)+' '+todo.length, todo,'owned','Nothing planned -- mark more products owned, or every owned video has hit its weekly cap.',{accent:'#0f9d58', first:true, sub:'Today&#39;s plan to hit your quota. Each video is spread across the week (max '+TF_WEEK_CAP+'/week) so you film something fresh each day.'});
+  var planBy={}; planBy[TF_ACCT_LINACRE]=0; planBy[TF_ACCT_YAS]=0;
+  planned.forEach(function(x){ planBy[x.acct]=(planBy[x.acct]||0)+x.target; });
+  var subTxt='Daily plan -- each video is spread across the week (max '+TF_WEEK_CAP+'/week, '+TF_DAY_CAP+'/day). Planned today: LBL '+(planBy[TF_ACCT_LINACRE]||0)+'/25, SWY '+(planBy[TF_ACCT_YAS]||0)+'/10.';
+  if((planBy[TF_ACCT_LINACRE]||0)<25 || (planBy[TF_ACCT_YAS]||0)<10) subTxt+=' Short of quota -- own more products (or wait for today&#39;s scrape) to fill it.';
+  h+=tfSection('To film today','plan '+String.fromCharCode(183)+' '+todo.length, todo,'owned','Nothing planned -- mark more products owned, or every owned video has hit its weekly cap.',{accent:'#0f9d58', first:true, sub:subTxt});
   if(done.length) h+=tfSection('Done for the day','done '+String.fromCharCode(183)+' '+done.length, done,'done','',{accent:'#9aa1b2'});
   h+=tfSamplesSection();
   card.innerHTML=h;
