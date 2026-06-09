@@ -1157,8 +1157,9 @@ function tfPerDay(views,days){ if(!views||days==null)return ''; return '~'+tfFmt
 function tfTimeMax(){ return ({'7d':7,'30d':30})[state.tfTime]||999999; }
 function tfIdeaKey(pid,angle){ return pid+'|'+angle.slice(0,30).toLowerCase(); }
 function tfJs(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/[\r\n]+/g,' '); }
-var TF_MAX=5, SAMPLE_LIMIT=10, SAMPLE_RECENCY_DAYS=10;
-var tfTicks={}, tfTickRows=[], tfSamplePicks={};
+var TF_WEEK_CAP=5, SAMPLE_LIMIT=10, SAMPLE_RECENCY_DAYS=10;
+var TF_QUOTA={}; TF_QUOTA[TF_ACCT_LINACRE]=25; TF_QUOTA[TF_ACCT_YAS]=10;
+var tfTicks={}, tfTickRows=[], tfWeek={}, tfSamplePicks={};
 function tfLocalDay(iso){ if(!iso)return null; var d=new Date(iso); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
 function tfActiveDay(){ if(!state.tfDay)state.tfDay=tfToday(); return state.tfDay; }
 function tfIsToday(){ return tfActiveDay()===tfToday(); }
@@ -1167,6 +1168,10 @@ function tfShiftDay(d){ var dt=new Date(tfActiveDay()+'T00:00:00'); dt.setDate(d
 async function loadTicks(){
   try{ var r=await sb.from('film_ticks').select('idea_key,count,product_uid,account,angle').eq('day',tfActiveDay()); tfTickRows=r.data||[]; tfTicks={}; tfTickRows.forEach(function(t){tfTicks[t.idea_key]=t.count||0;}); }catch(e){ tfTicks={}; tfTickRows=[]; }
   try{ var sp=await sb.from('sample_picks').select('product_uid,decision').eq('day',tfToday()); tfSamplePicks={}; (sp.data||[]).forEach(function(p){tfSamplePicks[p.product_uid]=p.decision;}); }catch(e){ tfSamplePicks={}; }
+  // last 7 days of ticks per idea -> enforce the weekly per-video cap + spread
+  try{ var ws=new Date(Date.now()-6*86400000-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+    var w=await sb.from('film_ticks').select('idea_key,count').gte('day',ws).lte('day',tfToday());
+    tfWeek={}; (w.data||[]).forEach(function(t){ tfWeek[t.idea_key]=(tfWeek[t.idea_key]||0)+(t.count||0); }); }catch(e){ tfWeek={}; }
 }
 // One card per PRODUCT + ACCOUNT. Each card's 3 checkboxes = 3 videos to film.
 // The representative (winning) video = highest views for that product+account.
@@ -1193,6 +1198,44 @@ function tfIdeas(){
   out.sort(function(a,b){return (b.views-a.views)||(b.gmv-a.gmv);});
   return out;
 }
+// owned ideas for one account (ignores the view filters; planning is global)
+function tfOwnedIdeas(acct){
+  var groups={};
+  (state.results||[]).forEach(function(r){
+    if(!r.product_uid || tfAcctOf(r.video_type)!==acct) return;
+    var p=tfProduct(r.product_uid); if(!(p&&p.owned)) return;
+    var views=parseNum(r.views)||0, gmv=parseNum(r.creator_gmv)||0;
+    var ovs=(r.raw&&Array.isArray(r.raw.textOverlays))?r.raw.textOverlays:(r.text_overlays?[r.text_overlays]:[]);
+    var angle=String((ovs.find(function(x){return String(x).trim();}))||r.caption||'').replace(/\s+/g,' ').trim();
+    if(angle.length>90) angle=angle.slice(0,90)+'...';
+    var key=r.product_uid+'|'+acct, fresh=(tfLocalDay(r.last_scraped_at)===tfToday())?1:0, g=groups[key];
+    if(!g){ groups[key]={pid:r.product_uid,vtype:r.video_type,acct:acct,views:views,gmv:gmv,angle:angle,link:r.tiktok_url,days:tfPostedDays(r.posted_date),key:key,pname:(p?p.name:''),fresh:fresh}; }
+    else { if(fresh)g.fresh=1; if(views>g.views){ g.views=views;g.gmv=gmv;g.angle=angle;g.link=r.tiktok_url;g.days=tfPostedDays(r.posted_date);g.vtype=r.video_type; } }
+  });
+  return Object.keys(groups).map(function(k){return groups[k];});
+}
+// Build TODAY's plan for an account: assign each video a small daily target so the
+// account quota is met, while no video exceeds 5 films/week (spread across days).
+// Fresh (scraped-today) winners are prioritised; the rest rotate daily for variety.
+function tfPlan(acct){
+  var quota=TF_QUOTA[acct]||0;
+  var ideas=tfOwnedIdeas(acct);
+  ideas.forEach(function(x){ x.today=tfTicks[x.key]||0; x.weekOther=Math.max(0,(tfWeek[x.key]||0)-x.today); x.maxToday=Math.max(0,TF_WEEK_CAP-x.weekOther); });
+  var elig=ideas.filter(function(x){return x.maxToday>0;});
+  elig.sort(function(a,b){ return (b.fresh-a.fresh) || (a.weekOther-b.weekOther) || (b.views-a.views); });
+  var fresh=elig.filter(function(x){return x.fresh;}), rest=elig.filter(function(x){return !x.fresh;});
+  if(rest.length){ var off=Math.floor(Date.now()/86400000)%rest.length; rest=rest.slice(off).concat(rest.slice(0,off)); }
+  elig=fresh.concat(rest);
+  var targets={}, total=0;
+  elig.forEach(function(x){ targets[x.key]=x.today; total+=x.today; });
+  for(var cap=1; cap<=TF_WEEK_CAP && total<quota; cap++){
+    for(var i=0;i<elig.length && total<quota;i++){
+      var x=elig[i], lim=Math.min(cap, x.maxToday);
+      if(targets[x.key]<lim){ targets[x.key]++; total++; }
+    }
+  }
+  return elig.filter(function(x){return targets[x.key]>0;}).map(function(x){ x.target=targets[x.key]; return x; });
+}
 function tfFilmed(acct){ var s=0; Object.keys(tfTicks).forEach(function(k){ if(k.substring(k.indexOf('|')+1)===acct) s+=(tfTicks[k]||0); }); return s; }
 function tfFilmedTotal(){ var s=0; Object.keys(tfTicks).forEach(function(k){ s+=(tfTicks[k]||0); }); return s; }
 function setFilmedMetric(){ var el=document.getElementById('statFilmed'); if(el) el.textContent=tfFilmedTotal(); }
@@ -1217,11 +1260,13 @@ function renderToFilm(){
   var popts='<option value="">All products</option>'+(state.products||[]).slice().sort(function(a,b){return (a.name||'').localeCompare(b.name||'');}).map(function(p){return '<option value="'+esc(p.name)+'"'+(((state.tfProd||'')===p.name)?' selected':'')+'>'+esc(p.name)+'</option>';}).join('');
   h+='<div class="tf-filters" style="margin-top:12px">'+seg([['all','All'],[TF_ACCT_LINACRE,'LBL'],[TF_ACCT_YAS,'SWY']])
     +'<select class="tf-prodfilter" onchange="setTfProd(this.value)">'+popts+'</select></div>';
-  var ideas=tfIdeas();
-  var ownedAll=ideas.filter(function(x){var p=tfProduct(x.pid);return p&&p.owned;});
-  var todo=ownedAll.filter(function(x){return (tfTicks[x.key]||0)<TF_MAX;});
-  var done=ownedAll.filter(function(x){return (tfTicks[x.key]||0)>=TF_MAX;});
-  h+=tfSection('What you can film','owned '+String.fromCharCode(183)+' '+todo.length, todo,'owned','No owned products match. Mark products owned to fill this.',{accent:'#0f9d58', first:true});
+  var accts=(state.tfAcct==='all')?[TF_ACCT_LINACRE,TF_ACCT_YAS]:[state.tfAcct];
+  var planned=[]; accts.forEach(function(a){ planned=planned.concat(tfPlan(a)); });
+  var pf=(state.tfProd||'').toLowerCase().trim();
+  if(pf) planned=planned.filter(function(x){return (x.pname||'').toLowerCase().indexOf(pf)>=0;});
+  var todo=planned.filter(function(x){return (tfTicks[x.key]||0)<x.target;});
+  var done=planned.filter(function(x){return (tfTicks[x.key]||0)>=x.target;});
+  h+=tfSection('To film today','plan '+String.fromCharCode(183)+' '+todo.length, todo,'owned','Nothing planned -- mark more products owned, or every owned video has hit its weekly cap.',{accent:'#0f9d58', first:true, sub:'Today&#39;s plan to hit your quota. Each video is spread across the week (max '+TF_WEEK_CAP+'/week) so you film something fresh each day.'});
   if(done.length) h+=tfSection('Done for the day','done '+String.fromCharCode(183)+' '+done.length, done,'done','',{accent:'#9aa1b2'});
   h+=tfSamplesSection();
   card.innerHTML=h;
@@ -1316,9 +1361,10 @@ function tfCard(x,mode){
   var perf='<span class="tf-badge">'+tfFmt(x.views)+' views</span>'+(rec?'<span class="tf-badge">'+rec+'</span>':'')+(vel?'<span class="tf-badge" style="background:#fff6e9;border-color:#f4d8a8;color:#8a5b00">'+vel+'</span>':'');
   var tags='<span class="tf-pill" style="background:'+acctCol[0]+';color:'+acctCol[1]+'">'+x.acct+'</span><span class="tf-pill" style="background:#f0ecff;color:#4a3fb8">'+tfStyleOf(x.vtype)+'</span>';
   var watch=x.link?'<a class="tf-watch" href="'+esc(x.link)+'" target="_blank" rel="noopener">Watch winning '+String.fromCharCode(8599)+'</a>':'';
-  var c=tfTicks[x.key]||0; var boxes='<div class="tf-checks">';
-  for(var i=1;i<=TF_MAX;i++){ boxes+='<button class="tf-box'+(i<=c?' on':'')+'" onclick="tfSetTick(\''+tfJs(x.key)+'\','+i+',\''+x.pid+'\',\''+x.acct+'\',\''+tfJs(x.angle)+'\')">'+(i<=c?'<svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"></use></svg>':i)+'</button>'; }
-  boxes+='<span class="h-sub" style="font-size:12px;margin-left:2px">filmed '+c+'/'+TF_MAX+'</span></div>';
+  var c=tfTicks[x.key]||0; var tgt=x.target||1; var wk=tfWeek[x.key]||0;
+  var boxes='<div class="tf-checks">';
+  for(var i=1;i<=tgt;i++){ boxes+='<button class="tf-box'+(i<=c?' on':'')+'" onclick="tfSetTick(\''+tfJs(x.key)+'\','+i+',\''+x.pid+'\',\''+x.acct+'\',\''+tfJs(x.angle)+'\')">'+(i<=c?'<svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"></use></svg>':i)+'</button>'; }
+  boxes+='<span class="h-sub" style="font-size:12px;margin-left:2px">today '+c+'/'+tgt+(wk?(' '+String.fromCharCode(183)+' '+wk+'/'+TF_WEEK_CAP+' this week'):'')+'</span></div>';
   return '<div class="card tf-card">'
     +'<div class="tf-prodname">'+esc(x.pname||'(product)')+'</div>'
     +'<div class="tf-meta">'+perf+'</div>'
@@ -1328,7 +1374,7 @@ function tfCard(x,mode){
     +'</div>';
 }
 async function tfSetTick(key,n,pid,acct,angle){
-  var c=tfTicks[key]||0; c=(c===n)?n-1:n; tfTicks[key]=c; renderToFilm();
+  var prev=tfTicks[key]||0; var c=(prev===n)?n-1:n; tfTicks[key]=c; tfWeek[key]=Math.max(0,(tfWeek[key]||0)+(c-prev)); renderToFilm();
   try{ await sb.from('film_ticks').upsert({idea_key:key,day:tfToday(),count:c,product_uid:pid,account:acct,angle:String(angle||'').slice(0,120),updated_at:new Date().toISOString()},{onConflict:'idea_key,day'}); }catch(e){}
 }
 async function tfMarkOwned(pid){
