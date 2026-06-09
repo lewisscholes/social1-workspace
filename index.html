@@ -1164,7 +1164,7 @@ function tfLocalDay(iso){ if(!iso)return null; var d=new Date(iso); return new D
 function tfActiveDay(){ if(!state.tfDay)state.tfDay=tfToday(); return state.tfDay; }
 function tfIsToday(){ return tfActiveDay()===tfToday(); }
 function tfDayLabel(){ var t=tfToday(); var y=new Date(Date.now()-86400000-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10); if(tfActiveDay()===t)return 'Today'; if(tfActiveDay()===y)return 'Yesterday'; return new Date(tfActiveDay()+'T00:00:00').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'}); }
-function tfShiftDay(d){ var dt=new Date(tfActiveDay()+'T00:00:00'); dt.setDate(dt.getDate()+d); var nd=dt.toISOString().slice(0,10); if(nd>tfToday())return; state.tfDay=nd; loadTicks().then(renderToFilm); }
+function tfShiftDay(d){ var p=tfActiveDay().split('-'); var dt=new Date(+p[0], (+p[1])-1, +p[2]); dt.setDate(dt.getDate()+d); var nd=dt.getFullYear()+'-'+('0'+(dt.getMonth()+1)).slice(-2)+'-'+('0'+dt.getDate()).slice(-2); if(nd>tfToday())return; state.tfDay=nd; loadTicks().then(renderToFilm); }
 async function loadTicks(){
   try{ var r=await sb.from('film_ticks').select('idea_key,count,product_uid,account,angle').eq('day',tfActiveDay()); tfTickRows=r.data||[]; tfTicks={}; tfTickRows.forEach(function(t){tfTicks[t.idea_key]=t.count||0;}); }catch(e){ tfTicks={}; tfTickRows=[]; }
   try{ var sp=await sb.from('sample_picks').select('product_uid,decision').eq('day',tfToday()); tfSamplePicks={}; (sp.data||[]).forEach(function(p){tfSamplePicks[p.product_uid]=p.decision;}); }catch(e){ tfSamplePicks={}; }
