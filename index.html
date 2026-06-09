@@ -1291,8 +1291,29 @@ async function toggleOwned(id){ const p=tfProduct(id); const v=!(p&&p.owned); co
 async function togglePriority(id){ const p=tfProduct(id); const v=!(p&&p.priority); const {error}=await sb.from('products').update({priority:v}).eq('id',id); if(error){toast('Failed','err');return;} if(p)p.priority=v; toast(v?'Priority on':'Priority off','ok'); renderProductsView(); }
 function setProductLinkModal(id){ const p=tfProduct(id); if(!p)return; showModal('<h3>Product link</h3><div class="h-sub" style="margin:-2px 0 10px">Paste the TikTok product or video link (best for the in-app open button).</div><input id="pl_in" placeholder="https://www.tiktok.com/..." value="'+esc(p.source_link||'')+'" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:9px"><div class="actions"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveProductLink(\''+id+'\')">Save</button></div>'); }
 async function saveProductLink(id){ const v=val('pl_in').trim(); const {error}=await sb.from('products').update({source_link:v||null}).eq('id',id); if(error){toast('Failed','err');return;} const p=tfProduct(id); if(p)p.source_link=v; closeModal(); toast('Saved','ok'); renderProductsView(); }
-function addProductModal(){ showModal('<h3>Add product</h3><label>Name</label><input id="ap_name" placeholder="e.g. Inkey List Body Stick" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:9px"><label style="margin-top:10px;display:block">TikTok link (optional)</label><input id="ap_link" placeholder="https://www.tiktok.com/..." style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:9px"><label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:14px"><input type="checkbox" id="ap_owned" checked> We own this product</label><div class="actions"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" onclick="addProductSave()">Add</button></div>'); }
-async function addProductSave(){ const name=val('ap_name').trim(); if(!name){toast('Enter a name','err');return;} const link=val('ap_link').trim()||null; const owned=document.getElementById('ap_owned').checked; const {data,error}=await sb.from('products').insert({name,source_link:link,owned}).select('*').single(); if(error){toast('Failed: '+error.message,'err');return;} (state.products||(state.products=[])).push(data); closeModal(); toast('Product added','ok'); renderProductsView(); }
+function addProductModal(){ showModal('<h3>Add product</h3><label>Name</label><input id="ap_name" placeholder="e.g. Inkey List Body Stick" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:9px"><label style="margin-top:10px;display:block">Social One product link <span style="color:var(--muted);font-weight:400">(recommended)</span></label><input id="ap_link" placeholder="https://www.social1.ai/products/..." style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:9px"><div class="h-sub" style="font-size:12px;margin-top:5px">Pasting the Social One product link lets us match this to the scraped data and pull its videos automatically.</div><label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:14px"><input type="checkbox" id="ap_owned" checked> We own this product</label><div class="actions"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" onclick="addProductSave()">Add</button></div>'); }
+async function addProductSave(){
+  var name=val('ap_name').trim(); var link=val('ap_link').trim();
+  if(!name && !link){ toast('Enter a name or a Social One link','err'); return; }
+  var sid=(link.match(/products\/(\d{8,})/)||[])[1]||null;
+  var owned=document.getElementById('ap_owned').checked;
+  if(sid){
+    var ex=(state.products||[]).find(function(p){return p.details&&String(p.details.social1_id)===sid;});
+    if(!ex){ var q=await sb.from('products').select('*').eq('details->>social1_id',sid).limit(1); ex=q.data&&q.data[0]; }
+    if(ex){
+      await sb.from('products').update({owned:owned, source_link:link||ex.source_link, name:name||ex.name}).eq('id',ex.id);
+      ex.owned=owned; if(name)ex.name=name; if(link)ex.source_link=link;
+      if(!(state.products||[]).some(function(p){return p.id===ex.id;})) (state.products||(state.products=[])).push(ex);
+      closeModal(); toast('Linked to the Social One product','ok'); renderProductsView(); return;
+    }
+  }
+  var row={name:name||link, source_link:link||null, owned:owned};
+  if(sid) row.details={social1_id:sid};
+  var {data,error}=await sb.from('products').insert(row).select('*').single();
+  if(error){toast('Failed: '+error.message,'err');return;}
+  (state.products||(state.products=[])).push(data);
+  closeModal(); toast(sid?'Added -- will match Social One on next scrape':'Product added','ok'); renderProductsView();
+}
 
 // ---------- PRIORITY (kanban) ----------
 async function loadPriorityView(){ await loadProducts(); renderPriority(); }
