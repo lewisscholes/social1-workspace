@@ -3218,14 +3218,23 @@ async function mteSave(){
 }
 
 // ---------- SCHEDULER (right swipe) + BACK TO UPLOADS (left swipe) ----------
-function openScheduler(id){
+async function openScheduler(id){
   const d=new Date(Date.now()+60*60*1000); d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
   const def=d.toISOString().slice(0,16);
-  showModal('<h3>Schedule for posting</h3>'
-    +'<div class="h-sub" style="color:var(--muted);font-size:13px;margin:-4px 0 14px">Pick when this video should post to TikTok.</div>'
-    +'<label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">Date and time</label>'
-    +'<input id="schedWhen" type="datetime-local" value="'+def+'" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;background:#fff">'
-    +'<div class="actions" style="display:flex;gap:8px;margin-top:16px"><button class="btn ghost" style="flex:1;justify-content:center" onclick="closeModal()">Cancel</button><button class="btn" style="flex:1;justify-content:center" onclick="confirmSchedule(\''+id+'\')">Schedule</button></div>'
+  var accs=[]; try{ const r=await sb.from('postpeer_accounts').select('account_tag,handle').not('account_id','is',null); accs=r.data||[]; }catch(e){}
+  var v=swVids.find(function(x){return x.id===id;});
+  var preferred=(v&&v.account)||'';
+  var accOpts = accs.length
+    ? accs.map(function(a){return '<option value="'+esc(a.account_tag)+'"'+(a.account_tag===preferred?' selected':'')+'>'+esc(a.account_tag)+'</option>';}).join('')
+    : '<option value="">No TikTok account connected</option>';
+  var inp='width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;background:#fff;box-sizing:border-box';
+  var lbl='font-size:13px;font-weight:600;display:block;margin:12px 0 6px';
+  showModal('<h3>Schedule to TikTok</h3>'
+    +'<div class="h-sub" style="font-size:13px;margin:-4px 0 8px">Sends a <b>draft to the TikTok inbox</b> so you can add the product and post. The date is your planned posting day.</div>'
+    +'<label style="'+lbl+';margin-top:0">Account</label><select id="schedAcct" style="'+inp+'">'+accOpts+'</select>'
+    +'<label style="'+lbl+'">Planned date and time</label><input id="schedWhen" type="datetime-local" value="'+def+'" style="'+inp+'">'
+    +'<label style="'+lbl+'">Caption (optional)</label><textarea id="schedCap" rows="2" placeholder="Add a caption..." style="'+inp+';resize:vertical"></textarea>'
+    +'<div class="actions" style="display:flex;gap:8px;margin-top:16px"><button class="btn ghost" style="flex:1;justify-content:center" onclick="closeModal()">Cancel</button><button class="btn" style="flex:1;justify-content:center" onclick="confirmSchedule(\''+id+'\')">Send draft</button></div>'
     +'<button class="btn ghost" style="width:100%;justify-content:center;margin-top:8px" onclick="swDownload(\''+id+'\')">&#8595; Download edited video</button>');
 }
 async function swResolveEdited(id){
@@ -3252,10 +3261,27 @@ async function swDownload(id){
 }
 async function confirmSchedule(id){
   const when=val('schedWhen'); if(!when){ toast('Pick a date and time','err'); return; }
+  const acct=val('schedAcct'); if(!acct){ toast('Connect a TikTok account first (Content Schedule settings)','err'); return; }
+  const cap=val('schedCap')||'';
   const iso=new Date(when).toISOString();
-  const {error}=await sb.from('videos').update({scheduled_at:iso,status:'scheduled'}).eq('id',id);
-  if(error){ toast('Failed: '+error.message,'err'); return; }
-  closeModal(); toast('Scheduled for '+new Date(iso).toLocaleString(),'ok');
+  // resolve the rendered edit + a temporary signed URL PostPeer can fetch
+  const edited=await swResolveEdited(id);
+  const v=swVids.find(function(x){return x.id===id;});
+  const path=(edited&&edited.storage_path)||(v&&v.storage_path);
+  if(!path){ toast('No rendered video yet -- let the edit finish first','err'); return; }
+  let signed=null; try{ const s=await sb.storage.from(BUCKET).createSignedUrl(path,60*60*24); signed=s.data&&s.data.signedUrl; }catch(e){}
+  if(!signed){ toast('Could not get the video URL','err'); return; }
+  toast('Sending draft to TikTok...','ok');
+  const tz=(Intl.DateTimeFormat().resolvedOptions().timeZone)||'Europe/London';
+  let jr=null;
+  try{
+    const r=await fetch('https://vcrforlyuhapvkewsogq.supabase.co/functions/v1/postpeer',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'schedule', video_id:id, videoUrl:signed, account_tag:acct, caption:cap, draft:true})});
+    jr=await r.json();
+  }catch(e){ toast('Schedule failed: '+e,'err'); return; }
+  if(!(jr&&jr.ok)){ const m=(jr&&jr.body&&(jr.body.error||(jr.body.platforms&&jr.body.platforms[0]&&jr.body.platforms[0].error)))||'see PostPeer'; toast('TikTok draft failed: '+String(m).slice(0,90),'err'); return; }
+  try{ await sb.from('videos').update({scheduled_at:iso, posted_at:new Date().toISOString(), posted_by:displayName(state.user), status:'posted'}).eq('id',id); }catch(e){}
+  closeModal(); toast('Draft sent to TikTok inbox -- moved to Posted','ok');
   const card=document.querySelector('.sw-card.is-top');
   if(card&&card.dataset.id===id){ card.classList.add('fly-right'); setTimeout(()=>swAdvance(),420); } else { swRender(); }
 }
