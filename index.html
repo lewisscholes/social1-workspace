@@ -2276,7 +2276,7 @@ function swInitDrag(){
     document.removeEventListener('touchend',onUp);
     if(!swDragging)return; swDragging=false; card.classList.remove('dragging');
     const threshold=90;
-    if(swCurX>threshold){ swFly('right'); }
+    if(swCurX>threshold){ swSchedule(); }       // right -> open schedule + account picker
     else if(swCurX<-threshold){swFly('left');}
     else{card.classList.add('snap-back');card.style.transform='';setTimeout(()=>card.classList.remove('snap-back'),400);}
   };
@@ -2293,6 +2293,13 @@ function swInitDrag(){
   card.addEventListener('touchstart',onDown,{passive:true});
 }
 
+function swSchedule(){
+  // Right swipe: snap the card back to centre and open the schedule sheet (date + account).
+  const card=document.querySelector('.sw-card.is-top'); if(!card) return;
+  const id=card.dataset.id;
+  card.classList.add('snap-back'); card.style.transform=''; setTimeout(()=>card.classList.remove('snap-back'),400);
+  openScheduler(id);
+}
 function swFly(dir){
   const card=document.querySelector('.sw-card.is-top'); if(!card) return;
   card.classList.add('fly-'+dir);
