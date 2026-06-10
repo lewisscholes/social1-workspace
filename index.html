@@ -105,6 +105,8 @@
   .tf-secth-sub{color:var(--muted);font-size:12px;margin:0 0 11px}
   .tf-card-sample{background:#fff;border-color:#ecdfbe}
   .tf-card-yes{border-color:#bfe6cf;box-shadow:0 0 0 2px #e7f7ee inset}
+  .schp{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;padding:9px 15px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+  .schp.active{background:var(--blue);border-color:var(--blue);color:#fff}
   .tf-goals{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px}
   .tf-card{display:block;padding:13px 14px;margin-bottom:10px;border:1px solid var(--line);border-radius:12px}
   .tf-prodname{font-weight:700;font-size:15px}
@@ -2330,7 +2332,7 @@ async function swDelete(){
   setTimeout(()=>swAdvance(),420);
 }
 
-function swApprove(){ const card=document.querySelector('.sw-card.is-top'); if(card) swFly('right'); }
+function swApprove(){ swSchedule(); }   // green check + right swipe both open the schedule sheet
 async function swApproveEdited(id){
   const {error}=await sb.from('videos').update({status:'edited'}).eq('id',id);
   if(error){ toast('Failed: '+error.message,'err'); return; }
@@ -3304,18 +3306,24 @@ async function openScheduler(id){
   var accs=[]; try{ const r=await sb.from('postpeer_accounts').select('account_tag,handle').not('account_id','is',null); accs=r.data||[]; }catch(e){}
   var v=swVids.find(function(x){return x.id===id;});
   var preferred=(v&&v.account)||'';
-  var accOpts = accs.length
-    ? accs.map(function(a){return '<option value="'+esc(a.account_tag)+'"'+(a.account_tag===preferred?' selected':'')+'>'+esc(a.account_tag)+'</option>';}).join('')
-    : '<option value="">No TikTok account connected</option>';
+  window.schedSelAcct = accs.length ? ((accs.find(function(a){return a.account_tag===preferred;})||accs[0]).account_tag) : '';
+  var pills = accs.length
+    ? '<div id="schedAcctPills" style="display:flex;flex-wrap:wrap;gap:8px">'+accs.map(function(a){return '<button type="button" class="schp'+(a.account_tag===window.schedSelAcct?' active':'')+'" data-tag="'+esc(a.account_tag)+'" onclick="schedPick(this)">'+esc(a.account_tag)+'</button>';}).join('')+'</div>'
+    : '<div class="h-sub" style="font-size:13px">No TikTok account connected. Add one in Content Schedule first.</div>';
   var inp='width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;background:#fff;box-sizing:border-box';
-  var lbl='font-size:13px;font-weight:600;display:block;margin:12px 0 6px';
+  var lbl='font-size:13px;font-weight:600;display:block;margin:14px 0 7px';
   showModal('<h3>Schedule to TikTok</h3>'
     +'<div class="h-sub" style="font-size:13px;margin:-4px 0 8px">Sends a <b>draft to the TikTok inbox</b> so you can add the product and post. The date is your planned posting day.</div>'
-    +'<label style="'+lbl+';margin-top:0">Account</label><select id="schedAcct" style="'+inp+'">'+accOpts+'</select>'
+    +'<label style="'+lbl+';margin-top:2px">Post to which account?</label>'+pills
     +'<label style="'+lbl+'">Planned date and time</label><input id="schedWhen" type="datetime-local" value="'+def+'" style="'+inp+'">'
     +'<label style="'+lbl+'">Caption (optional)</label><textarea id="schedCap" rows="2" placeholder="Add a caption..." style="'+inp+';resize:vertical"></textarea>'
     +'<div class="actions" style="display:flex;gap:8px;margin-top:16px"><button class="btn ghost" style="flex:1;justify-content:center" onclick="closeModal()">Cancel</button><button class="btn" style="flex:1;justify-content:center" onclick="confirmSchedule(\''+id+'\')">Send draft</button></div>'
     +'<button class="btn ghost" style="width:100%;justify-content:center;margin-top:8px" onclick="swDownload(\''+id+'\')">&#8595; Download edited video</button>');
+}
+function schedPick(btn){
+  window.schedSelAcct = btn.dataset.tag;
+  var wrap=document.getElementById('schedAcctPills');
+  if(wrap) [].forEach.call(wrap.children,function(b){ b.classList.toggle('active', b===btn); });
 }
 async function swResolveEdited(id){
   // Returns the worker-rendered (edited) clip for this source video if it exists, else null.
@@ -3341,7 +3349,7 @@ async function swDownload(id){
 }
 async function confirmSchedule(id){
   const when=val('schedWhen'); if(!when){ toast('Pick a date and time','err'); return; }
-  const acct=val('schedAcct'); if(!acct){ toast('Connect a TikTok account first (Content Schedule settings)','err'); return; }
+  const acct=window.schedSelAcct; if(!acct){ toast('Pick an account (add one in Content Schedule first)','err'); return; }
   const cap=val('schedCap')||'';
   const iso=new Date(when).toISOString();
   // resolve the rendered edit + a temporary signed URL PostPeer can fetch
