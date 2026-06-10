@@ -3301,24 +3301,35 @@ async function mteSave(){
 
 // ---------- SCHEDULER (right swipe) + BACK TO UPLOADS (left swipe) ----------
 async function openScheduler(id){
-  const d=new Date(Date.now()+60*60*1000); d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
-  const def=d.toISOString().slice(0,16);
   var accs=[]; try{ const r=await sb.from('postpeer_accounts').select('account_tag,handle').not('account_id','is',null); accs=r.data||[]; }catch(e){}
   var v=swVids.find(function(x){return x.id===id;});
   var preferred=(v&&v.account)||'';
+  var autoCap=tfAutoCaption(v);
   window.schedSelAcct = accs.length ? ((accs.find(function(a){return a.account_tag===preferred;})||accs[0]).account_tag) : '';
   var pills = accs.length
     ? '<div id="schedAcctPills" style="display:flex;flex-wrap:wrap;gap:8px">'+accs.map(function(a){return '<button type="button" class="schp'+(a.account_tag===window.schedSelAcct?' active':'')+'" data-tag="'+esc(a.account_tag)+'" onclick="schedPick(this)">'+esc(a.account_tag)+'</button>';}).join('')+'</div>'
     : '<div class="h-sub" style="font-size:13px">No TikTok account connected. Add one in Content Schedule first.</div>';
   var inp='width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;background:#fff;box-sizing:border-box';
   var lbl='font-size:13px;font-weight:600;display:block;margin:14px 0 7px';
-  showModal('<h3>Schedule to TikTok</h3>'
-    +'<div class="h-sub" style="font-size:13px;margin:-4px 0 8px">Sends a <b>draft to the TikTok inbox</b> so you can add the product and post. The date is your planned posting day.</div>'
+  showModal('<h3>Send to TikTok</h3>'
+    +'<div class="h-sub" style="font-size:13px;margin:-4px 0 8px">Sends a <b>draft to the TikTok inbox</b> so you can add the product and post when ready.</div>'
     +'<label style="'+lbl+';margin-top:2px">Post to which account?</label>'+pills
-    +'<label style="'+lbl+'">Planned date and time</label><input id="schedWhen" type="datetime-local" value="'+def+'" style="'+inp+'">'
-    +'<label style="'+lbl+'">Caption (optional)</label><textarea id="schedCap" rows="2" placeholder="Add a caption..." style="'+inp+';resize:vertical"></textarea>'
-    +'<div class="actions" style="display:flex;gap:8px;margin-top:16px"><button class="btn ghost" style="flex:1;justify-content:center" onclick="closeModal()">Cancel</button><button class="btn" style="flex:1;justify-content:center" onclick="confirmSchedule(\''+id+'\')">Send draft</button></div>'
+    +'<label style="'+lbl+'">Caption <span style="color:var(--muted);font-weight:400">(auto-generated, edit if you like)</span></label><textarea id="schedCap" rows="3" style="'+inp+';resize:vertical">'+esc(autoCap)+'</textarea>'
+    +'<div class="actions" style="display:flex;gap:8px;margin-top:16px"><button class="btn ghost" style="flex:1;justify-content:center" onclick="closeModal()">Cancel</button><button class="btn" style="flex:1;justify-content:center" onclick="confirmSchedule(\''+id+'\')">Send to inbox</button></div>'
     +'<button class="btn ghost" style="width:100%;justify-content:center;margin-top:8px" onclick="swDownload(\''+id+'\')">&#8595; Download edited video</button>');
+}
+// Build a caption automatically from the video's on-screen hook + product + a few hashtags.
+function tfAutoCaption(v){
+  var hook='';
+  var es=v&&v.edit_state;
+  if(es&&es.overlays&&es.overlays.length){ hook=es.overlays.map(function(o){return o&&o.text?o.text:'';}).filter(Boolean).join(' ').replace(/\s+/g,' ').trim(); }
+  if(!hook && v&&v.caption_suggested) hook=String(v.caption_suggested).replace(/\s+/g,' ').trim();
+  var p=(v&&v.product_uid)?tfProduct(v.product_uid):null;
+  var pname=p?p.name:'';
+  var line=hook||pname||'';
+  if(line.length>180) line=line.slice(0,180);
+  var tags='#tiktokshop #fyp #foryou';
+  return (line?(line+'\n\n'):'')+tags;
 }
 function schedPick(btn){
   window.schedSelAcct = btn.dataset.tag;
@@ -3348,10 +3359,8 @@ async function swDownload(id){
   if(card&&card.dataset.id===id){ card.classList.add('fly-left'); setTimeout(()=>swAdvance(),420); } else { swRender(); }
 }
 async function confirmSchedule(id){
-  const when=val('schedWhen'); if(!when){ toast('Pick a date and time','err'); return; }
   const acct=window.schedSelAcct; if(!acct){ toast('Pick an account (add one in Content Schedule first)','err'); return; }
   const cap=val('schedCap')||'';
-  const iso=new Date(when).toISOString();
   // resolve the rendered edit + a temporary signed URL PostPeer can fetch
   const edited=await swResolveEdited(id);
   const v=swVids.find(function(x){return x.id===id;});
@@ -3359,17 +3368,16 @@ async function confirmSchedule(id){
   if(!path){ toast('No rendered video yet -- let the edit finish first','err'); return; }
   let signed=null; try{ const s=await sb.storage.from(BUCKET).createSignedUrl(path,60*60*24); signed=s.data&&s.data.signedUrl; }catch(e){}
   if(!signed){ toast('Could not get the video URL','err'); return; }
-  toast('Sending draft to TikTok...','ok');
-  const tz=(Intl.DateTimeFormat().resolvedOptions().timeZone)||'Europe/London';
+  toast('Sending to TikTok inbox...','ok');
   let jr=null;
   try{
     const r=await fetch('https://vcrforlyuhapvkewsogq.supabase.co/functions/v1/postpeer',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action:'schedule', video_id:id, videoUrl:signed, account_tag:acct, caption:cap, draft:true})});
     jr=await r.json();
-  }catch(e){ toast('Schedule failed: '+e,'err'); return; }
+  }catch(e){ toast('Send failed: '+e,'err'); return; }
   if(!(jr&&jr.ok)){ const m=(jr&&jr.body&&(jr.body.error||(jr.body.platforms&&jr.body.platforms[0]&&jr.body.platforms[0].error)))||'see PostPeer'; toast('TikTok draft failed: '+String(m).slice(0,90),'err'); return; }
-  try{ await sb.from('videos').update({scheduled_at:iso, posted_at:new Date().toISOString(), posted_by:displayName(state.user), status:'posted'}).eq('id',id); }catch(e){}
-  closeModal(); toast('Draft sent to TikTok inbox -- moved to Posted','ok');
+  try{ await sb.from('videos').update({posted_at:new Date().toISOString(), posted_by:displayName(state.user), status:'posted'}).eq('id',id); }catch(e){}
+  closeModal(); toast('Sent to TikTok inbox -- moved to Posted','ok');
   const card=document.querySelector('.sw-card.is-top');
   if(card&&card.dataset.id===id){ card.classList.add('fly-right'); setTimeout(()=>swAdvance(),420); } else { swRender(); }
 }
