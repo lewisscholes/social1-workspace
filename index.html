@@ -3466,10 +3466,13 @@ function swRasterizeOverlays(W, H, overlays){
   return oc;
 }
 function swPickWebmMime(){
-  var c=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  // PostPeer/TikTok need MP4 (H.264/AAC). Modern Chrome + Safari can record MP4 directly;
+  // only fall back to webm if MP4 recording is unavailable.
+  var c=['video/mp4; codecs="avc1.42E01E, mp4a.40.2"','video/mp4','video/webm; codecs="vp9,opus"','video/webm; codecs="vp8,opus"','video/webm'];
   for(var i=0;i<c.length;i++){ try{ if(window.MediaRecorder && MediaRecorder.isTypeSupported(c[i])) return c[i]; }catch(e){} }
   return 'video/webm';
 }
+function swMimeExt(m){ return (m&&m.indexOf('mp4')>=0)?'mp4':'webm'; }
 // A single AudioContext, primed/resumed on the first user gesture, so the send-time burn can
 // route the clip's original sound into the recording silently (without it ever playing aloud).
 function swEnsureBurnAudio(){
@@ -3514,10 +3517,10 @@ function swBurnVideo(srcUrl, overlays){
           if(ac && ac.state==='running'){ var snode=ac.createMediaElementSource(v); var dst=ac.createMediaStreamDestination(); snode.connect(dst); (dst.stream.getAudioTracks()||[]).forEach(function(t){ stream.addTrack(t); }); ac=null; }
           else { ac=null; }
         }catch(e){ ac=null; }
-        var chunks=[], drawTimer=null;
-        var rec=new MediaRecorder(stream,{mimeType:swPickWebmMime(), videoBitsPerSecond:6000000});
+        var chunks=[], drawTimer=null, recMime=swPickWebmMime();
+        var rec=new MediaRecorder(stream,{mimeType:recMime, videoBitsPerSecond:6000000});
         rec.ondataavailable=function(e){ if(e.data&&e.data.size) chunks.push(e.data); };
-        rec.onstop=function(){ if(done)return; done=true; try{if(drawTimer)clearInterval(drawTimer);}catch(e){} cleanup(); resolve(new Blob(chunks,{type:'video/webm'})); };
+        rec.onstop=function(){ if(done)return; done=true; try{if(drawTimer)clearInterval(drawTimer);}catch(e){} cleanup(); resolve(new Blob(chunks,{type:(recMime.indexOf('mp4')>=0?'video/mp4':'video/webm')})); };
         // setInterval (not rAF) so frames keep flowing even if the tab loses focus during the background send.
         drawTimer=setInterval(function(){ if(done)return; try{ cx.drawImage(v,0,0,W,H); cx.drawImage(ov,0,0,W,H); }catch(e){} }, 33);
         var stopRec=function(){ try{ if(rec.state!=='inactive') rec.stop(); }catch(e){} };
@@ -3532,52 +3535,27 @@ function swBurnVideo(srcUrl, overlays){
 }
 
 async function schedSendBackground(id, acct, cap, edited, card){
-  // make sure we have the burned-in edit (card may already BE the edited render, or it may still be rendering)
+  // make sure we have the edited render (card may already BE the edited render, or it may still be rendering)
   if(!(edited&&edited.storage_path) && card && card.kind==='edited' && card.storage_path) edited=card;
   for(let i=0;i<24 && !(edited&&edited.storage_path);i++){
     await new Promise(r=>setTimeout(r,3000));
     edited=await swResolveEdited(id);
   }
   if(!(edited&&edited.storage_path)){ toast('Could not send '+acct+': the edit never finished rendering. Try again from the bank.','err'); return; }
-  // Pull the overlays that belong to this edit so we can burn the text into the pixels.
-  let overlays=[];
+  // Queue a send job. The workhorse send-worker burns the text into the pixels with ffmpeg
+  // (a real, TikTok-compatible MP4 -- browser-recorded video is rejected by TikTok) and posts
+  // the draft to the chosen account's TikTok inbox.
   try{
-    const {data:ej}=await sb.from('edit_jobs').select('options').eq('result_video_id',edited.id).limit(1);
-    if(ej&&ej.length&&ej[0].options&&ej[0].options.overlays) overlays=ej[0].options.overlays;
-    if(!overlays.length){ const {data:ej2}=await sb.from('edit_jobs').select('options').eq('video_id',id).eq('status','done').order('finished_at',{ascending:false}).limit(1); if(ej2&&ej2.length&&ej2[0].options&&ej2[0].options.overlays) overlays=ej2[0].options.overlays; }
-  }catch(e){}
-  overlays=(overlays||[]).filter(function(o){ return o && String(o.text||'').trim(); });
-  let signed=null;
-  // Sign the edited (cut, no-text) render, then burn the overlays in-browser and upload that.
-  let srcSigned=null; try{ const s=await sb.storage.from(BUCKET).createSignedUrl(edited.storage_path,60*60*6); srcSigned=s.data&&s.data.signedUrl; }catch(e){}
-  if(!srcSigned){ toast('Could not get the edited video URL','err'); return; }
-  if(overlays.length){
-    try{
-      const blob=await swBurnVideo(srcSigned, overlays);
-      if(!blob || blob.size<10000) throw new Error('empty render');
-      const burnPath='edited/burned_'+id+'_'+Date.now()+'.webm';
-      const up=await sb.storage.from(BUCKET).upload(burnPath, blob, {contentType:'video/webm', upsert:true});
-      if(up.error) throw up.error;
-      const s2=await sb.storage.from(BUCKET).createSignedUrl(burnPath,60*60*24); signed=s2.data&&s2.data.signedUrl;
-    }catch(e){
-      toast('Could not burn the caption into '+acct+': '+String(e.message||e).slice(0,80),'err'); return;
-    }
-  } else {
-    // no text overlay on this clip -- the cut render is the final
-    try{ const s=await sb.storage.from(BUCKET).createSignedUrl(edited.storage_path,60*60*24); signed=s.data&&s.data.signedUrl; }catch(e){}
-  }
-  if(!signed){ toast('Could not get the edited video URL','err'); return; }
-  let jr=null;
-  try{
-    const r=await fetch('https://vcrforlyuhapvkewsogq.supabase.co/functions/v1/postpeer',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'schedule', video_id:id, videoUrl:signed, account_tag:acct, caption:cap, draft:true})});
-    jr=await r.json();
-  }catch(e){ toast('Send failed: '+e,'err'); return; }
-  if(!(jr&&jr.ok)){ const m=(jr&&jr.body&&(jr.body.error||(jr.body.platforms&&jr.body.platforms[0]&&jr.body.platforms[0].error)))||'see PostPeer'; toast('TikTok draft failed: '+String(m).slice(0,90),'err'); return; }
-  // mark the card, the edited render, and the source clip all posted so none reappear in the deck
+    const {error}=await sb.from('send_jobs').insert({
+      video_id:edited.id, source_video_id:id, account_tag:acct, caption:cap, draft:true,
+      status:'queued', requested_by:displayName(state.user)
+    });
+    if(error) throw error;
+  }catch(e){ toast('Could not queue the send: '+String(e.message||e).slice(0,90),'err'); return; }
+  // mark the card, the edited render, and the source clip as posted so none reappear in the deck
   var ids=[id]; [edited.id, edited.source_video_id, card&&card.source_video_id].forEach(function(x){ if(x && ids.indexOf(x)<0) ids.push(x); });
   try{ await sb.from('videos').update({posted_at:new Date().toISOString(), posted_by:displayName(state.user), status:'posted'}).in('id',ids); }catch(e){}
-  toast('Sent to '+acct+' inbox (caption copied to paste)','ok');
+  toast('Queued for '+acct+' -- burning the text + sending to the TikTok inbox','ok');
 }
 async function swBackToUploads(id){
   try{ if(state.user) await sb.from('video_downloads').delete().eq('video_id',id).eq('user_id',state.user.id); }catch(e){}
