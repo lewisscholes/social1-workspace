@@ -3350,10 +3350,19 @@ function schedPick(btn){
   if(wrap) [].forEach.call(wrap.children,function(b){ b.classList.toggle('active', b===btn); });
 }
 async function swResolveEdited(id){
-  // Returns the worker-rendered (edited) clip for this source video if it exists, else null.
+  // Returns the worker-rendered (edited, text burned-in) clip for this source video.
+  // 1) direct link
   try{
-    const {data}=await sb.from('videos').select('id,storage_path,filename').eq('source_video_id',id).eq('kind','edited').order('created_at',{ascending:false}).limit(1);
+    const {data}=await sb.from('videos').select('id,storage_path,filename,source_video_id,kind').eq('source_video_id',id).eq('kind','edited').order('created_at',{ascending:false}).limit(1);
     if(data&&data.length&&data[0].storage_path) return data[0];
+  }catch(e){}
+  // 2) fallback via the render job (worker may not set source_video_id)
+  try{
+    const {data:j}=await sb.from('edit_jobs').select('result_video_id').eq('video_id',id).eq('status','done').not('result_video_id','is',null).order('finished_at',{ascending:false}).limit(1);
+    if(j&&j.length&&j[0].result_video_id){
+      const {data:ev}=await sb.from('videos').select('id,storage_path,filename,source_video_id,kind').eq('id',j[0].result_video_id).limit(1);
+      if(ev&&ev.length&&ev[0].storage_path) return ev[0];
+    }
   }catch(e){}
   return null;
 }
