@@ -3366,11 +3366,16 @@ async function swDownload(id){
 async function confirmSchedule(id){
   const acct=window.schedSelAcct; if(!acct){ toast('Pick an account (add one in Content Schedule first)','err'); return; }
   const cap=val('schedCap')||'';
-  // resolve the rendered edit + a temporary signed URL PostPeer can fetch
-  const edited=await swResolveEdited(id);
+  // ONLY the worker-rendered edit (text burned into the pixels) -- never the raw upload.
   const v=swVids.find(function(x){return x.id===id;});
-  const path=(edited&&edited.storage_path)||(v&&v.storage_path);
-  if(!path){ toast('No rendered video yet -- let the edit finish first','err'); return; }
+  let edited=await swResolveEdited(id);
+  if(!edited && v && v.kind==='edited' && v.storage_path) edited=v;   // card is already an edited render
+  if(!(edited&&edited.storage_path)){
+    let pending=false; try{ const {data}=await sb.from('edit_jobs').select('id').eq('video_id',id).in('status',['queued','rendering']).limit(1); pending=!!(data&&data.length); }catch(e){}
+    toast(pending?'Your edit is still rendering -- try again in a few seconds':'No edited (text burned-in) version yet. Edit & save this clip first, then send.','err');
+    return;
+  }
+  const path=edited.storage_path;
   let signed=null; try{ const s=await sb.storage.from(BUCKET).createSignedUrl(path,60*60*24); signed=s.data&&s.data.signedUrl; }catch(e){}
   if(!signed){ toast('Could not get the video URL','err'); return; }
   toast('Sending to TikTok inbox...','ok');
