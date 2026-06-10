@@ -3402,6 +3402,113 @@ async function confirmSchedule(id){
   // do the upload + send in the background (waits for the render if needed)
   schedSendBackground(id, acct, cap, edited, v);
 }
+// ---------------------------------------------------------------------------
+// Send-time overlay burn. The workhorse render only applies the CUTS; the text
+// overlay is burned here in the browser so the exact words the editor showed are
+// baked into the pixels of the file we hand to TikTok. Reuses the canonical
+// overlay geometry (mteOvParts math + the smooth-banner path helpers).
+// ---------------------------------------------------------------------------
+function swWrapLines(ctx, text, maxW){
+  var out=[];
+  String(text==null?'':text).split('\n').forEach(function(para){
+    var words=para.split(' '), line='';
+    for(var i=0;i<words.length;i++){
+      var trial=(line?line+' ':'')+words[i];
+      if(ctx.measureText(trial).width<=maxW || !line){ line=trial; }
+      else { out.push(line); line=words[i]; }
+    }
+    out.push(line);
+  });
+  return out;
+}
+// Draw all overlays onto an offscreen canvas (transparent background) at W x H.
+function swRasterizeOverlays(W, H, overlays){
+  var oc=document.createElement('canvas'); oc.width=W; oc.height=H;
+  var ctx=oc.getContext('2d');
+  (overlays||[]).forEach(function(o){
+    var text=String(o.text==null?'':o.text).trim(); if(!text) return;
+    var sty=o.style||(o.box?'box':(o.outline===false?'plain':'outline'));
+    var sz=(o.size||24)*(H/640);
+    var wght=(sty==='outline')?450:600;
+    var fam=(o.font==='elegance')?"Georgia,'Times New Roman',serif":((o.font==='comic')?"'Comic Sans MS','Chalkboard SE',cursive":"'TikTok Sans',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif");
+    var fst=(o.font==='retro')?'italic ':'';
+    ctx.font=fst+wght+' '+sz+"px "+fam;
+    try{ ctx.letterSpacing=(-0.01*sz)+'px'; }catch(e){}
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    var maxW=0.84*W;
+    var lines=swWrapLines(ctx, text, maxW);
+    var LH=(sty==='box')?1.18:1.2;
+    var step=sz*LH;
+    var cx=(o.x==null?50:o.x)/100*W, cy=(o.y==null?50:o.y)/100*H;
+    var blockTop=cy-(lines.length*step)/2;
+    var centers=lines.map(function(_,i){ return blockTop+i*step+step/2; });
+    if(sty==='box'){
+      // smooth continuous banner behind all lines (same path math as the app)
+      var rects=lines.map(function(ln,i){ var w=ctx.measureText(ln).width; return {left:cx-w/2,right:cx+w/2,top:centers[i]-sz*0.58,bottom:centers[i]+sz*0.58}; });
+      try{
+        var d=_mteRoundPath(_mtePoly(rects, 0.30*sz, 0.14*sz), 0.24*sz);
+        if(d){ var p=new Path2D(d); ctx.fillStyle=o.color||'#ffffff'; ctx.fill(p); }
+      }catch(e){}
+      var tc=mteContrast(o.color); tc=(tc==='#000')?'#161823':tc;
+      ctx.fillStyle=tc;
+      lines.forEach(function(ln,i){ ctx.fillText(ln, cx, centers[i]); });
+    } else {
+      if(sty!=='plain'){
+        // rounded black halo (approximated as offset copies) -- matches the outline style
+        ctx.fillStyle='#000';
+        var r=0.07*sz, rings=[[r,16],[r*0.6,10]];
+        rings.forEach(function(rg){ for(var k=0;k<rg[1];k++){ var a=2*Math.PI*k/rg[1]; var dx=Math.cos(a)*rg[0], dy=Math.sin(a)*rg[0]; lines.forEach(function(ln,i){ ctx.fillText(ln, cx+dx, centers[i]+dy); }); } });
+      }
+      ctx.fillStyle=o.color||'#ffffff';
+      lines.forEach(function(ln,i){ ctx.fillText(ln, cx, centers[i]); });
+    }
+  });
+  return oc;
+}
+function swPickWebmMime(){
+  var c=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  for(var i=0;i<c.length;i++){ try{ if(window.MediaRecorder && MediaRecorder.isTypeSupported(c[i])) return c[i]; }catch(e){} }
+  return 'video/webm';
+}
+// Burn overlays into srcUrl in the browser; resolves to a webm Blob (with audio, no sound played).
+function swBurnVideo(srcUrl, overlays){
+  return new Promise(function(resolve, reject){
+    var v=document.createElement('video');
+    v.crossOrigin='anonymous'; v.src=srcUrl; v.playsInline=true; v.muted=false; v.volume=0; v.preload='auto';
+    var done=false, hardTimer=null;
+    function fail(m){ if(done)return; done=true; try{if(hardTimer)clearTimeout(hardTimer);}catch(e){} reject(new Error(m||'burn failed')); }
+    v.onerror=function(){ fail('could not load the edit'); };
+    v.onloadedmetadata=function(){
+      try{
+        var vw=v.videoWidth||1080, vh=v.videoHeight||1920;
+        var scale=Math.min(1, 1080/Math.max(vw,vh));
+        var W=Math.round(vw*scale/2)*2, H=Math.round(vh*scale/2)*2;
+        var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+        var cx=cv.getContext('2d');
+        var ov=swRasterizeOverlays(W, H, overlays);
+        var stream=cv.captureStream(30);
+        // capture the original audio silently via WebAudio (so nothing plays out loud)
+        try{
+          var AC=window.AudioContext||window.webkitAudioContext;
+          if(AC){ var ac=new AC(); var snode=ac.createMediaElementSource(v); var dst=ac.createMediaStreamDestination(); snode.connect(dst); (dst.stream.getAudioTracks()||[]).forEach(function(t){ stream.addTrack(t); }); }
+        }catch(e){}
+        var chunks=[];
+        var rec=new MediaRecorder(stream,{mimeType:swPickWebmMime(), videoBitsPerSecond:6000000});
+        rec.ondataavailable=function(e){ if(e.data&&e.data.size) chunks.push(e.data); };
+        rec.onstop=function(){ if(done)return; done=true; try{if(hardTimer)clearTimeout(hardTimer);}catch(e){} resolve(new Blob(chunks,{type:'video/webm'})); };
+        var draw=function(){ if(done)return; cx.drawImage(v,0,0,W,H); cx.drawImage(ov,0,0,W,H); if(!v.ended && !v.paused) requestAnimationFrame(draw); };
+        v.onended=function(){ try{ rec.stop(); }catch(e){} };
+        hardTimer=setTimeout(function(){ try{ rec.stop(); }catch(e){} }, Math.min(180000, (v.duration||60)*1000+15000));
+        v.currentTime=0;
+        var pp=v.play();
+        if(pp&&pp.catch) pp.catch(function(){ fail('autoplay blocked'); });
+        rec.start();
+        requestAnimationFrame(draw);
+      }catch(e){ fail(String(e)); }
+    };
+  });
+}
+
 async function schedSendBackground(id, acct, cap, edited, card){
   // make sure we have the burned-in edit (card may already BE the edited render, or it may still be rendering)
   if(!(edited&&edited.storage_path) && card && card.kind==='edited' && card.storage_path) edited=card;
@@ -3410,7 +3517,33 @@ async function schedSendBackground(id, acct, cap, edited, card){
     edited=await swResolveEdited(id);
   }
   if(!(edited&&edited.storage_path)){ toast('Could not send '+acct+': the edit never finished rendering. Try again from the bank.','err'); return; }
-  let signed=null; try{ const s=await sb.storage.from(BUCKET).createSignedUrl(edited.storage_path,60*60*24); signed=s.data&&s.data.signedUrl; }catch(e){}
+  // Pull the overlays that belong to this edit so we can burn the text into the pixels.
+  let overlays=[];
+  try{
+    const {data:ej}=await sb.from('edit_jobs').select('options').eq('result_video_id',edited.id).limit(1);
+    if(ej&&ej.length&&ej[0].options&&ej[0].options.overlays) overlays=ej[0].options.overlays;
+    if(!overlays.length){ const {data:ej2}=await sb.from('edit_jobs').select('options').eq('video_id',id).eq('status','done').order('finished_at',{ascending:false}).limit(1); if(ej2&&ej2.length&&ej2[0].options&&ej2[0].options.overlays) overlays=ej2[0].options.overlays; }
+  }catch(e){}
+  overlays=(overlays||[]).filter(function(o){ return o && String(o.text||'').trim(); });
+  let signed=null;
+  // Sign the edited (cut, no-text) render, then burn the overlays in-browser and upload that.
+  let srcSigned=null; try{ const s=await sb.storage.from(BUCKET).createSignedUrl(edited.storage_path,60*60*6); srcSigned=s.data&&s.data.signedUrl; }catch(e){}
+  if(!srcSigned){ toast('Could not get the edited video URL','err'); return; }
+  if(overlays.length){
+    try{
+      const blob=await swBurnVideo(srcSigned, overlays);
+      if(!blob || blob.size<10000) throw new Error('empty render');
+      const burnPath='edited/burned_'+id+'_'+Date.now()+'.webm';
+      const up=await sb.storage.from(BUCKET).upload(burnPath, blob, {contentType:'video/webm', upsert:true});
+      if(up.error) throw up.error;
+      const s2=await sb.storage.from(BUCKET).createSignedUrl(burnPath,60*60*24); signed=s2.data&&s2.data.signedUrl;
+    }catch(e){
+      toast('Could not burn the caption into '+acct+': '+String(e.message||e).slice(0,80),'err'); return;
+    }
+  } else {
+    // no text overlay on this clip -- the cut render is the final
+    try{ const s=await sb.storage.from(BUCKET).createSignedUrl(edited.storage_path,60*60*24); signed=s.data&&s.data.signedUrl; }catch(e){}
+  }
   if(!signed){ toast('Could not get the edited video URL','err'); return; }
   let jr=null;
   try{
