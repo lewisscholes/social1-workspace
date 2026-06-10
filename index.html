@@ -2195,8 +2195,15 @@ async function loadEditor(){
   root.innerHTML='<div class="sw-empty"><div class="inline-loader"></div></div>';
   // Load ALL approved (non-posted) videos from the bank
   const {data:vids}=await sb.from('videos').select('*').neq('status','posted').neq('status','scheduled').eq('pending_approval',false).order('created_at',{ascending:false});
-  let list=(vids||[]).filter(v=>v.kind!=='edited' && v.status!=='edited');
-  try{ const {data:dls}=await sb.from('video_downloads').select('video_id').eq('user_id',state.user.id); const dset=new Set((dls||[]).map(d=>d.video_id)); list=list.filter(v=>!dset.has(v.id)); }catch(e){}
+  const all=vids||[];
+  // One card per source clip; prefer the EDITED (text burned-in) render when it exists, so it can be swiped to post.
+  const bySource={};
+  all.forEach(v=>{ const key=(v.kind==='edited')?(v.source_video_id||v.id):v.id;
+    const cur=bySource[key];
+    if(!cur || (v.kind==='edited' && cur.kind!=='edited')) bySource[key]=v; });
+  let list=Object.keys(bySource).map(k=>bySource[k]);
+  try{ const {data:dls}=await sb.from('video_downloads').select('video_id').eq('user_id',state.user.id); const dset=new Set((dls||[]).map(d=>d.video_id)); list=list.filter(v=>!dset.has(v.id) && !dset.has(v.source_video_id)); }catch(e){}
+  list.sort((a,b)=> new Date(b.created_at||0)-new Date(a.created_at||0));
   swVids=list; swIdx=0;
   // Preload signed URLs for first 3
   for(let i=0;i<Math.min(3,swVids.length);i++){
@@ -2243,6 +2250,7 @@ function swRender(){
 // swApplyOverlaySizes() once the cards are in the DOM (so o.size scales by the card's real height/640,
 // matching the editor and the export exactly).
 function swOverlayHtml(v){
+  if(v&&v.kind==='edited') return '';   // text is already burned into the pixels -- don't draw it again
   const es=v.edit_state;
   let ovs=null;
   if(es&&es.overlays&&es.overlays.length) ovs=es.overlays;
@@ -3383,15 +3391,14 @@ async function confirmSchedule(id){
   const card=document.querySelector('.sw-card.is-top');
   if(card&&card.dataset.id===id){ card.classList.add('fly-right'); setTimeout(()=>swAdvance(),420); } else { swRender(); }
   // do the upload + send in the background (waits for the render if needed)
-  schedSendBackground(id, acct, cap);
+  schedSendBackground(id, acct, cap, edited, v);
 }
-async function schedSendBackground(id, acct, cap){
-  // wait for the burned-in edit to be ready (worker may still be rendering)
-  let edited=null;
-  for(let i=0;i<24;i++){
-    edited=await swResolveEdited(id);
-    if(edited&&edited.storage_path) break;
+async function schedSendBackground(id, acct, cap, edited, card){
+  // make sure we have the burned-in edit (card may already BE the edited render, or it may still be rendering)
+  if(!(edited&&edited.storage_path) && card && card.kind==='edited' && card.storage_path) edited=card;
+  for(let i=0;i<24 && !(edited&&edited.storage_path);i++){
     await new Promise(r=>setTimeout(r,3000));
+    edited=await swResolveEdited(id);
   }
   if(!(edited&&edited.storage_path)){ toast('Could not send '+acct+': the edit never finished rendering. Try again from the bank.','err'); return; }
   let signed=null; try{ const s=await sb.storage.from(BUCKET).createSignedUrl(edited.storage_path,60*60*24); signed=s.data&&s.data.signedUrl; }catch(e){}
@@ -3403,7 +3410,9 @@ async function schedSendBackground(id, acct, cap){
     jr=await r.json();
   }catch(e){ toast('Send failed: '+e,'err'); return; }
   if(!(jr&&jr.ok)){ const m=(jr&&jr.body&&(jr.body.error||(jr.body.platforms&&jr.body.platforms[0]&&jr.body.platforms[0].error)))||'see PostPeer'; toast('TikTok draft failed: '+String(m).slice(0,90),'err'); return; }
-  try{ await sb.from('videos').update({posted_at:new Date().toISOString(), posted_by:displayName(state.user), status:'posted'}).eq('id',id); }catch(e){}
+  // mark the card, the edited render, and the source clip all posted so none reappear in the deck
+  var ids=[id]; [edited.id, edited.source_video_id, card&&card.source_video_id].forEach(function(x){ if(x && ids.indexOf(x)<0) ids.push(x); });
+  try{ await sb.from('videos').update({posted_at:new Date().toISOString(), posted_by:displayName(state.user), status:'posted'}).in('id',ids); }catch(e){}
   toast('Sent to '+acct+' inbox (caption copied to paste)','ok');
 }
 async function swBackToUploads(id){
