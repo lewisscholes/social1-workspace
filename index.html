@@ -809,6 +809,13 @@
         </div>
         <button class="btn ghost" onclick="loadSchedule()"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-refresh"></use></svg> Refresh</button>
       </div>
+      <div class="card" style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div style="font-weight:700;font-size:14px;flex:1">Connected accounts</div>
+          <button class="btn sm" onclick="openAddAccount()"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-plus"></use></svg> Add account</button>
+        </div>
+        <div id="ppAccounts"><div class="h-sub">Loading...</div></div>
+      </div>
       <div class="card">
         <div class="cal-head">
           <button class="cal-nav" onclick="schedMonth(-1)">&#8249;</button>
@@ -987,6 +994,72 @@ async function loadSchedule(){
   const {data}=await sb.from('videos').select('id,filename,scheduled_at,posted_at,product_uid').not('scheduled_at','is',null).order('scheduled_at',{ascending:true});
   state.schedVids=data||[];
   renderCalendar();
+  loadPPAccounts();
+}
+// ---------- Connected TikTok accounts (PostPeer) ----------
+var PP_FN='https://vcrforlyuhapvkewsogq.supabase.co/functions/v1/postpeer';
+async function ppCall(body){ const r=await fetch(PP_FN,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); return r.json(); }
+async function loadPPAccounts(){
+  var el=document.getElementById('ppAccounts'); if(!el)return;
+  try{ var r=await sb.from('postpeer_accounts').select('account_tag,handle,platform,account_id').order('created_at'); state.ppAccounts=r.data||[]; }catch(e){ state.ppAccounts=[]; }
+  renderPPAccounts();
+}
+function renderPPAccounts(){
+  var el=document.getElementById('ppAccounts'); if(!el)return;
+  var a=state.ppAccounts||[];
+  if(!a.length){ el.innerHTML='<div class="h-sub">No accounts connected yet. Tap "Add account" to link a TikTok account.</div>'; return; }
+  el.innerHTML=a.map(function(x){
+    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line2)">'
+      +'<span style="width:30px;height:30px;border-radius:8px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-play"></use></svg></span>'
+      +'<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px">'+esc(x.account_tag||x.handle||'(account)')+'</div>'
+      +'<div class="h-sub" style="font-size:12px">'+esc(x.platform||'tiktok')+(x.handle?(' &middot; @'+esc(x.handle)):'')+'</div></div>'
+      +'<span class="tf-pill" style="background:#e7f7ee;color:#0f6e56">Connected</span>'
+      +'<button class="btn ghost sm" style="padding:3px 8px" onclick="ppRemove(\''+esc(x.account_tag)+'\')">Remove</button></div>';
+  }).join('');
+}
+var _ppPendingTag=null, _ppWin=null;
+function openAddAccount(){
+  showModal('<h3>Add TikTok account</h3>'
+    +'<div class="h-sub" style="font-size:13px;margin:-2px 0 12px">Pick a label, then authorize the TikTok account in the new tab. Come back and tap "I have connected it".</div>'
+    +'<label style="font-size:13px;font-weight:600">Label</label>'
+    +'<select id="ppTag" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:9px;margin:6px 0 6px;font:inherit"><option value="@LinkedByLinacre">@LinkedByLinacre</option><option value="@LinkedByYas">@LinkedByYas</option><option value="__custom">Other...</option></select>'
+    +'<input id="ppCustom" placeholder="@CustomHandle" style="display:none;width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px">'
+    +'<div class="actions" style="display:flex;gap:8px;margin-top:14px"><button class="btn ghost" style="flex:1" onclick="closeModal()">Cancel</button><button class="btn" style="flex:1" id="ppConnectBtn" onclick="ppConnect()">Open TikTok</button></div>'
+    +'<button class="btn ghost" style="width:100%;justify-content:center;margin-top:8px;display:none" id="ppDoneBtn" onclick="ppDetect()">I have connected it</button>');
+  var sel=document.getElementById('ppTag'); sel.onchange=function(){ document.getElementById('ppCustom').style.display=(sel.value==='__custom')?'block':'none'; };
+}
+function ppTagValue(){ var s=document.getElementById('ppTag'); if(!s)return null; return s.value==='__custom'?(val('ppCustom').trim()||null):s.value; }
+function ppConnect(){
+  var tag=ppTagValue(); if(!tag){ toast('Enter a label','err'); return; }
+  _ppPendingTag=tag;
+  _ppWin=window.open('about:blank','_blank');   // open synchronously to survive popup blockers
+  ppCall({action:'connect',platform:'tiktok'}).then(function(j){
+    var u=j&&j.body&&(j.body.url||j.body.authUrl);
+    if(u && _ppWin){ _ppWin.location.href=u; } else if(u){ window.location.href=u; }
+    else { toast('Could not start connect','err'); }
+  });
+  var db=document.getElementById('ppDoneBtn'); if(db)db.style.display='';
+  toast('Authorize in the new tab, then tap "I have connected it"','ok');
+}
+async function ppDetect(){
+  toast('Checking for the new account...','ok');
+  var j=await ppCall({action:'integrations'});
+  var list=(j&&j.body&&j.body.integrations)||[];
+  var mapped=(state.ppAccounts||[]).map(function(a){return a.account_id;});
+  var fresh=list.filter(function(i){return mapped.indexOf(i.id)<0;});
+  if(!fresh.length){ toast('No new account detected yet -- finish the TikTok authorize, then tap again','err'); return; }
+  // newest unmapped integration = the one just connected
+  fresh.sort(function(a,b){return new Date(b.createdAt||0)-new Date(a.createdAt||0);});
+  var n=fresh[0];
+  var tag=_ppPendingTag||('@'+(n.platformUserId||'tiktok'));
+  var {error}=await sb.from('postpeer_accounts').upsert({account_tag:tag, platform:n.platform||'tiktok', account_id:n.id},{onConflict:'account_tag'});
+  if(error){ toast('Save failed: '+error.message,'err'); return; }
+  _ppPendingTag=null; closeModal(); toast('Connected '+tag,'ok'); loadPPAccounts();
+}
+async function ppRemove(tag){
+  var {error}=await sb.from('postpeer_accounts').delete().eq('account_tag',tag);
+  if(error){ toast('Failed','err'); return; }
+  toast('Removed '+tag,'ok'); loadPPAccounts();
 }
 function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function renderCalendar(){
