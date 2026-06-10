@@ -3304,7 +3304,7 @@ async function openScheduler(id){
   var accs=[]; try{ const r=await sb.from('postpeer_accounts').select('account_tag,handle').not('account_id','is',null); accs=r.data||[]; }catch(e){}
   var v=swVids.find(function(x){return x.id===id;});
   var preferred=(v&&v.account)||'';
-  var autoCap=tfAutoCaption(v);
+  var autoCap=await tfAutoCaption(v);
   window.schedSelAcct = accs.length ? ((accs.find(function(a){return a.account_tag===preferred;})||accs[0]).account_tag) : '';
   var pills = accs.length
     ? '<div id="schedAcctPills" style="display:flex;flex-wrap:wrap;gap:8px">'+accs.map(function(a){return '<button type="button" class="schp'+(a.account_tag===window.schedSelAcct?' active':'')+'" data-tag="'+esc(a.account_tag)+'" onclick="schedPick(this)">'+esc(a.account_tag)+'</button>';}).join('')+'</div>'
@@ -3318,18 +3318,23 @@ async function openScheduler(id){
     +'<div class="actions" style="display:flex;gap:8px;margin-top:16px"><button class="btn ghost" style="flex:1;justify-content:center" onclick="closeModal()">Cancel</button><button class="btn" style="flex:1;justify-content:center" onclick="confirmSchedule(\''+id+'\')">Send to inbox</button></div>'
     +'<button class="btn ghost" style="width:100%;justify-content:center;margin-top:8px" onclick="swDownload(\''+id+'\')">&#8595; Download edited video</button>');
 }
-// Build a caption automatically from the video's on-screen hook + product + a few hashtags.
-function tfAutoCaption(v){
+// Caption = the actual caption from the top-performing Social One video for this product
+// (copied word-for-word, hashtags included). Falls back to the video's own hook if none.
+async function tfAutoCaption(v){
+  try{
+    if(v && v.product_uid){
+      var r=await sb.from('scraped_videos').select('caption,views').eq('product_uid',v.product_uid).not('caption','is',null).limit(60);
+      var rows=(r.data||[]).filter(function(x){return x.caption && x.caption.trim().length>5;});
+      rows.sort(function(a,b){return (parseNum(b.views)||0)-(parseNum(a.views)||0);});
+      if(rows.length) return rows[0].caption.trim();   // winning video's real caption
+    }
+  }catch(e){}
+  // fallback: this clip's own on-screen hook + a few hashtags
   var hook='';
   var es=v&&v.edit_state;
   if(es&&es.overlays&&es.overlays.length){ hook=es.overlays.map(function(o){return o&&o.text?o.text:'';}).filter(Boolean).join(' ').replace(/\s+/g,' ').trim(); }
   if(!hook && v&&v.caption_suggested) hook=String(v.caption_suggested).replace(/\s+/g,' ').trim();
-  var p=(v&&v.product_uid)?tfProduct(v.product_uid):null;
-  var pname=p?p.name:'';
-  var line=hook||pname||'';
-  if(line.length>180) line=line.slice(0,180);
-  var tags='#tiktokshop #fyp #foryou';
-  return (line?(line+'\n\n'):'')+tags;
+  return (hook?hook+'\n\n':'')+'#tiktokshop #fyp #foryou';
 }
 function schedPick(btn){
   window.schedSelAcct = btn.dataset.tag;
