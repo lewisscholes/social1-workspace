@@ -3470,40 +3470,62 @@ function swPickWebmMime(){
   for(var i=0;i<c.length;i++){ try{ if(window.MediaRecorder && MediaRecorder.isTypeSupported(c[i])) return c[i]; }catch(e){} }
   return 'video/webm';
 }
+// A single AudioContext, primed/resumed on the first user gesture, so the send-time burn can
+// route the clip's original sound into the recording silently (without it ever playing aloud).
+function swEnsureBurnAudio(){
+  try{
+    var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return null;
+    if(!window.__burnAC) window.__burnAC=new AC();
+    if(window.__burnAC.state!=='running'){ try{ window.__burnAC.resume(); }catch(e){} }
+  }catch(e){ return null; }
+  return window.__burnAC||null;
+}
+try{ ['pointerdown','touchstart','click'].forEach(function(ev){ document.addEventListener(ev, swEnsureBurnAudio, {passive:true}); }); }catch(e){}
 // Burn overlays into srcUrl in the browser; resolves to a webm Blob (with audio, no sound played).
 function swBurnVideo(srcUrl, overlays){
   return new Promise(function(resolve, reject){
+    var holder=document.createElement('div');
+    holder.style.cssText='position:fixed;left:-10000px;top:0;width:2px;height:2px;overflow:hidden;opacity:0.01;pointer-events:none;z-index:-1';
+    document.body.appendChild(holder);
     var v=document.createElement('video');
     v.crossOrigin='anonymous'; v.src=srcUrl; v.playsInline=true; v.muted=false; v.volume=0; v.preload='auto';
-    var done=false, hardTimer=null;
-    function fail(m){ if(done)return; done=true; try{if(hardTimer)clearTimeout(hardTimer);}catch(e){} reject(new Error(m||'burn failed')); }
+    holder.appendChild(v);
+    var done=false, hardTimer=null, ac=null;
+    function cleanup(){ try{if(hardTimer)clearTimeout(hardTimer);}catch(e){} try{if(ac)ac.close();}catch(e){} try{holder.remove();}catch(e){} }
+    function fail(m){ if(done)return; done=true; cleanup(); reject(new Error(m||'burn failed')); }
     v.onerror=function(){ fail('could not load the edit'); };
-    v.onloadedmetadata=function(){
+    v.onloadeddata=function(){
+      if(v.__started) return; v.__started=true;
       try{
         var vw=v.videoWidth||1080, vh=v.videoHeight||1920;
         var scale=Math.min(1, 1080/Math.max(vw,vh));
         var W=Math.round(vw*scale/2)*2, H=Math.round(vh*scale/2)*2;
         var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+        cv.style.cssText='width:2px;height:2px'; holder.appendChild(cv);
         var cx=cv.getContext('2d');
         var ov=swRasterizeOverlays(W, H, overlays);
+        cx.drawImage(v,0,0,W,H); cx.drawImage(ov,0,0,W,H);   // paint first frame before capture starts
         var stream=cv.captureStream(30);
-        // capture the original audio silently via WebAudio (so nothing plays out loud)
+        // Capture the original audio silently (nothing plays out loud) ONLY if a gesture-primed
+        // AudioContext is already running -- a suspended context yields a stalled track that makes
+        // MediaRecorder emit an empty file, so we fall back to video-only in that case.
         try{
-          var AC=window.AudioContext||window.webkitAudioContext;
-          if(AC){ var ac=new AC(); var snode=ac.createMediaElementSource(v); var dst=ac.createMediaStreamDestination(); snode.connect(dst); (dst.stream.getAudioTracks()||[]).forEach(function(t){ stream.addTrack(t); }); }
-        }catch(e){}
-        var chunks=[];
+          ac=window.__burnAC || swEnsureBurnAudio();
+          if(ac && ac.state==='running'){ var snode=ac.createMediaElementSource(v); var dst=ac.createMediaStreamDestination(); snode.connect(dst); (dst.stream.getAudioTracks()||[]).forEach(function(t){ stream.addTrack(t); }); ac=null; }
+          else { ac=null; }
+        }catch(e){ ac=null; }
+        var chunks=[], drawTimer=null;
         var rec=new MediaRecorder(stream,{mimeType:swPickWebmMime(), videoBitsPerSecond:6000000});
         rec.ondataavailable=function(e){ if(e.data&&e.data.size) chunks.push(e.data); };
-        rec.onstop=function(){ if(done)return; done=true; try{if(hardTimer)clearTimeout(hardTimer);}catch(e){} resolve(new Blob(chunks,{type:'video/webm'})); };
-        var draw=function(){ if(done)return; cx.drawImage(v,0,0,W,H); cx.drawImage(ov,0,0,W,H); if(!v.ended && !v.paused) requestAnimationFrame(draw); };
-        v.onended=function(){ try{ rec.stop(); }catch(e){} };
-        hardTimer=setTimeout(function(){ try{ rec.stop(); }catch(e){} }, Math.min(180000, (v.duration||60)*1000+15000));
-        v.currentTime=0;
+        rec.onstop=function(){ if(done)return; done=true; try{if(drawTimer)clearInterval(drawTimer);}catch(e){} cleanup(); resolve(new Blob(chunks,{type:'video/webm'})); };
+        // setInterval (not rAF) so frames keep flowing even if the tab loses focus during the background send.
+        drawTimer=setInterval(function(){ if(done)return; try{ cx.drawImage(v,0,0,W,H); cx.drawImage(ov,0,0,W,H); }catch(e){} }, 33);
+        var stopRec=function(){ try{ if(rec.state!=='inactive') rec.stop(); }catch(e){} };
+        v.onended=stopRec;
+        hardTimer=setTimeout(stopRec, Math.min(300000, (v.duration||60)*1000+20000));
         var pp=v.play();
         if(pp&&pp.catch) pp.catch(function(){ fail('autoplay blocked'); });
-        rec.start();
-        requestAnimationFrame(draw);
+        rec.start(500);
       }catch(e){ fail(String(e)); }
     };
   });
