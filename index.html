@@ -2202,7 +2202,7 @@ async function loadEditor(){
     const cur=bySource[key];
     if(!cur || (v.kind==='edited' && cur.kind!=='edited')) bySource[key]=v; });
   let list=Object.keys(bySource).map(k=>bySource[k]);
-  try{ const {data:dls}=await sb.from('video_downloads').select('video_id').eq('user_id',state.user.id); const dset=new Set((dls||[]).map(d=>d.video_id)); list=list.filter(v=>!dset.has(v.id) && !dset.has(v.source_video_id)); }catch(e){}
+  try{ const {data:dls}=await sb.from('video_downloads').select('video_id').eq('user_id',state.user.id); const dset=new Set((dls||[]).map(d=>d.video_id)); list=list.filter(v=> v.kind==='edited' ? true : !dset.has(v.id)); }catch(e){}
   list.sort((a,b)=> new Date(b.created_at||0)-new Date(a.created_at||0));
   swVids=list; swIdx=0;
   // Preload signed URLs for first 3
