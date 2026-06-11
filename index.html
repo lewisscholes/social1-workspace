@@ -15,7 +15,7 @@
 <style>
   :root{
     --bg:#f3f4fb; --sidebar:#fbfcff; --panel:#ffffff; --ink:#10122a; --muted:#8a90a6;
-    --line:#ececf4; --line2:#f0f1f8; --blue:#ff3b4e; --blue-d:#e0273f; --blue-soft:#ffe7ea;
+    --line:#ececf4; --line2:#f0f1f8; --blue:#0ea5e9; --blue-d:#0284c7; --blue-soft:#e0f4fe;
     --grad:linear-gradient(135deg,#ff3b54,#ff5e3a);
     --shadow:0 8px 24px rgba(20,20,50,.07); --shadow-lg:0 14px 34px rgba(20,20,50,.14);
     --green:#16c79a; --amber:#f59e0b; --red:#ef4444;
@@ -139,7 +139,7 @@
   .tf-filters .seg{flex:0 0 auto}
   .tf-prodicon{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:#19202e;pointer-events:none}
   .tf-prodwrap .tf-prodfilter{padding-left:36px}
-  .tf-callout{display:flex;align-items:center;gap:14px;background:var(--blue-soft);border:1px solid #ffd4da;border-radius:16px;padding:16px 18px;margin:22px 0 16px}
+  .tf-callout{display:flex;align-items:center;gap:14px;background:var(--blue-soft);border:1px solid #bfe3f7;border-radius:16px;padding:16px 18px;margin:22px 0 16px}
   .tf-callout .tf-spark{background:#fff}
   .tf-callout-tt{flex:1 1 auto;min-width:0}
   .tf-callout-tt h3{font-size:17px;font-weight:800;margin:0;color:#161823}
@@ -1478,8 +1478,8 @@ function renderToFilm(){
     +'<g transform="rotate(-9 35 17)"><rect x="3" y="9" width="62" height="14" rx="3" fill="#11141d"/>'
     +'<polygon points="11,9 19,9 13,23 5,23" fill="#fff"/><polygon points="25,9 33,9 27,23 19,23" fill="#fff"/>'
     +'<polygon points="39,9 47,9 41,23 33,23" fill="#fff"/><polygon points="53,9 61,9 55,23 47,23" fill="#fff"/></g>'
-    +'<circle cx="35" cy="40" r="10" fill="#ff3b4e"/><polygon points="32,35 43,40 32,45" fill="#fff"/>'
-    +'<path d="M67 27l5-3M68 34h5M67 41l5 3" stroke="#ff3b4e" stroke-width="2.4" stroke-linecap="round"/></svg>';
+    +'<circle cx="35" cy="40" r="10" fill="#0ea5e9"/><polygon points="32,35 43,40 32,45" fill="#fff"/>'
+    +'<path d="M67 27l5-3M68 34h5M67 41l5 3" stroke="#0ea5e9" stroke-width="2.4" stroke-linecap="round"/></svg>';
   h+='<div class="tf-callout"><div class="tf-spark"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sparkles"></use></svg></div>'
     +'<div class="tf-callout-tt"><h3>Today&#39;s '+todo.length+' videos to film</h3>'
     +'<div class="tf-callout-sub">Daily plan '+DASH+' each video is spread across the week (max '+TF_WEEK_CAP+'/week, '+TF_DAY_CAP+'/day). Short of quota? Add more products or wait for today&#39;s scrape to fill it.</div></div>'
