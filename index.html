@@ -124,7 +124,8 @@
   .tf-box .svic{width:18px;height:18px}
   /* --- Filming plan redesign (mockup, red accent) --- */
   .tf-hero{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px}
-  .tf-hero-ic{width:30px;height:30px;color:var(--blue);flex:0 0 auto;margin-top:2px}
+  .tf-hero-ic{width:34px;height:34px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;font-size:27px;line-height:1}
+  .tf-ring-row{display:none}
   .tf-hero-tt{flex:1 1 auto;min-width:0}
   .tf-hero h2{font-size:23px;font-weight:800;letter-spacing:-.02em;margin:0;line-height:1.12}
   .tf-hero .sub{color:var(--muted);font-size:13px;margin-top:4px}
@@ -196,6 +197,10 @@
     .tf-hero h2{font-size:20px}
     .tf2-grid{grid-template-columns:1fr;gap:14px}
     .tf2-thumb{height:22vh;min-height:150px;max-height:230px}
+    .tf-ring-top{display:none}
+    .tf-ring-row{display:flex;align-items:center;gap:11px;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:12px;box-shadow:0 1px 2px rgba(20,30,60,.04)}
+    .tf-ring-row .rr-num{font-weight:800;font-size:14px;color:#19202e}
+    .tf-ring-row .rr-lbl{font-size:12px;color:var(--muted)}
   }
   /* Priority kanban */
   .pri-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
@@ -1422,9 +1427,9 @@ function renderToFilm(){
   planned.forEach(function(x){ plannedTotal+=x.target; filmedPlanned+=Math.min(x.target,tfTicks[x.key]||0); planBy[x.acct]=(planBy[x.acct]||0)+x.target; });
   // ---- hero ----
   var pct=plannedTotal?Math.round(filmedPlanned/plannedTotal*100):0;
-  var ring=isToday?('<div class="tf-ring">'+tfRingSvg(pct)+'<div><div class="rnum">'+filmedPlanned+' / '+plannedTotal+'</div><div class="rlbl">videos planned</div></div></div>'):'';
-  var h='<div class="tf-hero"><svg class="tf-hero-ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-film"></use></svg>'
-    +'<div class="tf-hero-tt"><h2>Today&#39;s filming plan</h2><div class="sub">Your daily video roadmap powered by <b>Social One</b></div></div>'+ring+'</div>';
+  var ringTop=isToday?('<div class="tf-ring tf-ring-top">'+tfRingSvg(pct)+'<div><div class="rnum">'+filmedPlanned+' / '+plannedTotal+'</div><div class="rlbl">videos planned</div></div></div>'):'';
+  var h='<div class="tf-hero"><span class="tf-hero-ic">'+String.fromCodePoint(128293)+'</span>'
+    +'<div class="tf-hero-tt"><h2>Today&#39;s filming plan</h2></div>'+ringTop+'</div>';
   // compact day switcher (kept from before, restyled small)
   h+='<div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin:-4px 0 14px">'
     +'<button class="btn ghost sm" style="padding:3px 10px;font-size:16px;line-height:1" onclick="tfShiftDay(-1)" aria-label="Previous day">&lsaquo;</button>'
@@ -1437,6 +1442,7 @@ function renderToFilm(){
       +'<div class="cnt">'+have+' / '+target+' filmed</div></div><div class="tf-bar"><i style="width:'+p+'%"></i></div></div>';};
   h+='<div class="tf-accts">'+acctCard('@LinkedByLinacre','L','BOF '+DOT+' text on screen',linFilmed,25)
     +acctCard('@LinkedByYas','Y','TOF '+DOT+' talking',yasFilmed,10)+'</div>';
+  if(isToday) h+='<div class="tf-ring-row">'+tfRingSvg(pct)+'<span class="rr-num">'+filmedPlanned+' / '+plannedTotal+'</span><span class="rr-lbl">videos planned</span></div>';
   if(!isToday){ h+=tfHistory(); card.innerHTML=h; return; }
   // ---- filters ----
   var seg=function(opts){return '<span class="seg">'+opts.map(function(o){return '<button class="'+(o[0]===state.tfAcct?'active':'')+'" onclick="setTfAcct(\''+o[0]+'\')">'+o[1]+'</button>';}).join('')+'</span>';};
@@ -1444,10 +1450,8 @@ function renderToFilm(){
   h+='<div class="tf-filters" style="margin-top:14px">'+seg([['all','All'],[TF_ACCT_LINACRE,'LBL'],[TF_ACCT_YAS,'SWY']])
     +'<select class="tf-prodfilter" onchange="setTfProd(this.value)">'+popts+'</select></div>';
   // ---- section header ----
-  var subTxt='Daily plan '+DASH+' each video is spread across the week (max '+TF_WEEK_CAP+'/week, '+TF_DAY_CAP+'/day).';
-  if((planBy[TF_ACCT_LINACRE]||0)<25 || (planBy[TF_ACCT_YAS]||0)<10) subTxt+=' Short of quota? Add more products or wait for today&#39;s scrape to fill it.';
   h+='<div class="tf-secthead"><div class="tf-spark"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sparkles"></use></svg></div>'
-    +'<div><h3>Today&#39;s '+todo.length+' videos to film</h3><div class="s">'+subTxt+'</div></div></div>';
+    +'<div><h3>Today&#39;s '+todo.length+' videos to film</h3></div></div>';
   h+= todo.length? '<div class="tf2-grid">'+todo.slice(0,20).map(function(x){return tfCard(x,'owned');}).join('')+'</div>'
     : '<div class="h-sub" style="padding:4px 0 12px">Nothing planned -- mark more products owned, or every owned video has hit its weekly cap.</div>';
   // ---- on-track card ----
