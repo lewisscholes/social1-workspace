@@ -150,7 +150,9 @@
   .tf2-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
   .tf2{position:relative;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(20,30,60,.05)}
   .tf2::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--blue);z-index:3}
-  .tf2-thumb{position:relative;width:100%;height:280px;background:#11131a;overflow:hidden}
+  .tf2-thumb{position:relative;width:100%;height:280px;background:#11131a;overflow:hidden;display:block;text-decoration:none}
+  .tf2-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none}
+  .tf2-play svg{width:20px;height:20px;color:#fff;margin-left:2px}
   .tf2-scrim{position:absolute;left:0;right:0;bottom:0;height:42%;background:linear-gradient(to top,rgba(0,0,0,.7),rgba(0,0,0,0));pointer-events:none;z-index:1}
   .tf2-st{position:absolute;left:9px;right:9px;bottom:10px;display:flex;gap:6px;flex-wrap:wrap;z-index:2}
   .tf2-st .st{background:rgba(0,0,0,.55);color:#fff;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap}
@@ -193,7 +195,7 @@
   @media(max-width:620px){
     .tf-hero h2{font-size:20px}
     .tf2-grid{grid-template-columns:1fr;gap:14px}
-    .tf2-thumb{height:42vh;min-height:240px;max-height:400px}
+    .tf2-thumb{height:22vh;min-height:150px;max-height:230px}
   }
   /* Priority kanban */
   .pri-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
@@ -1563,10 +1565,13 @@ function tfCard(x,mode){
   var stats='<div class="tf2-st"><span class="st">'+tfFmt(x.views)+' views</span>'
     +(rec?'<span class="st">'+rec+'</span>':'')
     +(vel?'<span class="st fire">'+String.fromCodePoint(128293)+' '+vel+'</span>':'')+'</div>';
-  var thumb='<div class="tf2-thumb">'
-    +(vid?'<div class="vthumb" id="emb_'+vid+'" data-url="'+esc(x.link)+'"><img id="th_'+vid+'" referrerpolicy="no-referrer" alt=""></div>':'')
+  var thumbInner=(vid?'<div class="vthumb" id="emb_'+vid+'" data-url="'+esc(x.link)+'"><img id="th_'+vid+'" referrerpolicy="no-referrer" alt=""></div>':'')
     +(cap?'<div class="cap">'+cap+'</div>':'')
-    +'<div class="tf2-scrim"></div>'+stats+'</div>';
+    +'<div class="tf2-scrim"></div>'+stats
+    +'<span class="tf2-play"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-play"></use></svg></span>';
+  var thumb=x.link
+    ? '<a class="tf2-thumb" href="'+esc(x.link)+'" target="_blank" rel="noopener">'+thumbInner+'</a>'
+    : '<div class="tf2-thumb">'+thumbInner+'</div>';
   var tags='<div class="tf2-tags"><span class="tf2-tag" style="background:'+acctCol[0]+';color:'+acctCol[1]+'">'+x.acct+'</span>'
     +'<span class="tf2-tag" style="background:var(--blue-soft);color:var(--blue-d)">'+tfStyleOf(x.vtype)+'</span></div>';
   var watch=x.link?'<a class="tf2-watch" href="'+esc(x.link)+'" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-play"></use></svg> Watch winning video</a>':'';
