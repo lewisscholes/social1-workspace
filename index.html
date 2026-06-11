@@ -1541,7 +1541,8 @@ function tfSamplesSection(){
   var skipped=Object.keys(tfSamplePicks).filter(function(k){return tfSamplePicks[k]==='no';}).length;
   var sub='Today&#39;s top trending products from Social One that you do not own. Refreshes with each daily scrape. Pick Yes to order, No to skip. Max '+SAMPLE_LIMIT+'/day.';
   if(skipped) sub+=' &middot; <a onclick="sampleResetNo()" style="cursor:pointer;color:#1850c4">'+skipped+' skipped, reset</a>';
-  var h='<div class="tf-sect samples"><div class="tf-secth"><span class="tf-secth-dot" style="background:#e08a1e"></span>Request samples <span class="tf-secth-badge">today '+String.fromCharCode(183)+' '+samples.length+'</span></div>';
+  var h='<div class="tf-sect samples"><div class="tf-secth"><span class="tf-secth-dot" style="background:#e08a1e"></span>Request samples <span class="tf-secth-badge">today '+String.fromCharCode(183)+' '+samples.length+'</span>'
+    +(samples.length?'<button class="btn ghost sm" style="margin-left:auto" onclick="sampleDeclineAll()">Skip all today</button>':'')+'</div>';
   h+='<div class="tf-secth-sub">'+sub+'</div>';
   h+= samples.length? samples.map(tfSampleCard).join('') : '<div class="h-sub" style="padding:4px 0 8px">Nothing scraped from Social One today yet -- run the videos scraper to populate today&#39;s samples.</div>';
   h+='</div>';
@@ -1572,6 +1573,12 @@ async function sampleResetNo(){
   var ids=Object.keys(tfSamplePicks).filter(function(k){return tfSamplePicks[k]==='no';});
   ids.forEach(function(k){ delete tfSamplePicks[k]; }); renderToFilm();
   try{ await sb.from('sample_picks').delete().eq('day',tfToday()).eq('decision','no'); }catch(e){}
+}
+async function sampleDeclineAll(){
+  var s=tfSamples(); if(!s.length) return;
+  s.forEach(function(x){ tfSamplePicks[x.pid]='no'; }); renderToFilm();
+  try{ var rows=s.map(function(x){return {product_uid:x.pid,day:tfToday(),decision:'no',created_at:new Date().toISOString()};});
+    await sb.from('sample_picks').upsert(rows,{onConflict:'product_uid,day'}); }catch(e){}
 }
 function tfSection(title,badge,list,mode,emptyMsg,opts){
   opts=opts||{};
