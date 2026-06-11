@@ -16,7 +16,7 @@
   :root{
     --bg:#f3f4fb; --sidebar:#fbfcff; --panel:#ffffff; --ink:#10122a; --muted:#8a90a6;
     --line:#ececf4; --line2:#f0f1f8; --blue:#0ea5e9; --blue-d:#0284c7; --blue-soft:#e0f4fe;
-    --grad:linear-gradient(135deg,#ff3b54,#ff5e3a);
+    --grad:linear-gradient(135deg,#0284c7,#0ea5e9);
     --shadow:0 8px 24px rgba(20,20,50,.07); --shadow-lg:0 14px 34px rgba(20,20,50,.14);
     --green:#16c79a; --amber:#f59e0b; --red:#ef4444;
     /* TikTok native caption font (TikTok Sans, open-source on Google Fonts) */
@@ -37,7 +37,7 @@
   .grp-l{font-size:10.5px;font-weight:700;color:#9aa1b2;text-transform:uppercase;letter-spacing:.06em;padding:9px 10px 3px}
   #adminGroup .grp-l{margin-top:2px}
   .brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:16px;padding:6px 8px 16px}
-  .brand .logo{width:30px;height:30px;border-radius:9px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;box-shadow:0 5px 13px rgba(255,59,84,.36)}
+  .brand .logo{width:30px;height:30px;border-radius:9px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;box-shadow:0 5px 13px rgba(14,165,233,.36)}
   .nav-btn{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:transparent;border:0;color:#454b63;padding:11px 12px;border-radius:11px;cursor:pointer;font-size:14px;font-weight:500;transition:background .12s ease,color .12s ease}
   .nav-btn:hover{background:#eef0f8}
   .nav-btn.active{background:var(--blue-soft);color:var(--blue-d);font-weight:700}
@@ -59,14 +59,14 @@
   .h-title{font-size:27px;font-weight:800;letter-spacing:-0.6px;margin:0;display:flex;align-items:center;gap:10px}
   .h-sub{color:var(--muted);font-size:13px;margin-top:4px}
   .h-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .btn{background:var(--grad);color:#fff;border:0;padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 6px 16px rgba(255,59,84,.32);transition:transform .12s ease,box-shadow .12s ease,filter .12s ease}
+  .btn{background:var(--grad);color:#fff;border:0;padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 6px 16px rgba(14,165,233,.32);transition:transform .12s ease,box-shadow .12s ease,filter .12s ease}
   .btn:hover{filter:brightness(1.05)}
-  .btn:active{transform:scale(.97);box-shadow:0 3px 10px rgba(255,59,84,.3)}
+  .btn:active{transform:scale(.97);box-shadow:0 3px 10px rgba(14,165,233,.3)}
   .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:0 2px 8px rgba(20,20,50,.05)}
   .btn.ghost:hover{background:#f7f8fe;border-color:#dfe1ee;filter:none}
   .btn.red{background:#fff;color:var(--red);border:1px solid #f3c2c2;box-shadow:none}
   .btn.red:hover{background:#fef2f2}
-  .btn.sm{padding:7px 12px;font-size:13px;border-radius:10px;box-shadow:0 4px 12px rgba(255,59,84,.26)}
+  .btn.sm{padding:7px 12px;font-size:13px;border-radius:10px;box-shadow:0 4px 12px rgba(14,165,233,.26)}
   .btn.ghost.sm{box-shadow:0 2px 8px rgba(20,20,50,.05)}
   .btn:disabled{opacity:.5;cursor:default;box-shadow:none}
   section[id^="view-"]:not(.hide){animation:vfade .24s ease}
@@ -74,7 +74,7 @@
   .metrics{margin-bottom:20px}
   .rangetoggle{display:inline-flex;gap:4px;background:var(--line2);border-radius:11px;padding:4px;margin-bottom:14px;flex-wrap:wrap;max-width:100%}
   .rtbtn{border:0;background:transparent;color:var(--muted);font-weight:600;font-size:13px;padding:7px 15px;border-radius:8px;cursor:pointer;white-space:nowrap}
-  .rtbtn.on{background:var(--grad);color:#fff;box-shadow:0 5px 13px rgba(255,59,84,.36)}
+  .rtbtn.on{background:var(--grad);color:#fff;box-shadow:0 5px 13px rgba(14,165,233,.36)}
   .dbox{display:flex;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px 22px;box-shadow:var(--shadow)}
   .dstat{flex:1;min-width:0}
   .dval{font-size:34px;font-weight:800;line-height:1.05;color:var(--ink)}
@@ -316,7 +316,7 @@
   .hide{display:none!important}
   .drop{border:2px dashed var(--line);border-radius:12px;padding:22px;text-align:center;color:var(--muted);background:#fff;margin-bottom:14px}
   .drop.drag{border-color:var(--blue);background:var(--blue-soft);color:var(--blue-d)}
-  .modal label.uploadbtn{display:block;width:100%;text-align:center;background:var(--grad);color:#fff;padding:15px;border-radius:13px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;box-shadow:0 6px 16px rgba(255,59,84,.34)}
+  .modal label.uploadbtn{display:block;width:100%;text-align:center;background:var(--grad);color:#fff;padding:15px;border-radius:13px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;box-shadow:0 6px 16px rgba(14,165,233,.34)}
   .bar{height:6px;background:#e8edf5;border-radius:999px;overflow:hidden;margin-top:8px}
   .bar > div{height:100%;background:var(--blue);width:0%}
   .teamrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px}
@@ -422,7 +422,7 @@
   .bottomnav button .bi{font-size:19px;width:42px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:12px;transition:background .14s ease}
   .bottomnav button.active{color:var(--blue-d);font-weight:700}
   .bottomnav button.active .bi{background:var(--blue-soft)}
-  .bnav-plus{flex:0 0 auto;width:52px;height:52px;border-radius:17px;background:var(--grad);color:#fff;box-shadow:0 9px 22px rgba(255,59,84,.5);display:flex;align-items:center;justify-content:center;margin:-18px 6px 0;border:0;cursor:pointer;transition:transform .12s ease}
+  .bnav-plus{flex:0 0 auto;width:52px;height:52px;border-radius:17px;background:var(--grad);color:#fff;box-shadow:0 9px 22px rgba(14,165,233,.5);display:flex;align-items:center;justify-content:center;margin:-18px 6px 0;border:0;cursor:pointer;transition:transform .12s ease}
   .bnav-plus:active{transform:scale(.93)}
   .bnav-plus .plusic{font-size:28px;font-weight:300;line-height:1;margin-top:-2px}
   /* mobile drawer (secondary tools) */
