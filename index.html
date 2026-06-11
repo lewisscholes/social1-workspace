@@ -164,7 +164,7 @@
   .tf2-thumb .pl{position:absolute;left:8px;bottom:8px;display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.6);color:#fff;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:700}
   .tf2-thumb .pl svg{width:10px;height:10px}
   .tf2-body{flex:1 1 auto;min-width:0;padding:15px 15px 15px 17px}
-  .tf2-title{font-weight:800;font-size:16px;line-height:1.2;letter-spacing:-.01em;color:#161823}
+  .tf2-title{font-weight:800;font-size:16px;line-height:1.25;letter-spacing:-.01em;color:#161823;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .tf2-chips{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
   .tf2-chip{font-size:11px;font-weight:600;border:1px solid var(--line);border-radius:8px;padding:3px 9px;color:#475;white-space:nowrap}
   .tf2-chip.fire{background:#fff6e9;border-color:#f4d8a8;color:#8a5b00;font-weight:700}
@@ -1566,7 +1566,6 @@ function tfCard(x,mode){
     +(rec?'<span class="st">'+rec+'</span>':'')
     +(vel?'<span class="st fire">'+String.fromCodePoint(128293)+' '+vel+'</span>':'')+'</div>';
   var thumbInner=(vid?'<div class="vthumb" id="emb_'+vid+'" data-url="'+esc(x.link)+'"><img id="th_'+vid+'" referrerpolicy="no-referrer" alt=""></div>':'')
-    +(cap?'<div class="cap">'+cap+'</div>':'')
     +'<div class="tf2-scrim"></div>'+stats
     +'<span class="tf2-play"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-play"></use></svg></span>';
   var thumb=x.link
