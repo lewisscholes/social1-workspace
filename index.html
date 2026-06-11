@@ -130,6 +130,20 @@
   .tf-hero h2{font-size:23px;font-weight:800;letter-spacing:-.02em;margin:0;line-height:1.12}
   .tf-hero .sub{color:var(--muted);font-size:13px;margin-top:4px}
   .tf-hero .sub b{color:var(--blue);font-weight:700}
+  .tf-topright{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+  .tf-daynav{display:flex;align-items:center;gap:2px;border:1px solid var(--line);border-radius:14px;padding:7px 6px;box-shadow:0 1px 2px rgba(20,30,60,.04)}
+  .tf-daynav button{border:0;background:transparent;font-size:18px;line-height:1;color:#19202e;cursor:pointer;padding:3px 9px;border-radius:8px}
+  .tf-daynav button[disabled]{color:#c7ccd8;cursor:default}
+  .tf-daynav span{font-weight:700;font-size:13px;min-width:66px;text-align:center}
+  .tf-prodwrap{position:relative;flex:1 1 100%;min-width:0}
+  .tf-prodicon{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:#19202e;pointer-events:none}
+  .tf-prodwrap .tf-prodfilter{padding-left:36px}
+  .tf-callout{display:flex;align-items:center;gap:14px;background:var(--blue-soft);border:1px solid #ffd4da;border-radius:16px;padding:16px 18px;margin:22px 0 16px}
+  .tf-callout .tf-spark{background:#fff}
+  .tf-callout-tt{flex:1 1 auto;min-width:0}
+  .tf-callout-tt h3{font-size:17px;font-weight:800;margin:0;color:#161823}
+  .tf-callout-sub{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.5}
+  .tf-callout-art{flex:0 0 auto;width:74px;height:64px}
   .tf-ring{flex:0 0 auto;display:flex;align-items:center;gap:11px;border:1px solid var(--line);border-radius:16px;padding:11px 15px;box-shadow:0 1px 2px rgba(20,30,60,.04)}
   .tf-ring .rnum{font-weight:800;font-size:15px;color:#19202e}
   .tf-ring .rlbl{font-size:11px;color:var(--muted);line-height:1.25}
@@ -194,13 +208,19 @@
   .tf-track .tx div{font-size:12.5px;color:#3f6b54;margin-top:1px}
   @media(max-width:980px){ .tf2-grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
   @media(max-width:620px){
+    .tf-hero{flex-wrap:wrap}
     .tf-hero h2{font-size:20px}
+    .tf-hero .sub{display:none}
+    .tf-topright{order:3;width:100%;justify-content:flex-end;margin-top:8px}
     .tf2-grid{grid-template-columns:1fr;gap:14px}
     .tf2-thumb{height:22vh;min-height:150px;max-height:230px}
     .tf-ring-top{display:none}
     .tf-ring-row{display:flex;align-items:center;gap:11px;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:12px;box-shadow:0 1px 2px rgba(20,30,60,.04)}
     .tf-ring-row .rr-num{font-weight:800;font-size:14px;color:#19202e}
     .tf-ring-row .rr-lbl{font-size:12px;color:var(--muted)}
+    .tf-callout{background:transparent;border:0;padding:0;margin:22px 0 15px}
+    .tf-callout .tf-spark{background:var(--blue-soft)}
+    .tf-callout-sub,.tf-callout-art{display:none}
   }
   /* Priority kanban */
   .pri-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
@@ -1428,13 +1448,12 @@ function renderToFilm(){
   // ---- hero ----
   var pct=plannedTotal?Math.round(filmedPlanned/plannedTotal*100):0;
   var ringTop=isToday?('<div class="tf-ring tf-ring-top">'+tfRingSvg(pct)+'<div><div class="rnum">'+filmedPlanned+' / '+plannedTotal+'</div><div class="rlbl">videos planned</div></div></div>'):'';
+  var daynav='<div class="tf-daynav"><button onclick="tfShiftDay(-1)" aria-label="Previous day">&lsaquo;</button>'
+    +'<span>'+tfDayLabel()+'</span>'
+    +'<button'+(isToday?' disabled':'')+' onclick="tfShiftDay(1)" aria-label="Next day">&rsaquo;</button></div>';
   var h='<div class="tf-hero"><span class="tf-hero-ic">'+String.fromCodePoint(128293)+'</span>'
-    +'<div class="tf-hero-tt"><h2>Today&#39;s filming plan</h2></div>'+ringTop+'</div>';
-  // compact day switcher (kept from before, restyled small)
-  h+='<div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin:-4px 0 14px">'
-    +'<button class="btn ghost sm" style="padding:3px 10px;font-size:16px;line-height:1" onclick="tfShiftDay(-1)" aria-label="Previous day">&lsaquo;</button>'
-    +'<span style="font-weight:700;font-size:13px;min-width:78px;text-align:center">'+tfDayLabel()+'</span>'
-    +'<button class="btn ghost sm" style="padding:3px 10px;font-size:16px;line-height:1"'+(isToday?' disabled':'')+' onclick="tfShiftDay(1)" aria-label="Next day">&rsaquo;</button></div>';
+    +'<div class="tf-hero-tt"><h2>Today&#39;s filming plan</h2><div class="sub">Your daily roadmap to create winning videos.</div></div>'
+    +'<div class="tf-topright">'+ringTop+daynav+'</div></div>';
   // ---- account cards ----
   var acctCard=function(handle,initial,role,have,target){ var p=target?Math.min(100,Math.round(have/target*100)):0;
     return '<div class="tf-acct"><div class="tf-acct-top"><div class="tf-av">'+initial+'</div>'
@@ -1448,10 +1467,20 @@ function renderToFilm(){
   var seg=function(opts){return '<span class="seg">'+opts.map(function(o){return '<button class="'+(o[0]===state.tfAcct?'active':'')+'" onclick="setTfAcct(\''+o[0]+'\')">'+o[1]+'</button>';}).join('')+'</span>';};
   var popts='<option value="">All products</option>'+(state.products||[]).slice().sort(function(a,b){return (a.name||'').localeCompare(b.name||'');}).map(function(p){return '<option value="'+esc(p.name)+'"'+(((state.tfProd||'')===p.name)?' selected':'')+'>'+esc(p.name)+'</option>';}).join('');
   h+='<div class="tf-filters" style="margin-top:14px">'+seg([['all','All'],[TF_ACCT_LINACRE,'LBL'],[TF_ACCT_YAS,'SWY']])
-    +'<select class="tf-prodfilter" onchange="setTfProd(this.value)">'+popts+'</select></div>';
-  // ---- section header ----
-  h+='<div class="tf-secthead"><div class="tf-spark"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sparkles"></use></svg></div>'
-    +'<div><h3>Today&#39;s '+todo.length+' videos to film</h3></div></div>';
+    +'<div class="tf-prodwrap"><svg class="tf-prodicon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>'
+    +'<select class="tf-prodfilter" onchange="setTfProd(this.value)">'+popts+'</select></div></div>';
+  // ---- section callout (desktop: tinted panel + subtext + clapperboard; mobile: plain header) ----
+  var clap='<svg class="tf-callout-art" viewBox="0 0 74 64" fill="none" aria-hidden="true">'
+    +'<rect x="6" y="22" width="58" height="34" rx="5" fill="#1e2330"/>'
+    +'<g transform="rotate(-9 35 17)"><rect x="3" y="9" width="62" height="14" rx="3" fill="#11141d"/>'
+    +'<polygon points="11,9 19,9 13,23 5,23" fill="#fff"/><polygon points="25,9 33,9 27,23 19,23" fill="#fff"/>'
+    +'<polygon points="39,9 47,9 41,23 33,23" fill="#fff"/><polygon points="53,9 61,9 55,23 47,23" fill="#fff"/></g>'
+    +'<circle cx="35" cy="40" r="10" fill="#ff3b4e"/><polygon points="32,35 43,40 32,45" fill="#fff"/>'
+    +'<path d="M67 27l5-3M68 34h5M67 41l5 3" stroke="#ff3b4e" stroke-width="2.4" stroke-linecap="round"/></svg>';
+  h+='<div class="tf-callout"><div class="tf-spark"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sparkles"></use></svg></div>'
+    +'<div class="tf-callout-tt"><h3>Today&#39;s '+todo.length+' videos to film</h3>'
+    +'<div class="tf-callout-sub">Daily plan '+DASH+' each video is spread across the week (max '+TF_WEEK_CAP+'/week, '+TF_DAY_CAP+'/day). Short of quota? Add more products or wait for today&#39;s scrape to fill it.</div></div>'
+    +clap+'</div>';
   h+= todo.length? '<div class="tf2-grid">'+todo.slice(0,20).map(function(x){return tfCard(x,'owned');}).join('')+'</div>'
     : '<div class="h-sub" style="padding:4px 0 12px">Nothing planned -- mark more products owned, or every owned video has hit its weekly cap.</div>';
   // ---- on-track card ----
