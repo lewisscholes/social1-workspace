@@ -122,6 +122,76 @@
   .tf-box{width:36px;height:36px;border:1.5px solid #c7ccd8;border-radius:9px;background:#fff;font:inherit;font-size:14px;font-weight:700;color:#6b7280;cursor:pointer;display:flex;align-items:center;justify-content:center}
   .tf-box.on{background:#0f9d58;border-color:#0f9d58;color:#fff}
   .tf-box .svic{width:18px;height:18px}
+  /* --- Filming plan redesign (mockup, red accent) --- */
+  .tf-hero{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px}
+  .tf-hero-ic{width:30px;height:30px;color:var(--blue);flex:0 0 auto;margin-top:2px}
+  .tf-hero-tt{flex:1 1 auto;min-width:0}
+  .tf-hero h2{font-size:23px;font-weight:800;letter-spacing:-.02em;margin:0;line-height:1.12}
+  .tf-hero .sub{color:var(--muted);font-size:13px;margin-top:4px}
+  .tf-hero .sub b{color:var(--blue);font-weight:700}
+  .tf-ring{flex:0 0 auto;display:flex;align-items:center;gap:11px;border:1px solid var(--line);border-radius:16px;padding:11px 15px;box-shadow:0 1px 2px rgba(20,30,60,.04)}
+  .tf-ring .rnum{font-weight:800;font-size:15px;color:#19202e}
+  .tf-ring .rlbl{font-size:11px;color:var(--muted);line-height:1.25}
+  .tf-accts{display:flex;gap:12px;flex-wrap:wrap}
+  .tf-acct{flex:1 1 240px;min-width:0;border:1px solid var(--line);border-radius:16px;padding:13px 15px;box-shadow:0 1px 2px rgba(20,30,60,.04)}
+  .tf-acct-top{display:flex;align-items:center;gap:11px}
+  .tf-av{width:42px;height:42px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#fff;background:var(--blue)}
+  .tf-acct .nm{font-weight:800;font-size:14px;color:var(--blue)}
+  .tf-acct .role{font-size:12px;color:var(--muted);margin-top:1px}
+  .tf-acct .cnt{margin-left:auto;font-size:12.5px;color:#5b6170;font-weight:600;white-space:nowrap}
+  .tf-bar{height:7px;background:#eef1f6;border-radius:999px;overflow:hidden;margin-top:11px}
+  .tf-bar>i{display:block;height:100%;background:var(--blue);border-radius:999px;min-width:6px}
+  .tf-secthead{display:flex;align-items:flex-start;gap:12px;margin:22px 0 15px}
+  .tf-spark{width:34px;height:34px;border-radius:50%;background:var(--blue-soft);color:var(--blue);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .tf-spark svg{width:18px;height:18px}
+  .tf-secthead h3{font-size:16px;font-weight:800;margin:0;line-height:1.2}
+  .tf-secthead .s{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.45}
+  /* plan card */
+  .tf2{position:relative;display:flex;border:1px solid var(--line);border-radius:18px;overflow:hidden;margin-bottom:14px;background:#fff;box-shadow:0 1px 3px rgba(20,30,60,.05)}
+  .tf2::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--blue);z-index:2}
+  .tf2-thumb{position:relative;flex:0 0 122px;width:122px;background:#11131a;overflow:hidden}
+  .tf2-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .tf2-thumb .vthumb{position:absolute;inset:0;min-height:0;background:#11131a;cursor:default}
+  .tf2-thumb .vthumb img{width:100%;height:100%;max-width:none;max-height:none;margin:0;object-fit:cover}
+  .tf2-thumb .cap{position:absolute;left:9px;right:9px;top:9px;color:#fff;font-weight:800;font-size:12px;line-height:1.18;text-shadow:0 1px 5px rgba(0,0,0,.7);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .tf2-thumb .pl{position:absolute;left:8px;bottom:8px;display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.6);color:#fff;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:700}
+  .tf2-thumb .pl svg{width:10px;height:10px}
+  .tf2-body{flex:1 1 auto;min-width:0;padding:15px 15px 15px 17px}
+  .tf2-title{font-weight:800;font-size:16px;line-height:1.2;letter-spacing:-.01em;color:#161823}
+  .tf2-chips{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
+  .tf2-chip{font-size:11px;font-weight:600;border:1px solid var(--line);border-radius:8px;padding:3px 9px;color:#475;white-space:nowrap}
+  .tf2-chip.fire{background:#fff6e9;border-color:#f4d8a8;color:#8a5b00;font-weight:700}
+  .tf2-tags{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+  .tf2-tag{font-size:11px;font-weight:700;padding:4px 11px;border-radius:999px}
+  .tf2-watch{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:#161823;color:#fff;border:0;border-radius:12px;padding:13px;font:inherit;font-weight:700;font-size:14px;text-decoration:none;cursor:pointer}
+  .tf2-watch:hover{background:#000}
+  .tf2-watch svg{width:16px;height:16px}
+  .tf2-film{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--line);margin-top:14px;padding-top:13px;gap:8px}
+  .tf2-film .lab{font-weight:700;font-size:13px;display:flex;align-items:center;gap:5px;color:#19202e}
+  .tf2-film .lab svg{width:14px;height:14px;color:#9aa1b2}
+  .tf2-film .cnt{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap}
+  .tf2-boxes{display:flex;gap:10px;align-items:center;margin-top:12px}
+  .tf2-box{flex:0 0 auto;min-width:64px;border:1.5px solid var(--line);border-radius:13px;padding:9px 6px;background:#fff;cursor:pointer;text-align:center;transition:transform .05s}
+  .tf2-box:active{transform:scale(.96)}
+  .tf2-box .n{font-weight:800;font-size:17px;color:#19202e;line-height:1}
+  .tf2-box .t{font-size:11px;color:var(--muted);margin-top:3px}
+  .tf2-box.on{background:var(--blue);border-color:var(--blue)}
+  .tf2-box.on .n,.tf2-box.on .t{color:#fff}
+  .tf2-bk{margin-left:auto;width:40px;height:40px;border:1.5px solid var(--line);border-radius:11px;background:#fff;display:flex;align-items:center;justify-content:center;color:#b6bcc9;cursor:pointer;flex:0 0 auto}
+  .tf2-bk svg{width:18px;height:18px}
+  .tf2-bk.on{color:var(--blue);border-color:var(--blue);background:var(--blue-soft)}
+  .tf-track{display:flex;align-items:center;gap:13px;background:#eafaf1;border:1px solid #bfe6cf;border-radius:16px;padding:15px 16px;margin-top:18px}
+  .tf-track .ic{width:30px;height:30px;border-radius:50%;background:#16c79a;color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .tf-track .ic svg{width:17px;height:17px}
+  .tf-track .tx{flex:1 1 auto;min-width:0}
+  .tf-track .tx b{font-size:14px;color:#10301f}
+  .tf-track .tx div{font-size:12.5px;color:#3f6b54;margin-top:1px}
+  @media(max-width:560px){
+    .tf-hero h2{font-size:20px}
+    .tf2-thumb{flex-basis:104px;width:104px}
+    .tf2-body{padding:13px 13px 13px 15px}
+    .tf2-box{min-width:0;flex:1 1 0}
+  }
   /* Priority kanban */
   .pri-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
   .pri-col{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;min-height:120px}
@@ -1322,33 +1392,59 @@ function renderToFilm(){
   if(!state.tfAcct)state.tfAcct='all';
   var isToday=tfIsToday();
   var linFilmed=tfFilmed(TF_ACCT_LINACRE), yasFilmed=tfFilmed(TF_ACCT_YAS);
-  var goal=function(nm,sub,have,target,col){return '<div style="flex:1 1 220px;border:1px solid var(--line);border-radius:12px;padding:11px 13px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:14px">'+nm+'</span><span class="h-sub" style="font-size:13px">'+have+' / '+target+' filmed</span></div><div class="h-sub" style="font-size:12px">'+sub+'</div><div style="height:8px;background:#eef1f6;border-radius:999px;margin-top:8px;overflow:hidden"><div style="height:100%;width:'+Math.min(100,Math.round(have/target*100))+'%;background:'+col+';border-radius:999px"></div></div></div>';};
-  var h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:11px">'
-    +'<div style="font-weight:700;font-size:16px"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-3px"><use href="#i-film"></use></svg> To film</div>'
-    +'<span style="flex:1"></span>'
-    +'<button class="btn ghost sm" style="padding:4px 11px;font-size:16px;line-height:1" onclick="tfShiftDay(-1)" aria-label="Previous day">&lsaquo;</button>'
-    +'<span style="font-weight:700;font-size:13px;min-width:84px;text-align:center">'+tfDayLabel()+'</span>'
-    +'<button class="btn ghost sm" style="padding:4px 11px;font-size:16px;line-height:1"'+(isToday?' disabled':'')+' onclick="tfShiftDay(1)" aria-label="Next day">&rsaquo;</button></div>';
-  h+='<div class="tf-goals">'+goal('@LinkedByLinacre','BOF '+String.fromCharCode(183)+' text on screen',linFilmed,25,'#2f6df6')+goal('@LinkedByYas','TOF '+String.fromCharCode(183)+' talking',yasFilmed,10,'#0f9d58')+'</div>';
-  if(!isToday){ h+=tfHistory(); card.innerHTML=h; return; }
-  var seg=function(opts){return '<span class="seg">'+opts.map(function(o){return '<button class="'+(o[0]===state.tfAcct?'active':'')+'" onclick="setTfAcct(\''+o[0]+'\')">'+o[1]+'</button>';}).join('')+'</span>';};
-  var popts='<option value="">All products</option>'+(state.products||[]).slice().sort(function(a,b){return (a.name||'').localeCompare(b.name||'');}).map(function(p){return '<option value="'+esc(p.name)+'"'+(((state.tfProd||'')===p.name)?' selected':'')+'>'+esc(p.name)+'</option>';}).join('');
-  h+='<div class="tf-filters" style="margin-top:12px">'+seg([['all','All'],[TF_ACCT_LINACRE,'LBL'],[TF_ACCT_YAS,'SWY']])
-    +'<select class="tf-prodfilter" onchange="setTfProd(this.value)">'+popts+'</select></div>';
+  var DOT=String.fromCharCode(183), DASH=String.fromCharCode(8211);
+  // ---- plan data (needed before the hero ring) ----
   var accts=(state.tfAcct==='all')?[TF_ACCT_LINACRE,TF_ACCT_YAS]:[state.tfAcct];
-  var planned=[]; accts.forEach(function(a){ planned=planned.concat(tfPlan(a)); });
+  var planned=[]; if(isToday){ accts.forEach(function(a){ planned=planned.concat(tfPlan(a)); }); }
   var pf=(state.tfProd||'').toLowerCase().trim();
   if(pf) planned=planned.filter(function(x){return (x.pname||'').toLowerCase().indexOf(pf)>=0;});
   var todo=planned.filter(function(x){return (tfTicks[x.key]||0)<x.target;});
   var done=planned.filter(function(x){return (tfTicks[x.key]||0)>=x.target;});
-  var planBy={}; planBy[TF_ACCT_LINACRE]=0; planBy[TF_ACCT_YAS]=0;
-  planned.forEach(function(x){ planBy[x.acct]=(planBy[x.acct]||0)+x.target; });
-  var subTxt='Daily plan -- each video is spread across the week (max '+TF_WEEK_CAP+'/week, '+TF_DAY_CAP+'/day). Planned today: LBL '+(planBy[TF_ACCT_LINACRE]||0)+'/25, SWY '+(planBy[TF_ACCT_YAS]||0)+'/10.';
-  if((planBy[TF_ACCT_LINACRE]||0)<25 || (planBy[TF_ACCT_YAS]||0)<10) subTxt+=' Short of quota -- own more products (or wait for today&#39;s scrape) to fill it.';
-  h+=tfSection('To film today','plan '+String.fromCharCode(183)+' '+todo.length, todo,'owned','Nothing planned -- mark more products owned, or every owned video has hit its weekly cap.',{accent:'#0f9d58', first:true, sub:subTxt});
-  if(done.length) h+=tfSection('Done for the day','done '+String.fromCharCode(183)+' '+done.length, done,'done','',{accent:'#9aa1b2'});
+  var plannedTotal=0, filmedPlanned=0, planBy={}; planBy[TF_ACCT_LINACRE]=0; planBy[TF_ACCT_YAS]=0;
+  planned.forEach(function(x){ plannedTotal+=x.target; filmedPlanned+=Math.min(x.target,tfTicks[x.key]||0); planBy[x.acct]=(planBy[x.acct]||0)+x.target; });
+  // ---- hero ----
+  var pct=plannedTotal?Math.round(filmedPlanned/plannedTotal*100):0;
+  var ring=isToday?('<div class="tf-ring">'+tfRingSvg(pct)+'<div><div class="rnum">'+filmedPlanned+' / '+plannedTotal+'</div><div class="rlbl">videos planned</div></div></div>'):'';
+  var h='<div class="tf-hero"><svg class="tf-hero-ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-film"></use></svg>'
+    +'<div class="tf-hero-tt"><h2>Today&#39;s filming plan</h2><div class="sub">Your daily video roadmap powered by <b>Social One</b></div></div>'+ring+'</div>';
+  // compact day switcher (kept from before, restyled small)
+  h+='<div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin:-4px 0 14px">'
+    +'<button class="btn ghost sm" style="padding:3px 10px;font-size:16px;line-height:1" onclick="tfShiftDay(-1)" aria-label="Previous day">&lsaquo;</button>'
+    +'<span style="font-weight:700;font-size:13px;min-width:78px;text-align:center">'+tfDayLabel()+'</span>'
+    +'<button class="btn ghost sm" style="padding:3px 10px;font-size:16px;line-height:1"'+(isToday?' disabled':'')+' onclick="tfShiftDay(1)" aria-label="Next day">&rsaquo;</button></div>';
+  // ---- account cards ----
+  var acctCard=function(handle,initial,role,have,target){ var p=target?Math.min(100,Math.round(have/target*100)):0;
+    return '<div class="tf-acct"><div class="tf-acct-top"><div class="tf-av">'+initial+'</div>'
+      +'<div style="min-width:0"><div class="nm">'+handle+'</div><div class="role">'+role+'</div></div>'
+      +'<div class="cnt">'+have+' / '+target+' filmed</div></div><div class="tf-bar"><i style="width:'+p+'%"></i></div></div>';};
+  h+='<div class="tf-accts">'+acctCard('@LinkedByLinacre','L','BOF '+DOT+' text on screen',linFilmed,25)
+    +acctCard('@LinkedByYas','Y','TOF '+DOT+' talking',yasFilmed,10)+'</div>';
+  if(!isToday){ h+=tfHistory(); card.innerHTML=h; return; }
+  // ---- filters ----
+  var seg=function(opts){return '<span class="seg">'+opts.map(function(o){return '<button class="'+(o[0]===state.tfAcct?'active':'')+'" onclick="setTfAcct(\''+o[0]+'\')">'+o[1]+'</button>';}).join('')+'</span>';};
+  var popts='<option value="">All products</option>'+(state.products||[]).slice().sort(function(a,b){return (a.name||'').localeCompare(b.name||'');}).map(function(p){return '<option value="'+esc(p.name)+'"'+(((state.tfProd||'')===p.name)?' selected':'')+'>'+esc(p.name)+'</option>';}).join('');
+  h+='<div class="tf-filters" style="margin-top:14px">'+seg([['all','All'],[TF_ACCT_LINACRE,'LBL'],[TF_ACCT_YAS,'SWY']])
+    +'<select class="tf-prodfilter" onchange="setTfProd(this.value)">'+popts+'</select></div>';
+  // ---- section header ----
+  var subTxt='Daily plan '+DASH+' each video is spread across the week (max '+TF_WEEK_CAP+'/week, '+TF_DAY_CAP+'/day).';
+  if((planBy[TF_ACCT_LINACRE]||0)<25 || (planBy[TF_ACCT_YAS]||0)<10) subTxt+=' Short of quota? Add more products or wait for today&#39;s scrape to fill it.';
+  h+='<div class="tf-secthead"><div class="tf-spark"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sparkles"></use></svg></div>'
+    +'<div><h3>Today&#39;s '+todo.length+' videos to film</h3><div class="s">'+subTxt+'</div></div></div>';
+  h+= todo.length? todo.slice(0,20).map(function(x){return tfCard(x,'owned');}).join('')
+    : '<div class="h-sub" style="padding:4px 0 12px">Nothing planned -- mark more products owned, or every owned video has hit its weekly cap.</div>';
+  // ---- on-track card ----
+  var remaining=Math.max(0,plannedTotal-filmedPlanned);
+  if(plannedTotal){
+    var ttl=remaining>0?'You&#39;re on track!':'Quota smashed!';
+    var msg=remaining>0?('Film '+remaining+' more video'+(remaining===1?'':'s')+' to hit today&#39;s quota.'):('All '+plannedTotal+' planned videos filmed for today.');
+    h+='<div class="tf-track"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"></use></svg></div>'
+      +'<div class="tx"><b>'+ttl+'</b><div>'+msg+'</div></div>'
+      +'<button class="btn ghost sm" onclick="navigate(\'bank\')"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-2px"><use href="#i-rows"></use></svg> View progress</button></div>';
+  }
+  if(done.length) h+=tfSection('Done for the day','done '+DOT+' '+done.length, done,'done','',{accent:'#9aa1b2'});
   h+=tfSamplesSection();
   card.innerHTML=h;
+  hydrateTfThumbs();
   setFilmedMetric();
 }
 function tfHistory(){
@@ -1433,24 +1529,44 @@ function tfSection(title,badge,list,mode,emptyMsg,opts){
   h+='</div>';
   return h;
 }
+function tfRingSvg(pct){
+  var r=15, c=2*Math.PI*r, off=c*(1-Math.max(0,Math.min(100,pct))/100);
+  return '<svg width="36" height="36" viewBox="0 0 38 38" aria-hidden="true">'
+    +'<circle cx="19" cy="19" r="'+r+'" fill="none" stroke="#eef1f6" stroke-width="4"></circle>'
+    +'<circle cx="19" cy="19" r="'+r+'" fill="none" stroke="var(--blue)" stroke-width="4" stroke-linecap="round" stroke-dasharray="'+c.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'" transform="rotate(-90 19 19)"></circle></svg>';
+}
+var tfSaved={};
+function tfToggleSave(pid){ tfSaved[pid]=!tfSaved[pid]; renderToFilm(); }
+function hydrateTfThumbs(){ try{ [].slice.call(document.querySelectorAll('#toFilmCard .vthumb')).forEach(loadThumbFor); }catch(e){} }
 function tfCard(x,mode){
+  var DOT=String.fromCharCode(183);
   var acctCol = x.acct===TF_ACCT_LINACRE?['#e6f1fb','#0c447c']:['#e1f5ee','#0f6e56'];
-  var rec=tfRecency(x.days);
-  var vel=tfPerDay(x.views,x.days);
-  var perf='<span class="tf-badge">'+tfFmt(x.views)+' views</span>'+(rec?'<span class="tf-badge">'+rec+'</span>':'')+(vel?'<span class="tf-badge" style="background:#fff6e9;border-color:#f4d8a8;color:#8a5b00">'+vel+'</span>':'');
-  var tags='<span class="tf-pill" style="background:'+acctCol[0]+';color:'+acctCol[1]+'">'+x.acct+'</span><span class="tf-pill" style="background:#f0ecff;color:#4a3fb8">'+tfStyleOf(x.vtype)+'</span>';
-  var watch=x.link?'<a class="tf-watch" href="'+esc(x.link)+'" target="_blank" rel="noopener">Watch winning '+String.fromCharCode(8599)+'</a>':'';
-  var c=tfTicks[x.key]||0; var tgt=x.target||1; var wk=tfWeek[x.key]||0;
-  var boxes='<div class="tf-checks">';
-  for(var i=1;i<=tgt;i++){ boxes+='<button class="tf-box'+(i<=c?' on':'')+'" onclick="tfSetTick(\''+tfJs(x.key)+'\','+i+',\''+x.pid+'\',\''+x.acct+'\',\''+tfJs(x.angle)+'\')">'+(i<=c?'<svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"></use></svg>':i)+'</button>'; }
-  boxes+='<span class="h-sub" style="font-size:12px;margin-left:2px">today '+c+'/'+tgt+(wk?(' '+String.fromCharCode(183)+' '+wk+'/'+TF_WEEK_CAP+' this week'):'')+'</span></div>';
-  return '<div class="card tf-card">'
-    +'<div class="tf-prodname">'+esc(x.pname||'(product)')+'</div>'
-    +'<div class="tf-meta">'+perf+'</div>'
-    +'<div class="tf-meta">'+tags+'</div>'
-    +(watch?'<div class="tf-foot">'+watch+'</div>':'')
-    +boxes
-    +'</div>';
+  var rec=tfRecency(x.days), vel=tfPerDay(x.views,x.days);
+  var vid=(String(x.link||'').match(/\/video\/(\d+)/)||[])[1];
+  var cap=esc(String(x.angle||'').trim());
+  var thumb='<div class="tf2-thumb">'
+    +(vid?'<div class="vthumb" id="emb_'+vid+'" data-url="'+esc(x.link)+'"><img id="th_'+vid+'" referrerpolicy="no-referrer" alt=""></div>':'')
+    +(cap?'<div class="cap">'+cap+'</div>':'')
+    +'<div class="pl"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-play"></use></svg> Winning</div></div>';
+  var chips='<div class="tf2-chips"><span class="tf2-chip">'+tfFmt(x.views)+' views</span>'
+    +(rec?'<span class="tf2-chip">'+rec+'</span>':'')
+    +(vel?'<span class="tf2-chip fire">'+String.fromCodePoint(128293)+' '+vel+'</span>':'')+'</div>';
+  var tags='<div class="tf2-tags"><span class="tf2-tag" style="background:'+acctCol[0]+';color:'+acctCol[1]+'">'+x.acct+'</span>'
+    +'<span class="tf2-tag" style="background:var(--blue-soft);color:var(--blue-d)">'+tfStyleOf(x.vtype)+'</span></div>';
+  var watch=x.link?'<a class="tf2-watch" href="'+esc(x.link)+'" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-play"></use></svg> Watch winning video</a>':'';
+  var c=tfTicks[x.key]||0, tgt=x.target||1, wk=tfWeek[x.key]||0;
+  var film='<div class="tf2-film"><span class="lab">Film this video <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-info"></use></svg></span>'
+    +'<span class="cnt">'+c+' / '+tgt+' filmed'+(wk?(' '+DOT+' '+wk+'/'+TF_WEEK_CAP+' wk'):'')+'</span></div>';
+  var boxes='<div class="tf2-boxes">';
+  for(var i=1;i<=tgt;i++){
+    var inner=(i<=c)?'<div class="n"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:17px;height:17px"><use href="#i-check"></use></svg></div><div class="t">Done</div>'
+                    :'<div class="n">'+i+'</div><div class="t">Film '+i+'</div>';
+    boxes+='<button class="tf2-box'+(i<=c?' on':'')+'" onclick="tfSetTick(\''+tfJs(x.key)+'\','+i+',\''+x.pid+'\',\''+x.acct+'\',\''+tfJs(x.angle)+'\')">'+inner+'</button>';
+  }
+  boxes+='<button class="tf2-bk'+(tfSaved[x.pid]?' on':'')+'" onclick="tfToggleSave(\''+x.pid+'\')" aria-label="Save for later"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"></use></svg></button></div>';
+  return '<div class="tf2">'+thumb+'<div class="tf2-body">'
+    +'<div class="tf2-title">'+esc(x.pname||'(product)')+'</div>'
+    +chips+tags+watch+film+boxes+'</div></div>';
 }
 async function tfSetTick(key,n,pid,acct,angle){
   var prev=tfTicks[key]||0; var c=(prev===n)?n-1:n; tfTicks[key]=c; tfWeek[key]=Math.max(0,(tfWeek[key]||0)+(c-prev)); renderToFilm();
