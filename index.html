@@ -914,6 +914,14 @@
         </div>
         <button class="btn ghost" onclick="loadSchedule()"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-refresh"></use></svg> Refresh</button>
       </div>
+      <div class="card" style="margin-bottom:14px" id="rtpCard">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <div style="font-weight:700;font-size:14px;flex:1">Ready to post &middot; captions</div>
+          <button class="btn ghost sm" onclick="loadReadyToPost()"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-refresh"></use></svg></button>
+        </div>
+        <div class="h-sub" style="font-size:12px;margin-bottom:10px">TikTok drafts can't carry a caption over (a TikTok limit, not a bug). Open the draft in TikTok, copy its caption from here, and paste it before you post.</div>
+        <div id="rtpList"><div class="h-sub">Loading...</div></div>
+      </div>
       <div class="card" style="margin-bottom:14px">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
           <div style="font-weight:700;font-size:14px;flex:1">Connected accounts</div>
@@ -1100,6 +1108,52 @@ async function loadSchedule(){
   state.schedVids=data||[];
   renderCalendar();
   loadPPAccounts();
+  loadReadyToPost();
+}
+// ---------- Ready to post (caption handoff) ----------
+// TikTok inbox/draft uploads strip the caption (platform limitation), so this
+// panel keeps every sent caption one tap away for whoever finalizes the draft.
+async function loadReadyToPost(){
+  var el=document.getElementById('rtpList'); if(!el)return;
+  try{
+    var r=await sb.from('send_jobs').select('id,account_tag,caption,status,message,created_at').is('cleared_at',null).order('created_at',{ascending:false}).limit(20);
+    state.rtpJobs=r.data||[];
+  }catch(e){ state.rtpJobs=[]; }
+  renderReadyToPost();
+}
+function renderReadyToPost(){
+  var el=document.getElementById('rtpList'); if(!el)return;
+  var rows=state.rtpJobs||[];
+  if(!rows.length){ el.innerHTML='<div class="h-sub">Nothing waiting. When you swipe a video right to send it, its caption shows up here.</div>'; return; }
+  el.innerHTML=rows.map(function(j){
+    var st=j.status||'queued';
+    var pill;
+    if(st==='done') pill='<span class="tf-pill" style="background:#e7f7ee;color:#0f6e56">In TikTok inbox</span>';
+    else if(st==='error') pill='<span class="tf-pill" style="background:#fdecec;color:#b3261e">Failed</span>';
+    else pill='<span class="tf-pill" style="background:#fff4e0;color:#9a6b00">'+(st==='sending'?'Sending...':'Queued')+'</span>';
+    var when=new Date(j.created_at).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+    var err=(st==='error'&&j.message)?'<div class="h-sub" style="color:#b3261e;font-size:12px;margin-top:4px">'+esc(String(j.message).slice(0,140))+'</div>':'';
+    return '<div style="padding:10px 0;border-bottom:1px solid var(--line2)">'
+      +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      +'<span style="font-weight:700;font-size:13px">'+esc(j.account_tag||'')+'</span>'
+      +pill
+      +'<span class="h-sub" style="font-size:12px">'+esc(when)+'</span>'
+      +'<span style="flex:1"></span>'
+      +'<button class="btn sm" onclick="rtpCopy(\''+esc(j.id)+'\')">Copy caption</button>'
+      +'<button class="btn ghost sm" style="padding:3px 8px" onclick="rtpClear(\''+esc(j.id)+'\')">Clear</button>'
+      +'</div>'
+      +'<div class="h-sub" style="font-size:13px;margin-top:6px;white-space:pre-wrap;word-break:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer" onclick="rtpExpand(this)">'+esc(j.caption||'(no caption)')+'</div>'
+      +err
+      +'</div>';
+  }).join('');
+}
+function rtpExpand(div){ if(div.style.webkitLineClamp){ div.style.webkitLineClamp=''; div.style.display='block'; } else { div.style.display='-webkit-box'; div.style.webkitLineClamp='3'; } }
+function rtpCopy(id){ var j=(state.rtpJobs||[]).find(function(x){return x.id===id;}); if(!j){ toast('Not found','err'); return; } copyText(j.caption||'','caption'); }
+async function rtpClear(id){
+  var r=await sb.from('send_jobs').update({cleared_at:new Date().toISOString()}).eq('id',id);
+  if(r.error){ toast('Failed: '+r.error.message,'err'); return; }
+  state.rtpJobs=(state.rtpJobs||[]).filter(function(x){return x.id!==id;});
+  renderReadyToPost();
 }
 // ---------- Connected TikTok accounts (PostPeer) ----------
 var PP_FN='https://vcrforlyuhapvkewsogq.supabase.co/functions/v1/postpeer';
@@ -4032,7 +4086,7 @@ async function revokeUser(id){ await sb.from('profiles').update({status:'pending
 
 // ---------- init ----------
 (function(){ refreshAuth(); })();
-setInterval(()=>{ if(state.currentView==='dashboard') loadJobs().then(()=>renderJobsInto('sc_jobs')); if(state.currentView==='overlays') loadOverlays(); }, 6000);
+setInterval(()=>{ if(state.currentView==='dashboard') loadJobs().then(()=>renderJobsInto('sc_jobs')); if(state.currentView==='overlays') loadOverlays(); if(state.currentView==='schedule') loadReadyToPost(); }, 6000);
 window.addEventListener('resize',()=>{ if(state.currentView==='dashboard') renderDash(); });
 </script>
 </body>
