@@ -2475,7 +2475,7 @@ function swOverlayHtml(v){
   const es=v.edit_state;
   let ovs=null;
   if(es&&es.overlays&&es.overlays.length) ovs=es.overlays;
-  else if(v.caption_suggested) ovs=[{text:mteClampLines(v.caption_suggested),x:50,y:MTE_OV_TOP,color:'#ffffff',size:24,style:'plain',font:'classic'}];
+  else if(v.caption_suggested) ovs=[{text:mteClampLines(v.caption_suggested),x:50,y:MTE_OV_TOP,color:'#ffffff',size:24,style:'outline',font:'classic'}];
   if(!ovs) return '';
   return ovs.map(o=>{ const p=mteOvParts(o,640); return '<div class="sw-text'+(p.box?' sw-box':'')+'" data-osize="'+(o.size||24)+'"'+(p.box?(' data-bg="'+esc(p.bg)+'"'):'')+' style="position:absolute;'+p.style+'">'+p.inner+'</div>'; }).join('');
 }
@@ -2759,7 +2759,7 @@ async function mteAutoSuggest(id){
     if(error||(data&&data.error)) return; // no data / not configured -- user can tap Suggest overlays
     const {data:vr}=await sb.from('videos').select('caption_suggested').eq('id',id).single();
     if(vr&&vr.caption_suggested&&mteId===id&&!mteTexts.length){
-      mteTexts.push({id:++mteOvSeq,text:mteClampLines(vr.caption_suggested),x:50,y:MTE_OV_TOP,color:'#ffffff',size:24,font:'classic',style:'plain'});
+      mteTexts.push({id:++mteOvSeq,text:mteClampLines(vr.caption_suggested),x:50,y:MTE_OV_TOP,color:'#ffffff',size:24,font:'classic',style:'outline'});
       mteRenderOverlays();
       const sv=swVids.find(x=>x.id===id); if(sv)sv.caption_suggested=vr.caption_suggested;
       toast('Overlay idea added','ok');
@@ -2775,7 +2775,7 @@ async function mteOpen(id){
   if(!url){ const {data:s}=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600); url=s&&s.signedUrl; if(url)signed[id]=url; }
   const es=v.edit_state;
   if(es&&es.overlays&&es.overlays.length){ mteTexts=es.overlays.map(o=>({id:++mteOvSeq,text:o.text,x:o.x,y:o.y,color:o.color,size:o.size||24,scale:o.scale||1,font:(o.font==='TikTok Sans'?'classic':(o.font||'classic')),style:(o.style||(o.box?'box':(o.outline===false?'plain':'outline')))})); }
-  else if(v.caption_suggested){ mteTexts.push({id:++mteOvSeq,text:mteClampLines(v.caption_suggested),x:50,y:MTE_OV_TOP,color:'#ffffff',size:24,font:'classic',style:'plain'}); }
+  else if(v.caption_suggested){ mteTexts.push({id:++mteOvSeq,text:mteClampLines(v.caption_suggested),x:50,y:MTE_OV_TOP,color:'#ffffff',size:24,font:'classic',style:'outline'}); }
   if(!mteTexts.length && v.product_uid){ mteAutoSuggest(id); }
   mteActive=0; mteRunIdx=0;
   const vid=document.getElementById('mteVideo'); const vidB=document.getElementById('mteVideo2');
