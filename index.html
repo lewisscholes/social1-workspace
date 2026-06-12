@@ -1899,7 +1899,9 @@ function renderDashMetrics(){
   const inWin=ts=>{ if(!ts) return false; const t=new Date(ts).getTime(); return d===1 ? t>=t0 : (now-t)<=d*day; };
   const up=V.filter(v=>v.kind!=='edited'&&inWin(v.created_at)).length;   // raw uploads
   const ed=V.filter(v=>v.kind==='edited'&&inWin(v.created_at)).length;   // rendered edited clips (Edited bucket)
-  const po=V.filter(v=>inWin(v.posted_at)).length;                       // posted
+  // posted: the send flow stamps posted_at on BOTH the raw clip and its edited render --
+  // count each underlying clip once, not twice.
+  const po=(()=>{ const seen=new Set(); let n=0; V.forEach(v=>{ if(!inWin(v.posted_at))return; const k=(v.kind==='edited')?(v.source_video_id||v.id):v.id; if(seen.has(k))return; seen.add(k); n++; }); return n; })();
   const ranges=[[1,'Today'],[7,'Last 7 days'],[14,'14 days'],[30,'30 days']];
   const toggle='<div class="rangetoggle">'+ranges.map(r=>'<button class="rtbtn'+(r[0]===d?' on':'')+'" onclick="setDashRange('+r[0]+')">'+r[1]+'</button>').join('')+'</div>';
   const stat=(l,v)=>'<div class="dstat"><div class="dval">'+v+'</div><div class="dlbl">'+l+'</div></div>';
@@ -2340,7 +2342,19 @@ document.addEventListener('click',()=>document.querySelectorAll('.menu').forEach
 document.addEventListener('scroll',()=>document.querySelectorAll('.menu:not(.hide)').forEach(m=>m.classList.add('hide')),true);
 // For PLAYBACK/preview we use the small 720p proxy when it's ready (fast to load);
 // downloads and the final render always use the full-res original (storage_path).
-function previewPath(v){ return (v&&v.proxy_path)?v.proxy_path:(v&&v.storage_path); }
+function previewPath(v){
+  if(!v) return null;
+  if(v.proxy_path) return v.proxy_path;
+  // Edited renders made by the old worker have no proxy AND no faststart, so they play
+  // as a black screen until fully downloaded. Preview via the raw source's 480p proxy
+  // instead (the deck draws the text overlay on top from the saved edit state).
+  if(v._srcProxy) return v._srcProxy;
+  if(v.kind==='edited'&&v.source_video_id){
+    const s=(state.videos||[]).find(x=>x&&x.id===v.source_video_id);
+    if(s&&s.proxy_path) return s.proxy_path;
+  }
+  return v.storage_path;
+}
 async function hydrateBankUrls(){ for(const v of state.videos){ if(signed[v.id])continue; const {data}=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600); if(data&&data.signedUrl) signed[v.id]=data.signedUrl; } renderBankVideos(); }
 function renderBankVideos(){ const b=bankBuckets(); const list=b[state.bankTab]; if(list.length) paintBank(list); }
 function isMobileDevice(){ return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints>1); }
@@ -2423,6 +2437,9 @@ async function loadEditor(){
     const cur=bySource[key];
     if(!cur || (v.kind==='edited' && cur.kind!=='edited')) bySource[key]=v; });
   let list=Object.keys(bySource).map(k=>bySource[k]);
+  // Edited renders without a proxy: remember their raw source's proxy + edit state so the
+  // card previews instantly (old renders lack faststart -> would show a black screen).
+  list.forEach(v=>{ if(v.kind==='edited'&&!v.proxy_path&&v.source_video_id){ const raw=all.find(x=>x.id===v.source_video_id); if(raw){ v._srcProxy=raw.proxy_path||null; v._srcES=raw.edit_state||null; } } });
   try{ const {data:dls}=await sb.from('video_downloads').select('video_id').eq('user_id',state.user.id); const dset=new Set((dls||[]).map(d=>d.video_id)); list=list.filter(v=> v.kind==='edited' ? true : !dset.has(v.id)); }catch(e){}
   list.sort((a,b)=> new Date(b.created_at||0)-new Date(a.created_at||0));
   swVids=list; swIdx=0;
@@ -2471,8 +2488,11 @@ function swRender(){
 // swApplyOverlaySizes() once the cards are in the DOM (so o.size scales by the card's real height/640,
 // matching the editor and the export exactly).
 function swOverlayHtml(v){
-  if(v&&v.kind==='edited') return '';   // text is already burned into the pixels -- don't draw it again
-  const es=v.edit_state;
+  // Text is burned into edited renders -- don't draw it again... EXCEPT when the card is
+  // previewing via the raw source's proxy (no text in those pixels), where we draw the
+  // saved overlays so the card still shows what was written.
+  if(v&&v.kind==='edited'&&!(v._srcProxy&&v._srcES)) return '';
+  const es=(v&&v.kind==='edited')?v._srcES:v.edit_state;
   let ovs=null;
   if(es&&es.overlays&&es.overlays.length) ovs=es.overlays;
   else if(v.caption_suggested) ovs=[{text:mteClampLines(v.caption_suggested),x:50,y:MTE_OV_TOP,color:'#ffffff',size:24,style:'outline',font:'classic'}];
@@ -2768,7 +2788,14 @@ async function mteAutoSuggest(id){
 }
 
 async function mteOpen(id){
-  const v=swVids.find(x=>x.id===id); if(!v) return;
+  let v=swVids.find(x=>x.id===id); if(!v) return;
+  // NEVER edit a burned render -- its text is baked into the pixels, so editing it again
+  // double-burns ("edited.edited"). Redirect to the RAW source clip + its saved edit state.
+  if(v.kind==='edited'&&v.source_video_id){
+    let src=swVids.find(x=>x.id===v.source_video_id)||(state.videos||[]).find(x=>x.id===v.source_video_id);
+    if(!src){ try{ const {data}=await sb.from('videos').select('*').eq('id',v.source_video_id).single(); src=data; }catch(e){} }
+    if(src&&src.storage_path){ if(swVids.indexOf(src)<0) swVids.push(src); v=src; id=src.id; }
+  }
   mteId=id; mteSelSeg=-1; mteThumbs=[]; mtePlaying=false; mteTexts=[]; mteSegments=[]; mteMedia=[]; mteMovSeq=0; mteSelMedia=null; mtePps=0; mteMuted=false; mteResetUndo();
   mteRenderOverlays(); mteRenderMedia();   // clear any overlays left on screen from the previous video right away
   let url=signed[id];
@@ -3214,7 +3241,7 @@ function mteFontCss(key){ if(key==='elegance')return "Georgia,'Times New Roman',
 // between close letters, and sits BEHIND the fill so the white letters keep their full thickness.
 const MTE_OUTLINE_R=0.07;  // halo radius in em (scales with font size) -- locked to TikTok match
 const MTE_WEIGHT=600;          // banner + plain text weight (locked to TikTok match)
-const MTE_OUTLINE_WEIGHT=450;  // outline-style letters are lighter (the halo adds visual weight)
+const MTE_OUTLINE_WEIGHT=700;  // TikTok's classic bordered text is BOLD (matched 1:1 against the TikTok editor)
 // Banner (box) style -- one smooth continuous shape (not per-line boxes), locked to TikTok match.
 const MTE_BOX_RAD=0.24, MTE_BOX_PADX=0.30, MTE_BOX_PADY=0.14, MTE_BOX_LH=1.18;
 function mteBoxTextColor(bg){ var c=mteContrast(bg); return (c==='#000')?'#161823':c; }   // softer near-black on a light banner
@@ -3349,6 +3376,7 @@ function mteOpenTextSheet(ov){
   const sz=document.getElementById('mteSize'); if(sz)sz.value=mteCurSize;
   mteSelStyleBtn();
   document.getElementById('mteSheet').classList.add('open');
+  var tp=document.querySelector('.mte-top'); if(tp)tp.classList.add('hide');   // back/save buttons overlap the style buttons -- hide while typing
   mteApplyTaStyle(); mteRenderOverlays();
   // Place the edit box exactly where the overlay sits, so tapping it doesn't move the text.
   const pv=document.getElementById('mtePv'); const wrap=document.getElementById('mteTaWrap');
@@ -3374,6 +3402,7 @@ function mteTextDone(){
   const ta=document.getElementById('mteTa'); const txt=(ta?mteTaText(ta):'').trim();
   if(mteEditingOv){ if(!txt){ mteTexts=mteTexts.filter(o=>o!==mteEditingOv); } else { Object.assign(mteEditingOv,{text:txt,color:mteCurColor,size:mteCurSize,font:mteCurFont,style:mteCurStyle}); } }
   document.getElementById('mteSheet').classList.remove('open'); mteEditingOv=null; mteKbUnbind(); mteRenderOverlays();
+  var tp=document.querySelector('.mte-top'); if(tp)tp.classList.remove('hide');
   const wrap=document.getElementById('mteTaWrap'); if(wrap){ const sv=wrap.querySelector('svg.mte-bsvg'); if(sv)sv.remove(); wrap.style.position=''; wrap.style.left=''; wrap.style.top=''; wrap.style.transform=''; }
 }
 
