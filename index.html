@@ -525,8 +525,11 @@
   .mte-sheet.open{display:flex}
   .mte-sheet-top{display:flex;align-items:center;gap:12px;padding:max(12px,env(safe-area-inset-top)) 14px 6px}
   .mte-sheet-top .mte-done{margin-left:0;font-size:16px;font-weight:700;background:transparent;border:0;color:#fff;cursor:pointer;flex:0 0 auto}
-  .mte-stybtn{flex:0 0 auto;background:transparent;border:1.5px solid #fff;color:#fff;width:34px;height:34px;border-radius:9px;font-weight:800;font-size:17px;cursor:pointer;line-height:1}
+  .mte-stybtn{flex:0 0 auto;background:transparent;border:1.5px solid rgba(255,255,255,.45);color:#fff;width:34px;height:34px;border-radius:9px;font-weight:800;font-size:17px;cursor:pointer;line-height:1}
   .mte-stybtn.on{background:#fff;color:#000}
+  .mte-stybtn.outl{text-shadow:-1.5px -1.5px 0 #000,1.5px -1.5px 0 #000,-1.5px 1.5px 0 #000,1.5px 1.5px 0 #000,0 1.5px 0 #000,0 -1.5px 0 #000,1.5px 0 0 #000,-1.5px 0 0 #000}
+  .mte-stybtn.boxed{background:#fff;color:#161823}
+  .mte-stybtn.sel{border-color:var(--blue,#0ea5e9);box-shadow:0 0 0 2px var(--blue,#0ea5e9)}
   .mte-wheelbtn{flex:0 0 auto;width:32px;height:32px;border-radius:50%;border:2px solid #fff;padding:0;cursor:pointer;background:conic-gradient(from 0deg,#ff2d55,#ffd400,#27c2a0,#3a86ff,#8b5cf6,#ff2d55)}
   .mte-cs{flex:0 0 auto;width:30px;height:30px;border-radius:50%;border:2px solid #fff;padding:0;cursor:pointer}
   .mte-colors2{display:flex;gap:16px;justify-content:center;align-items:center;overflow-x:auto;padding:9px 14px;scrollbar-width:none}
@@ -811,29 +814,13 @@
       </div>
       <div class="mte-sheet" id="mteSheet">
         <div class="mte-sheet-top">
-          <button class="mte-wheelbtn" onclick="mteToggleColors()" aria-label="Colours"></button>
-          <button class="mte-stybtn" onclick="mteToggleStyle()" id="mteStyBtn" aria-label="Text style">A</button>
-          <button class="mte-done" onclick="mteTextDone()">Done</button>
+          <button class="mte-stybtn outl" id="mteStyOutline" onclick="mteSetStyle('outline')" aria-label="White text with black border">A</button>
+          <button class="mte-stybtn boxed" id="mteStyBox" onclick="mteSetStyle('box')" aria-label="Black text on white background">A</button>
+          <button class="mte-done" style="margin-left:auto" onclick="mteTextDone()">Done</button>
         </div>
         <div class="mte-sheet-body">
           <div class="mte-ta-wrap" id="mteTaWrap"><span class="mte-ta" id="mteTa" contenteditable="true" role="textbox" data-ph="Add text" oninput="mteLiveApply()" onkeydown="mteTaKey(event)"></span></div>
           <div class="mte-sizewrap"><input type="range" class="mte-size" id="mteSize" min="14" max="72" value="28" oninput="mteSizeChange(this.value)"></div>
-        </div>
-        <div class="mte-fonts" id="mteFonts">
-          <button class="mte-fbtn sel" data-font="classic" onclick="mteSetFont('classic',this)">Classic</button>
-          <button class="mte-fbtn" data-font="elegance" onclick="mteSetFont('elegance',this)" style="font-family:Georgia,serif">Elegance</button>
-          <button class="mte-fbtn" data-font="neon" onclick="mteSetFont('neon',this)">Neon</button>
-          <button class="mte-fbtn" data-font="retro" onclick="mteSetFont('retro',this)" style="font-style:italic">Retro</button>
-          <button class="mte-fbtn" data-font="comic" onclick="mteSetFont('comic',this)" style="font-family:'Comic Sans MS',cursive">Comic Sans</button>
-        </div>
-        <div class="mte-colors2" id="mteColors2" style="display:none">
-          <button class="mte-cs" style="background:#ffffff" onclick="mteSetColor('#ffffff')" aria-label="White"></button>
-          <button class="mte-cs" style="background:#000000" onclick="mteSetColor('#000000')" aria-label="Black"></button>
-          <button class="mte-cs" style="background:#fe2c55" onclick="mteSetColor('#fe2c55')" aria-label="Red"></button>
-          <button class="mte-cs" style="background:#ffd400" onclick="mteSetColor('#ffd400')" aria-label="Yellow"></button>
-          <button class="mte-cs" style="background:#27c2a0" onclick="mteSetColor('#27c2a0')" aria-label="Teal"></button>
-          <button class="mte-cs" style="background:#3a86ff" onclick="mteSetColor('#3a86ff')" aria-label="Blue"></button>
-          <button class="mte-cs" style="background:#8b5cf6" onclick="mteSetColor('#8b5cf6')" aria-label="Purple"></button>
         </div>
       </div>
     </div>
@@ -2159,7 +2146,9 @@ function bankBuckets(){
       const key=v.source_video_id||v.id;
       if(seenEdited.has(key)) return;        // a newer render of this clip already shown
       seenEdited.add(key);
-      if(downloadedBy(v.id,uid)) b.downloaded.push(v); else b.edited.push(v); return;
+      // Sent/posted renders live in the Posted tab (the burned, final file).
+      if(isPosted(v)||v.status==='posted'||v.status==='scheduled') b.posted.push(v);
+      else if(downloadedBy(v.id,uid)) b.downloaded.push(v); else b.edited.push(v); return;
     }
     if(v.status==='edited'){
       if(seenEdited.has(v.id)) return;   // a rendered version exists -> shown as that
@@ -2169,7 +2158,7 @@ function bankBuckets(){
       b.edited.push(rendering?Object.assign({_finalizing:true},v):v);
       return;
     }
-    if(isPosted(v)||v.status==='scheduled') b.posted.push(v);
+    if(isPosted(v)||v.status==='scheduled'){ if(!seenEdited.has(v.id)) b.posted.push(v); }   // its edited render already represents it
     else if(downloadedBy(v.id,uid)) b.downloaded.push(v);
     else b.new.push(v);
   });
@@ -2744,7 +2733,7 @@ function epInitTextDrag(){
 // ---------- MOBILE TIKTOK-STYLE EDITOR ----------
 let mteId=null, mteDuration=0, mteSegments=[], mteSelSeg=-1, mteThumbs=[], mtePlaying=false, mteTexts=[], mteEditingOv=null, mteOvSeq=0, mteMedia=[], mteMovSeq=0, mteSelMedia=null, mteOTrimming=false;
 let mtePps=0, mtePpsFit=0, mteProgScroll=false, mteProgT=0, mteRaf=0, mteMuted=false, mteBound=false, mteSeekTarget=null, mteSeekRaf=0, mteThumbKey='';
-let mteCurColor='#ffffff', mteCurSize=28, mteCurFont='classic', mteCurStyle='plain', mtePinchBase=0, mtePinchPps=0, mtePinchRaf=0, mteThumbRaf=0, mteTrimming=false, mteTrimContentW=0, mteLastScrubSeek=0, mteScrubEndT=0, mteSeeking=false;
+let mteCurColor='#ffffff', mteCurSize=28, mteCurFont='classic', mteCurStyle='outline', mtePinchBase=0, mtePinchPps=0, mtePinchRaf=0, mteThumbRaf=0, mteTrimming=false, mteTrimContentW=0, mteLastScrubSeek=0, mteScrubEndT=0, mteSeeking=false;
 function mteContrast(hex){ const m=/^#?([0-9a-f]{6})$/i.exec(hex||''); if(!m)return '#000'; const n=parseInt(m[1],16); const r=(n>>16)&255,g=(n>>8)&255,b=n&255; return (0.299*r+0.587*g+0.114*b)>150?'#000':'#fff'; }
 function mteSyncKb(){ const sh=document.getElementById('mteSheet'); if(!sh)return; const vv=window.visualViewport; if(vv){ sh.style.height=vv.height+'px'; sh.style.top=vv.offsetTop+'px'; } }
 function mteKbBind(){ if(window.visualViewport){ window.visualViewport.addEventListener('resize',mteSyncKb); window.visualViewport.addEventListener('scroll',mteSyncKb); } mteSyncKb(); }
@@ -3310,7 +3299,7 @@ function mteApplyTaStyle(){
     ta.style.textShadow=(mteCurFont==='neon')?('0 0 6px '+mteCurColor+',0 0 13px '+mteCurColor):'none';
     ta.style.caretColor=mteCurColor;
   }
-  const stb=document.getElementById('mteStyBtn'); if(stb){ stb.classList.toggle('on',mteCurStyle!=='plain'); stb.textContent=(mteCurStyle==='box'?'A':(mteCurStyle==='outline'?'A':'A')); stb.title='Text style: '+mteCurStyle; }
+  mteSelStyleBtn();
   // wrap width matches the on-video overlay (84% of the video) so it wraps identically
   const pv=document.getElementById('mtePv'); const wrap=document.getElementById('mteTaWrap');
   if(wrap&&pv&&pv.clientWidth){ wrap.style.maxWidth=Math.round(pv.clientWidth*0.84)+'px'; }
@@ -3349,14 +3338,16 @@ function mtePlaceCaretEnd(el){ try{ const r=document.createRange(); r.selectNode
 function mteSelFontBtn(key){ document.querySelectorAll('#mteFonts .mte-fbtn').forEach(b=>b.classList.toggle('sel',b.dataset.font===key)); }
 function mteAddText(){ mtePushUndo(); mteOpenTextSheet(null); }
 function mteOpenTextSheet(ov){
-  if(!ov){ ov={id:++mteOvSeq,text:'',x:50,y:50,color:'#ffffff',size:28,scale:1,font:'classic',style:'plain'}; mteTexts.push(ov); }
+  if(!ov){ ov={id:++mteOvSeq,text:'',x:50,y:50,color:'#ffffff',size:28,scale:1,font:'classic',style:'outline'}; mteTexts.push(ov); }
   mteEditingOv=ov;
-  mteCurColor=ov.color||'#ffffff'; mteCurSize=ov.size||28; mteCurFont=ov.font||'classic'; mteCurStyle=ov.style||(ov.box?'box':(ov.outline===false?'plain':'outline'));
+  // Two TikTok styles only: 'outline' (white text, black border) and 'box' (dark text, white banner).
+  // Older overlays (plain / custom colours / fonts) are coerced when re-edited.
+  mteCurStyle=(ov.style==='box'||ov.box)?'box':'outline';
+  mteCurColor='#ffffff'; mteCurFont='classic'; mteCurSize=ov.size||28;
+  ov.style=mteCurStyle; ov.color=mteCurColor; ov.font=mteCurFont;
   const ta=document.getElementById('mteTa'); ta.textContent=ov.text||'';
   const sz=document.getElementById('mteSize'); if(sz)sz.value=mteCurSize;
-  mteSelFontBtn(mteCurFont);
-  const c2=document.getElementById('mteColors2'); if(c2)c2.style.display='none';
-  const ff=document.getElementById('mteFonts'); if(ff)ff.style.display='flex';
+  mteSelStyleBtn();
   document.getElementById('mteSheet').classList.add('open');
   mteApplyTaStyle(); mteRenderOverlays();
   // Place the edit box exactly where the overlay sits, so tapping it doesn't move the text.
@@ -3376,7 +3367,9 @@ function mteLiveApply(){
 function mteSetColor(c){ mteCurColor=c; mteApplyTaStyle(); mteLiveApply(); }
 function mteSizeChange(v){ mteCurSize=parseInt(v)||28; mteApplyTaStyle(); mteLiveApply(); }
 function mteSetFont(key,btn){ mteCurFont=key; mteSelFontBtn(key); mteApplyTaStyle(); mteLiveApply(); }
-function mteToggleStyle(){ mteCurStyle=(mteCurStyle==='plain')?'outline':((mteCurStyle==='outline')?'box':'plain'); toast('Style: '+mteCurStyle,'ok'); mteApplyTaStyle(); mteLiveApply(); }
+function mteToggleStyle(){ mteSetStyle(mteCurStyle==='box'?'outline':'box'); }
+function mteSetStyle(s){ mteCurStyle=(s==='box')?'box':'outline'; mteCurColor='#ffffff'; mteCurFont='classic'; mteSelStyleBtn(); mteApplyTaStyle(); mteLiveApply(); }
+function mteSelStyleBtn(){ var a=document.getElementById('mteStyOutline'),b=document.getElementById('mteStyBox'); if(a)a.classList.toggle('sel',mteCurStyle!=='box'); if(b)b.classList.toggle('sel',mteCurStyle==='box'); }
 function mteTextDone(){
   const ta=document.getElementById('mteTa'); const txt=(ta?mteTaText(ta):'').trim();
   if(mteEditingOv){ if(!txt){ mteTexts=mteTexts.filter(o=>o!==mteEditingOv); } else { Object.assign(mteEditingOv,{text:txt,color:mteCurColor,size:mteCurSize,font:mteCurFont,style:mteCurStyle}); } }
