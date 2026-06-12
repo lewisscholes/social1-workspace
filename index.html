@@ -2431,15 +2431,25 @@ async function loadEditor(){
   // Load ALL approved (non-posted) videos from the bank
   const {data:vids}=await sb.from('videos').select('*').neq('status','posted').neq('status','scheduled').eq('pending_approval',false).order('created_at',{ascending:false});
   const all=vids||[];
-  // One card per source clip; prefer the EDITED (text burned-in) render when it exists, so it can be swiped to post.
+  // Resolve every edited render back to its ROOT raw clip (renders can chain:
+  // edited.edited...). Sources that aren't in the deck query (e.g. already posted)
+  // are fetched separately so the chain still resolves.
+  const byId={}; all.forEach(x=>{ byId[x.id]=x; });
+  for(let hop=0;hop<6;hop++){
+    const missing=[...new Set(all.concat(Object.values(byId)).filter(v=>v.kind==='edited'&&v.source_video_id&&!byId[v.source_video_id]).map(v=>v.source_video_id))];
+    if(!missing.length) break;
+    try{ const {data:more}=await sb.from('videos').select('*').in('id',missing); if(!more||!more.length) break; more.forEach(x=>{ byId[x.id]=x; }); }catch(e){ break; }
+  }
+  const rootOf=v=>{ let cur=v,g=0; while(cur&&cur.kind==='edited'&&cur.source_video_id&&byId[cur.source_video_id]&&g++<8){ cur=byId[cur.source_video_id]; } return cur; };
+  // One card per ROOT clip; prefer the newest EDITED (text burned-in) render so it can be swiped to post.
   const bySource={};
-  all.forEach(v=>{ const key=(v.kind==='edited')?(v.source_video_id||v.id):v.id;
+  all.forEach(v=>{ const key=(v.kind==='edited')?rootOf(v).id:v.id;
     const cur=bySource[key];
     if(!cur || (v.kind==='edited' && cur.kind!=='edited')) bySource[key]=v; });
   let list=Object.keys(bySource).map(k=>bySource[k]);
-  // Edited renders without a proxy: remember their raw source's proxy + edit state so the
-  // card previews instantly (old renders lack faststart -> would show a black screen).
-  list.forEach(v=>{ if(v.kind==='edited'&&!v.proxy_path&&v.source_video_id){ const raw=all.find(x=>x.id===v.source_video_id); if(raw){ v._srcProxy=raw.proxy_path||null; v._srcES=raw.edit_state||null; } } });
+  // Edited renders without a proxy: preview via the root raw's 480p proxy + draw its saved
+  // overlays (old renders lack faststart -> would show a black screen until downloaded).
+  list.forEach(v=>{ if(v.kind==='edited'&&!v.proxy_path){ const root=rootOf(v); if(root&&root.id!==v.id){ v._srcProxy=root.proxy_path||null; v._srcES=root.edit_state||null; v._rootId=root.id; } } });
   try{ const {data:dls}=await sb.from('video_downloads').select('video_id').eq('user_id',state.user.id); const dset=new Set((dls||[]).map(d=>d.video_id)); list=list.filter(v=> v.kind==='edited' ? true : !dset.has(v.id)); }catch(e){}
   list.sort((a,b)=> new Date(b.created_at||0)-new Date(a.created_at||0));
   swVids=list; swIdx=0;
@@ -2790,11 +2800,14 @@ async function mteAutoSuggest(id){
 async function mteOpen(id){
   let v=swVids.find(x=>x.id===id); if(!v) return;
   // NEVER edit a burned render -- its text is baked into the pixels, so editing it again
-  // double-burns ("edited.edited"). Redirect to the RAW source clip + its saved edit state.
-  if(v.kind==='edited'&&v.source_video_id){
-    let src=swVids.find(x=>x.id===v.source_video_id)||(state.videos||[]).find(x=>x.id===v.source_video_id);
-    if(!src){ try{ const {data}=await sb.from('videos').select('*').eq('id',v.source_video_id).single(); src=data; }catch(e){} }
-    if(src&&src.storage_path){ if(swVids.indexOf(src)<0) swVids.push(src); v=src; id=src.id; }
+  // double-burns ("edited.edited"). Walk back to the ROOT raw clip + its saved edit state.
+  for(let g=0; g<8 && v.kind==='edited'; g++){
+    const sid=v._rootId||v.source_video_id; if(!sid) break;
+    let src=swVids.find(x=>x.id===sid)||(state.videos||[]).find(x=>x.id===sid);
+    if(!src){ try{ const {data}=await sb.from('videos').select('*').eq('id',sid).single(); src=data; }catch(e){} }
+    if(!(src&&src.storage_path)) break;
+    if(swVids.indexOf(src)<0) swVids.push(src);
+    v=src; id=src.id;
   }
   mteId=id; mteSelSeg=-1; mteThumbs=[]; mtePlaying=false; mteTexts=[]; mteSegments=[]; mteMedia=[]; mteMovSeq=0; mteSelMedia=null; mtePps=0; mteMuted=false; mteResetUndo();
   mteRenderOverlays(); mteRenderMedia();   // clear any overlays left on screen from the previous video right away
