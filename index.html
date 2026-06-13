@@ -2441,16 +2441,17 @@ async function loadEditor(){
     try{ const {data:more}=await sb.from('videos').select('*').in('id',missing); if(!more||!more.length) break; more.forEach(x=>{ byId[x.id]=x; }); }catch(e){ break; }
   }
   const rootOf=v=>{ let cur=v,g=0; while(cur&&cur.kind==='edited'&&cur.source_video_id&&byId[cur.source_video_id]&&g++<8){ cur=byId[cur.source_video_id]; } return cur; };
-  // One card per ROOT clip; prefer the newest EDITED (text burned-in) render so it can be swiped to post.
-  const bySource={};
-  all.forEach(v=>{ const key=(v.kind==='edited')?rootOf(v).id:v.id;
-    const cur=bySource[key];
-    if(!cur || (v.kind==='edited' && cur.kind!=='edited')) bySource[key]=v; });
-  let list=Object.keys(bySource).map(k=>bySource[k]);
-  // Edited renders without a proxy: preview via the root raw's 480p proxy + draw its saved
-  // overlays (old renders lack faststart -> would show a black screen until downloaded).
-  list.forEach(v=>{ if(v.kind==='edited'&&!v.proxy_path){ const root=rootOf(v); if(root&&root.id!==v.id){ v._srcProxy=root.proxy_path||null; v._srcES=root.edit_state||null; v._rootId=root.id; } } });
-  try{ const {data:dls}=await sb.from('video_downloads').select('video_id').eq('user_id',state.user.id); const dset=new Set((dls||[]).map(d=>d.video_id)); list=list.filter(v=> v.kind==='edited' ? true : !dset.has(v.id)); }catch(e){}
+  // One card per ROOT clip. The card IS the raw source clip and previews it with its saved
+  // edit_state (overlays + cuts) -- so the deck is congruent with the editor the instant you
+  // save, with no waiting on a re-render. The newest edited (text-burned) render id is kept so
+  // swipe-right still sends the burned file to TikTok.
+  const editedByRoot={};
+  all.forEach(v=>{ if(v.kind==='edited'){ const rid=rootOf(v).id; const cur=editedByRoot[rid]; if(!cur || new Date(v.created_at||0)>new Date(cur.created_at||0)) editedByRoot[rid]=v; } });
+  const rootIds=[...new Set(all.map(v=> v.kind==='edited'?rootOf(v).id : v.id))];
+  let list=rootIds.map(id=>byId[id]).filter(Boolean);
+  list.forEach(v=>{ const er=editedByRoot[v.id]; if(er){ v._editedId=er.id; v._editedAt=er.created_at; } v._srcProxy=null; v._srcES=null; v._rootId=null; });
+  // Hide raw clips already downloaded UNLESS they carry an edit (then they're still in review).
+  try{ const {data:dls}=await sb.from('video_downloads').select('video_id').eq('user_id',state.user.id); const dset=new Set((dls||[]).map(d=>d.video_id)); list=list.filter(v=> (v._editedId||(v.edit_state&&v.edit_state.segments)) ? true : !dset.has(v.id)); }catch(e){}
   list.sort((a,b)=> new Date(b.created_at||0)-new Date(a.created_at||0));
   swVids=list; swIdx=0;
   // Preload signed URLs for first 3
@@ -2491,7 +2492,25 @@ function swRender(){
       <div class="sw-count">${remaining.length} video${remaining.length!==1?'s':''} to review</div>
     </div>`;
   swApplyOverlaySizes();
+  swApplySegments();
   swInitDrag();
+}
+// Play ONLY the kept ranges in the deck preview, so cuts show immediately (no re-render needed).
+function swApplySegments(){
+  document.querySelectorAll('.sw-card').forEach(card=>{
+    const v=swVids.find(x=>x.id===card.dataset.id); const vid=card.querySelector('video'); if(!v||!vid) return;
+    const es=v.edit_state;
+    const segs=(es&&es.segments&&es.segments.length)?es.segments.slice().filter(s=>(s.end-s.start)>0.05).sort((a,b)=>a.start-b.start):null;
+    if(!segs||!segs.length){ vid.loop=true; return; }
+    vid.loop=false;
+    let si=0;
+    const start0=()=>{ try{ vid.currentTime=segs[0].start; }catch(e){} si=0; };
+    if(vid.readyState>=1) start0(); else vid.addEventListener('loadeddata',start0,{once:true});
+    vid.addEventListener('timeupdate',()=>{
+      const s=segs[si]; if(!s) return;
+      if(vid.currentTime>=s.end-0.04){ si++; if(si>=segs.length){ si=0; } try{ vid.currentTime=segs[si].start; }catch(e){} }
+    });
+  });
 }
 
 // Deck preview overlays -- SAME renderer as the on-video overlay (mteOvParts). Sizes are filled in by
