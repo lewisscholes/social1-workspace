@@ -496,6 +496,7 @@
   .mte-seg:last-child{border-right:0}
   .mte-seg.sel{outline:3px solid #fff;outline-offset:-3px;border-radius:7px;z-index:5;box-shadow:0 0 0 3px #000}
   .mte-trim{position:absolute;top:-2px;bottom:-2px;width:22px;background:#fff;display:flex;align-items:center;justify-content:center;color:#111;font-weight:900;font-size:16px;line-height:1;z-index:7;cursor:ew-resize;touch-action:none}
+  .mte-trimdim{position:absolute;top:0;bottom:0;background:rgba(8,12,20,.62);z-index:6;pointer-events:none;border-radius:6px;display:none}
   .mte-trim.l{border-radius:8px 0 0 8px}
   .mte-trim.r{border-radius:0 8px 8px 0}
   .mte-split{position:absolute;top:0;bottom:0;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;z-index:6;pointer-events:none}
@@ -3028,38 +3029,45 @@ function mteTrimBind(el,side){
     mtePushUndo();   // snapshot before a trim so it can be undone
     mteTrimming=true;
     if(mtePlaying){ mteV().pause(); mtePlaying=false; mteStopTick(); mteSyncPlay(); }
-    const content=document.getElementById('mteTlContent'); const scroll=document.getElementById('mteTlScroll');
-    const p0=e.touches?e.touches[0]:e; const sx=p0.clientX, os=seg.start, oe=seg.end, osl=scroll.scrollLeft;
+    const tl=document.getElementById('mteTl');
+    const p0=e.touches?e.touches[0]:e; const sx=p0.clientX, os=seg.start, oe=seg.end;
     const lower=(mteSelSeg>0?mteSegments[mteSelSeg-1].end:0);
     const upper=(mteSelSeg<mteSegments.length-1?mteSegments[mteSelSeg+1].start:(mteDuration||oe));
-    const MIN=0.25, pad=(scroll.clientWidth||320)/2, SNAP=20/mtePps;
-    const phTime=mteV().currentTime;   // the playhead line's current position -> snap target for precise cuts
-    content.style.width=((mteDuration||oe)*mtePps+2*pad+200)+'px';   // freeze scroll width so reflow can't clamp-jump the view
-    let raf=0, pendingEdge=0, lastSeek=0;
+    const MIN=0.25;
+    // TikTok-style trim: the strip stays FROZEN during the drag -- we never reflow the footage.
+    // Only the dragged bumper moves, and the trimmed-off part dims. We commit the cut on release.
+    let segLeft=0; for(let i=0;i<mteSelSeg;i++)segLeft+=(mteSegments[i].end-mteSegments[i].start)*mtePps;
+    const segW=(oe-os)*mtePps;
+    const hl=document.getElementById('mteTrimL'),hr=document.getElementById('mteTrimR'),dur=document.getElementById('mteDur');
+    let dim=document.getElementById('mteTrimDim');
+    if(!dim){ dim=document.createElement('div'); dim.id='mteTrimDim'; dim.className='mte-trimdim'; if(tl)tl.appendChild(dim); }
+    dim.style.display='block';
+    let raf=0, pendingEdge=os, lastSeek=0, ns=os, ne=oe;
     const move=(ev)=>{
       const p=ev.touches?ev.touches[0]:ev; if(ev.cancelable)ev.preventDefault();
       const dt=(p.clientX-sx)/mtePps;
       if(side==='r'){
-        let ne=Math.min(upper,Math.max(os+MIN,oe+dt));
-        if(phTime>os+MIN&&phTime<upper&&Math.abs(ne-phTime)<SNAP)ne=phTime;   // snap/lock onto the playhead line
-        seg.end=ne; pendingEdge=Math.max(seg.start,seg.end-0.04);
+        ne=Math.min(upper,Math.max(os+MIN,oe+dt)); pendingEdge=Math.max(os,ne-0.04);
+        const xr=segLeft+(ne-os)*mtePps;
+        if(hr)hr.style.left=(xr-22)+'px';                                              // bumper exactly as before (right edge at the kept end)
+        dim.style.left=xr+'px'; dim.style.width=Math.max(0,(segLeft+segW)-xr)+'px';    // dim only the trimmed-off tail; rest frozen
+        if(dur)dur.textContent=(ne-os).toFixed(1)+'s';
       } else {
-        let ns=Math.max(lower,Math.min(oe-MIN,os+dt));
-        if(phTime>lower&&phTime<oe-MIN&&Math.abs(ns-phTime)<SNAP)ns=phTime;   // snap/lock onto the playhead line
-        seg.start=ns; pendingEdge=seg.start;
+        ns=Math.max(lower,Math.min(oe-MIN,os+dt)); pendingEdge=ns;
+        const xl=segLeft+(ns-os)*mtePps;
+        if(hl)hl.style.left=xl+'px';                                                   // bumper exactly as before (left edge at the kept start)
+        dim.style.left=segLeft+'px'; dim.style.width=Math.max(0,xl-segLeft)+'px';      // dim only the trimmed-off head; rest frozen
+        if(dur)dur.textContent=(oe-ns).toFixed(1)+'s';
       }
-      if(!raf)raf=requestAnimationFrame(()=>{
-        raf=0; mteTrimReflow();                                       // footage + handle move together with the finger
-        if(side==='l')scroll.scrollLeft=osl-(seg.start-os)*mtePps;    // anchor the far edge so only the dragged edge moves
-        const now=performance.now(); if(now-lastSeek>80){ lastSeek=now; const vid=mteV(); if(vid.fastSeek){try{vid.fastSeek(pendingEdge);}catch(_){vid.currentTime=pendingEdge;}}else{vid.currentTime=pendingEdge;} }
-      });
-      mteUpdTime();
+      if(!raf)raf=requestAnimationFrame(()=>{ raf=0; const now=performance.now(); if(now-lastSeek>80){ lastSeek=now; const vid=mteV(); if(vid.fastSeek){try{vid.fastSeek(pendingEdge);}catch(_){vid.currentTime=pendingEdge;}}else{vid.currentTime=pendingEdge;} } });
     };
     const up=(ev)=>{ if(ev&&ev.touches&&ev.touches.length>0)return; document.removeEventListener('mousemove',move);document.removeEventListener('touchmove',move);document.removeEventListener('mouseup',up);document.removeEventListener('touchend',up);
       if(raf){cancelAnimationFrame(raf);raf=0;}
+      if(side==='r')seg.end=ne; else seg.start=ns;                                      // commit only on release -> the strip reflows once, cleanly
+      if(dim)dim.style.display='none';
       mteTrimming=false;
-      const ct=Math.max(0,(side==='l'?seg.start:seg.end)); mteV().currentTime=ct;   // park playback at the trimmed edge (sync so the re-render centres on it)
-      mteRenderTL(); mteUpdTime();   // commit + lock the playhead line onto the trim point
+      const ct=Math.max(0,(side==='l'?seg.start:seg.end)); try{mteV().currentTime=ct;}catch(e){}
+      mteRenderTL(); mteUpdTime();
     };
     document.addEventListener('mousemove',move);document.addEventListener('touchmove',move,{passive:false});document.addEventListener('mouseup',up);document.addEventListener('touchend',up);
   };
