@@ -4457,27 +4457,27 @@ async function swCapcut(){
   var id=edCardId(); if(!id){ toast('No clip selected','err'); return; }
   var v=swVids.find(function(x){ return x.id===id; }); if(!v) return;
   var isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  var pf=(window.__edShareFile && window.__edShareFile.id===id) ? window.__edShareFile : null;
-  // BEST path (mobile): hand the actual clip to the native share sheet -> tap CapCut -> it opens in the app.
-  // Must call share with no awaits first, so the click gesture is still active (hence the prefetch).
-  if(pf && navigator.canShare && navigator.canShare({files:[pf.file]})){
-    try{ await navigator.share({files:[pf.file], title:pf.name}); edCapcutPending[id]=true; toast('Pick CapCut, edit, then come back and tap Import'); return; }
-    catch(e){ if(e && e.name==='AbortError') return; }
-  }
-  edCapcutPending[id]=true;
-  // make sure we have the bytes
-  var blob=pf?pf.blob:null, fname=pf?pf.name:(v.filename||'clip.mp4');
-  if(!blob){ try{ var url=signed[id]; if(!url){ var s=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600); url=s&&s.data&&s.data.signedUrl; } var r=await fetch(url); blob=await r.blob(); }catch(e){ toast('Could not prepare the clip -- open it from the Bank to download','err'); return; } }
-  // save a copy to the device so it can be imported into CapCut either way
-  try{ var burl=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=burl; a.download=fname; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(burl); }, 60000); }catch(e){}
   if(isMobile){
-    toast('Clip saved -- opening the CapCut app');
-    var t=Date.now(); window.location.href='capcut://';
-    setTimeout(function(){ if(Date.now()-t<1700) window.location.href='https://www.capcut.com/'; }, 800);
-  } else {
-    window.open('https://www.capcut.com/editor','_blank');
-    toast('Clip downloaded -- opening CapCut');
+    // On iOS/Android the ONLY way a web app can pass a file to CapCut is the system
+    // share sheet (Apple sandbox + CapCut has no import deep-link). One consistent
+    // behaviour every time: share the clip -> user taps CapCut -> lands in its editor.
+    var pf=(window.__edShareFile && window.__edShareFile.id===id) ? window.__edShareFile : null;
+    var file=pf?pf.file:null;
+    if(!file){
+      try{ var url=signed[id]; if(!url){ var s=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600); url=s&&s.data&&s.data.signedUrl; } var r=await fetch(url); var b=await r.blob(); file=new File([b],(v.filename||'clip.mp4'),{type:b.type||'video/mp4'}); }catch(e){}
+    }
+    if(file && navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file], title:(v.filename||'clip')}); edCapcutPending[id]=true; toast('Tap CapCut to start editing'); }
+      catch(e){ if(!(e&&e.name==='AbortError')) toast('Tap Edit in CapCut again','err'); }
+      return;
+    }
+    toast('Could not prepare the clip -- try again','err'); return;
   }
+  // Desktop: download the clip and open the CapCut web editor to drop it in.
+  edCapcutPending[id]=true;
+  try{ var url2=signed[id]; if(!url2){ var s2=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600); url2=s2&&s2.data&&s2.data.signedUrl; } var r2=await fetch(url2); var blob2=await r2.blob(); var burl=URL.createObjectURL(blob2); var a=document.createElement('a'); a.href=burl; a.download=(v.filename||'clip.mp4'); document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(burl); }, 60000); }catch(e){}
+  window.open('https://www.capcut.com/editor','_blank');
+  toast('Clip downloaded -- drag it into CapCut');
 }
 function swImportCapcut(){
   var id=edCardId(); if(!id){ toast('No clip selected','err'); return; }
