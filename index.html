@@ -3081,16 +3081,7 @@ function mteSelectAtClientX(cx){
   for(let i=0;i<mteSegments.length;i++){ const w=(mteSegments[i].end-mteSegments[i].start)*mtePps; if(xInTl>=acc-1&&xInTl<acc+w+1){ hit=i; break; } acc+=w; }
   const hadMedia=(mteSelMedia!=null); mteSelMedia=null; if(hadMedia)mteRenderMedia();   // tapping a clip deselects any image overlay
   if(hit<0){ if(mteSelSeg<0&&!hadMedia)return; mteSelSeg=-1; mteRenderTL(true); return; }
-  mteSelSeg=(mteSelSeg===hit?-1:hit); mteRenderTL(true);
-  if(mteSelSeg>=0){
-    // Snap the marker to just INSIDE the left trim border of the selected clip (TikTok-style),
-    // flush against the inner edge of the sliding handle instead of sitting outside at the start.
-    let selL=0; for(let k=0;k<mteSelSeg;k++)selL+=(mteSegments[k].end-mteSegments[k].start)*mtePps;
-    const inX=selL+22;   // 22px = trim-handle width -> land the playhead at the handle's inner edge
-    scroll.scrollLeft=inX;
-    try{ mteV().currentTime=mteKeptToSrc(inX/mtePps); }catch(e){}
-    mteUpdTime();
-  }
+  mteSelSeg=(mteSelSeg===hit?-1:hit); mteRenderTL(true);   // keep the playhead exactly where it is on select (no snap-to-start)
 }
 
 function mteRenderRuler(total){
