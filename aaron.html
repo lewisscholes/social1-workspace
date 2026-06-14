@@ -2493,6 +2493,10 @@ function swRender(){
         <button class="sw-btn ed" title="Edit" onclick="swEdit()"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pencil"></use></svg> Edit</button>
         <button class="sw-btn go" title="Approve for TikTok" onclick="swApprove()"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"></use></svg></button>
       </div>
+      <div style="display:flex;gap:8px;margin:10px auto 0;max-width:430px;width:100%;padding:0 8px;box-sizing:border-box">
+        <button onclick="swCapcut()" style="flex:1;background:#000;color:#fff;border:0;border-radius:12px;padding:12px;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;font-family:inherit"><span style="width:16px;height:16px;border-radius:4px;background:linear-gradient(135deg,#00e0e0,#3a6bff);display:inline-block"></span> Edit in CapCut</button>
+        <button onclick="swImportCapcut()" style="flex:0 0 auto;background:#fff;color:#0f172a;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="width:16px;height:16px"><use href="#i-download"></use></svg> Import edit</button>
+      </div>
       <div class="sw-count">${remaining.length} video${remaining.length!==1?'s':''} to review</div>
     </div>`;
   swApplyOverlaySizes();
@@ -4345,6 +4349,46 @@ async function tfAutoCaption(v){ var hook=''; var es=v&&v.edit_state; if(es&&es.
 
 // queuing a raw clip for editing just means opening the editor deck on it
 async function editVideo(id){ showView('editor'); }
+
+// ---- CapCut handoff: one click sends the clip out to CapCut; "Import edit" brings the export back ----
+var edCapcutPending={};
+function edCardId(){ var c=document.querySelector('.sw-card.is-top'); if(c) return c.dataset.id; var t=document.querySelector('.sw-card'); return t?t.dataset.id:null; }
+async function swCapcut(){
+  var id=edCardId(); if(!id){ toast('No clip selected','err'); return; }
+  var v=swVids.find(function(x){ return x.id===id; }); if(!v) return;
+  // open CapCut straight away (must happen in the click gesture so it is not blocked)
+  window.open('https://www.capcut.com/editor','_blank');
+  edCapcutPending[id]=true;
+  toast('Opening CapCut -- saving your clip to import');
+  try{
+    var url=signed[id];
+    if(!url){ var s=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600); url=s&&s.data&&s.data.signedUrl; }
+    if(!url) throw new Error('no url');
+    var resp=await fetch(url); var blob=await resp.blob(); var burl=URL.createObjectURL(blob);
+    var a=document.createElement('a'); a.href=burl; a.download=(v.filename||('clip-'+String(id).slice(0,6)+'.mp4')); document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(burl); }, 60000);
+  }catch(e){ toast('Could not auto-save the clip -- open it from the Bank to download, then edit in CapCut','err'); }
+}
+function swImportCapcut(){
+  var id=edCardId(); if(!id){ toast('No clip selected','err'); return; }
+  var inp=document.createElement('input'); inp.type='file'; inp.accept='video/*';
+  inp.onchange=function(){ var f=inp.files&&inp.files[0]; if(f) edUploadEditedFor(id,f); };
+  inp.click();
+}
+async function edUploadEditedFor(srcId, file){
+  var v=swVids.find(function(x){ return x.id===srcId; });
+  toast('Uploading finished edit...');
+  try{
+    var safe=file.name.replace(/[^\w.\-]+/g,'_');
+    var path='edited/'+srcId+'_'+Date.now()+'_'+safe;
+    await tusUpload(file,path,null);
+    var ins=await sb.from('ed_videos').insert({creator_id:(v&&v.creator_id)||null, kind:'edited', source_video_id:srcId, title:(v&&(v.title||v.filename))||'edited', filename:file.name, storage_path:path, size_bytes:file.size, content_type:'video/mp4', status:'edited', caption_suggested:(v&&v.caption_suggested)||null}).select('id').single();
+    if(ins.error) throw ins.error;
+    delete edCapcutPending[srcId];
+    toast('Edit imported -- swipe right to send it to TikTok','ok');
+    loadEditor();
+  }catch(e){ toast('Import failed: '+String((e&&e.message)||e).slice(0,80),'err'); }
+}
 
 </script>
 </body>
