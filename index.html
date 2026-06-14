@@ -483,7 +483,8 @@
   .mte-tlrow{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:2px 10px 0}
   .mte-gap{flex:0 0 11vh;touch-action:none}   /* black thumb-scroll space between the timeline and the bottom buttons (TikTok layout) */
   .mte-vol{flex:0 0 auto;width:24px;text-align:center;color:#fff;font-size:15px;background:transparent;border:0;cursor:pointer}
-  .mte-tlwrap{position:relative;flex:1 1 auto;min-width:0}
+  .mte-tlwrap{position:relative;flex:1 1 auto;min-width:0;padding-bottom:48px}
+  .mte-wave{position:absolute;left:0;right:0;bottom:4px;height:40px;z-index:2;pointer-events:none;background:#141416;border-radius:8px}
   .mte-tlscroll{position:relative;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-x}
   .mte-tlscroll::-webkit-scrollbar{display:none}
   .mte-tlcontent{position:relative}
@@ -797,6 +798,7 @@
               <div class="mte-otrack" id="mteOTrack"></div>
             </div>
           </div>
+          <canvas class="mte-wave" id="mteWave"></canvas>
           <div class="mte-phfix" id="mtePhFix"></div>
         </div>
         <button class="mte-add" onclick="mteSoon('Add clip')" aria-label="Add clip">&#43;</button>
@@ -2833,6 +2835,7 @@ async function mteOpen(id){
   mteRenderOverlays(); mteRenderMedia();   // clear any overlays left on screen from the previous video right away
   let url=signed[id];
   if(!url){ const {data:s}=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600); url=s&&s.signedUrl; if(url)signed[id]=url; }
+  mteWavePeaks=null; mteWaveId=null; mteDecodeWave(id);   // build the audio waveform for this clip
   const es=v.edit_state;
   if(es&&es.overlays&&es.overlays.length){ mteTexts=es.overlays.map(o=>({id:++mteOvSeq,text:o.text,x:o.x,y:o.y,color:o.color,size:o.size||24,scale:o.scale||1,font:(o.font==='TikTok Sans'?'classic':(o.font||'classic')),style:(o.style||(o.box?'box':(o.outline===false?'plain':'outline')))})); }
   else if(v.caption_suggested){ mteTexts.push({id:++mteOvSeq,text:mteClampLines(v.caption_suggested),x:50,y:MTE_OV_TOP,color:'#ffffff',size:24,font:'classic',style:'outline'}); }
@@ -2932,7 +2935,7 @@ function mteAdvance(){
   // next clip never appears mid-decode. Hard deadline so we can never stall on the boundary.
   if(mteRolling && t>=run.end-0.012 && (mteSbReady || t>=run.end+0.06)){ mteSwapTo(ni); }
 }
-function mteStartTick(){ if(mteRaf)return; const loop=()=>{ if(!mtePlaying){ mteRaf=0; return; } mteAdvance(); mteUpdScroll(); mteUpdTime(); mteApplyVideoZoom(); mteUpdMediaVis(); mteRaf=requestAnimationFrame(loop); }; mteRaf=requestAnimationFrame(loop); }
+function mteStartTick(){ if(mteRaf)return; const loop=()=>{ if(!mtePlaying){ mteRaf=0; return; } mteAdvance(); mteUpdScroll(); mteUpdTime(); mteApplyVideoZoom(); mteUpdMediaVis(); mteRenderWave(); mteRaf=requestAnimationFrame(loop); }; mteRaf=requestAnimationFrame(loop); }
 function mteStopTick(){ if(mteRaf){ cancelAnimationFrame(mteRaf); mteRaf=0; } }
 
 function mteFmt(s){ s=Math.max(0,Math.round(s||0)); const m=Math.floor(s/60); const ss=s%60; return m+':'+(ss<10?'0':'')+ss; }
@@ -2965,8 +2968,8 @@ function mteRenderTL(keepScroll){
   if(mteSelSeg>=0&&mteSegments[mteSelSeg]){
     let leftX=0; for(let k=0;k<mteSelSeg;k++)leftX+=(mteSegments[k].end-mteSegments[k].start)*mtePps;
     const sg=mteSegments[mteSelSeg]; const selW=(sg.end-sg.start)*mtePps;
-    html+='<div class="mte-trim l" id="mteTrimL" style="left:'+leftX+'px">&#8249;</div>';
-    html+='<div class="mte-trim r" id="mteTrimR" style="left:'+(leftX+selW-22)+'px">&#8250;</div>';
+    html+='<div class="mte-trim l" id="mteTrimL" style="left:'+(leftX-22)+'px">&#8249;</div>';
+    html+='<div class="mte-trim r" id="mteTrimR" style="left:'+(leftX+selW)+'px">&#8250;</div>';
     html+='<div class="mte-dur" id="mteDur" style="left:'+(leftX+26)+'px">'+(sg.end-sg.start).toFixed(1)+'s</div>';
   }
   tl.innerHTML=html;
@@ -2976,7 +2979,7 @@ function mteRenderTL(keepScroll){
   mteRenderRuler(total);
   if(prevSL!=null){ mteProgScroll=true; scroll.scrollLeft=prevSL; clearTimeout(mteProgT); mteProgT=setTimeout(()=>{mteProgScroll=false;},90); }   // keep the marker exactly where it was
   else mteUpdScroll();
-  mteApplyVideoZoom(); mteRenderOTrack();
+  mteApplyVideoZoom(); mteRenderOTrack(); mteRenderWave();
 }
 // The on-screen playhead = the centred marker = the scroll position. This (not the video's
 // currentTime, which can lag a scrub) is the source of truth for "where we're up to".
@@ -2984,6 +2987,42 @@ function mteMarkerKept(){ const sc=document.getElementById('mteTlScroll'); if(!s
 function mteMarkerSrc(){ return mteKeptToSrc(mteMarkerKept()); }
 // Virtualized thumbnail strip: only the cells visible in the scroll viewport are drawn, at a fixed crisp width.
 // Zooming widens the strip (more frames spaced out by TIME) without magnifying any single image, and stays fast at any zoom.
+// ---------- Audio waveform (Premiere-style) ----------
+let mteWaveId=null, mteWavePeaks=null, mteWaveAC=null, mteWaveBusy=false;
+async function mteDecodeWave(id){
+  if(mteWaveId===id && mteWavePeaks){ mteRenderWave(); return; }
+  if(mteWaveBusy)return; mteWaveBusy=true;
+  try{
+    const su=signed[id]; if(!su){ mteWaveBusy=false; return; }
+    if(!mteWaveAC){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC){ mteWaveBusy=false; return; } mteWaveAC=new AC(); }
+    const ab=await (await fetch(su)).arrayBuffer();
+    const audio=await mteWaveAC.decodeAudioData(ab.slice(0));
+    const ch0=audio.getChannelData(0);
+    const N=1600; const peaks=new Float32Array(N); const step=Math.max(1,Math.floor(ch0.length/N)); let mx=0.0001;
+    for(let i=0;i<N;i++){ let p=0; const s=i*step, e=Math.min(ch0.length,s+step); for(let j=s;j<e;j+=8){ const a=ch0[j]<0?-ch0[j]:ch0[j]; if(a>p)p=a; } peaks[i]=p; if(p>mx)mx=p; }
+    for(let i=0;i<N;i++)peaks[i]=Math.min(1,peaks[i]/mx);
+    if(mteId===id){ mteWaveId=id; mteWavePeaks=peaks; mteRenderWave(); }
+  }catch(e){ /* no audio track / decode unsupported -> leave the strip blank */ }
+  mteWaveBusy=false;
+}
+function mteRenderWave(){
+  const cv=document.getElementById('mteWave'); const scroll=document.getElementById('mteTlScroll');
+  if(!cv||!scroll||!mtePps)return;
+  const dpr=Math.min(2,window.devicePixelRatio||1); const cw=cv.clientWidth||1, chh=cv.clientHeight||40;
+  if(cv.width!==Math.round(cw*dpr)||cv.height!==Math.round(chh*dpr)){ cv.width=Math.round(cw*dpr); cv.height=Math.round(chh*dpr); }
+  const ctx=cv.getContext('2d'); if(!ctx)return; ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,cw,chh);
+  if(!mteWavePeaks||mteWaveId!==mteId||!mteDuration)return;
+  const pad=(scroll.clientWidth||320)/2, sl=scroll.scrollLeft, total=mteTotalKept();
+  const bd=mteDuration/mteWavePeaks.length, mid=chh/2;
+  ctx.fillStyle='#3e9bff';
+  for(let x=0;x<cw;x++){
+    const keptT=(sl + x - pad)/mtePps;
+    if(keptT<0||keptT>total)continue;
+    const srcT=mteKeptToSrc(keptT); let bi=Math.floor(srcT/bd); if(bi<0)bi=0; if(bi>=mteWavePeaks.length)bi=mteWavePeaks.length-1;
+    const h=Math.max(1, mteWavePeaks[bi]*(chh-6));
+    ctx.fillRect(x, mid-h/2, 1, h);
+  }
+}
 function mteRenderThumbs(){
   const tl=document.getElementById('mteTl'); const scroll=document.getElementById('mteTlScroll'); const layer=document.getElementById('mteThumbsL');
   if(!tl||!scroll||!layer||!mtePps)return;
@@ -3017,7 +3056,7 @@ function mteTrimReflow(){
   const cuts=tl.querySelectorAll('.mte-gapcut'); let cum=0,mi=0;
   mteSegments.forEach((s,i)=>{ cum+=(s.end-s.start)*mtePps; if(i<mteSegments.length-1){ const mk=cuts[mi++]; if(mk)mk.style.left=cum+'px'; } });
   const hl=document.getElementById('mteTrimL'),hr=document.getElementById('mteTrimR');
-  if(hl)hl.style.left=selL+'px'; if(hr)hr.style.left=(selL+selW-22)+'px';
+  if(hl)hl.style.left=(selL-22)+'px'; if(hr)hr.style.left=(selL+selW)+'px';
   const dur=document.getElementById('mteDur'); const sg=mteSegments[mteSelSeg];
   if(dur&&sg){ dur.textContent=(sg.end-sg.start).toFixed(1)+'s'; dur.style.left=(selL+26)+'px'; }   // live duration as you trim
   mteRenderThumbs();
@@ -3033,9 +3072,10 @@ function mteTrimBind(el,side){
     const p0=e.touches?e.touches[0]:e; const sx=p0.clientX, os=seg.start, oe=seg.end;
     const lower=(mteSelSeg>0?mteSegments[mteSelSeg-1].end:0);
     const upper=(mteSelSeg<mteSegments.length-1?mteSegments[mteSelSeg+1].start:(mteDuration||oe));
-    const MIN=0.25;
+    const MIN=0.25, SNAP=18/mtePps;
+    const phTime=mteKeptToSrc(mteMarkerKept());   // the marker (playhead) -> the trim edge magnet-snaps to it
     // TikTok-style trim: the strip stays FROZEN during the drag -- we never reflow the footage.
-    // Only the dragged bumper moves, and the trimmed-off part dims. We commit the cut on release.
+    // Only the dragged bumper moves (and snaps to the marker), and the trimmed-off part dims. Commit on release.
     let segLeft=0; for(let i=0;i<mteSelSeg;i++)segLeft+=(mteSegments[i].end-mteSegments[i].start)*mtePps;
     const segW=(oe-os)*mtePps;
     const hl=document.getElementById('mteTrimL'),hr=document.getElementById('mteTrimR'),dur=document.getElementById('mteDur');
@@ -3047,15 +3087,19 @@ function mteTrimBind(el,side){
       const p=ev.touches?ev.touches[0]:ev; if(ev.cancelable)ev.preventDefault();
       const dt=(p.clientX-sx)/mtePps;
       if(side==='r'){
-        ne=Math.min(upper,Math.max(os+MIN,oe+dt)); pendingEdge=Math.max(os,ne-0.04);
+        ne=Math.min(upper,Math.max(os+MIN,oe+dt));
+        if(phTime>os+MIN&&phTime<upper&&Math.abs(ne-phTime)<SNAP)ne=phTime;            // snap the edge to the marker; drag past it to pull through
+        pendingEdge=Math.max(os,ne-0.04);
         const xr=segLeft+(ne-os)*mtePps;
-        if(hr)hr.style.left=(xr-22)+'px';                                              // bumper exactly as before (right edge at the kept end)
+        if(hr)hr.style.left=xr+'px';                                                   // bumper sits just OUTSIDE the footage -> footage + marker inside the border
         dim.style.left=xr+'px'; dim.style.width=Math.max(0,(segLeft+segW)-xr)+'px';    // dim only the trimmed-off tail; rest frozen
         if(dur)dur.textContent=(ne-os).toFixed(1)+'s';
       } else {
-        ns=Math.max(lower,Math.min(oe-MIN,os+dt)); pendingEdge=ns;
+        ns=Math.max(lower,Math.min(oe-MIN,os+dt));
+        if(phTime>lower&&phTime<oe-MIN&&Math.abs(ns-phTime)<SNAP)ns=phTime;            // snap the edge to the marker; drag past it to pull through
+        pendingEdge=ns;
         const xl=segLeft+(ns-os)*mtePps;
-        if(hl)hl.style.left=xl+'px';                                                   // bumper exactly as before (left edge at the kept start)
+        if(hl)hl.style.left=(xl-22)+'px';                                              // bumper sits just OUTSIDE the footage -> footage + marker inside the border
         dim.style.left=segLeft+'px'; dim.style.width=Math.max(0,xl-segLeft)+'px';      // dim only the trimmed-off head; rest frozen
         if(dur)dur.textContent=(oe-ns).toFixed(1)+'s';
       }
@@ -3106,7 +3150,7 @@ function mteResizeTL(){
   tl.querySelectorAll('.mte-seg').forEach((el,i)=>{ const s=mteSegments[i]; if(s)el.style.width=((s.end-s.start)*mtePps)+'px'; });
   const marks=tl.querySelectorAll('.mte-gapcut'); let cum=0,mi=0;
   mteSegments.forEach((s,i)=>{ cum+=(s.end-s.start)*mtePps; if(i<mteSegments.length-1){ const mk=marks[mi++]; if(mk)mk.style.left=cum+'px'; } });
-  mteRenderRuler(total); mteUpdScroll(); mteRenderThumbs(); mteRenderOTrack();
+  mteRenderRuler(total); mteUpdScroll(); mteRenderThumbs(); mteRenderOTrack(); mteRenderWave();
 }
 
 function mteBindTl(){
@@ -3137,7 +3181,7 @@ function mteBindTl(){
     if(mteTrimming)return;   // a trim-handle drag just ended; don't treat it as a tap
     if(!tapPinch&&!tapMoved&&(Date.now()-tapT)<350){ mteSelectAtClientX(tapX); }   // quick tap = select the clip
   },{passive:true});
-  scroll.addEventListener('scroll',()=>{ if(mteTrimming||mteOTrimming)return; if(!mteThumbRaf)mteThumbRaf=requestAnimationFrame(()=>{ mteThumbRaf=0; mteRenderThumbs(); }); if(mtePlaying||mteProgScroll)return; mteSeekTarget=Math.max(0,Math.min(mteTotalKept(),scroll.scrollLeft/mtePps)); if(!mteSeekRaf)mteSeekRaf=requestAnimationFrame(mteApplySeek); });
+  scroll.addEventListener('scroll',()=>{ if(mteTrimming||mteOTrimming)return; if(!mteThumbRaf)mteThumbRaf=requestAnimationFrame(()=>{ mteThumbRaf=0; mteRenderThumbs(); mteRenderWave(); }); if(mtePlaying||mteProgScroll)return; mteSeekTarget=Math.max(0,Math.min(mteTotalKept(),scroll.scrollLeft/mtePps)); if(!mteSeekRaf)mteSeekRaf=requestAnimationFrame(mteApplySeek); });
   // Scrubbing in the black gap below the timeline also scrolls the timeline (handy thumb area)
   const gap=document.querySelector('.mte-gap');
   if(gap){
