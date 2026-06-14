@@ -490,8 +490,8 @@
   .mte-tlcontent{position:relative}
   .mte-ruler{position:relative;height:15px;color:#8e8e93;font-size:10px}
   .mte-ruler span{position:absolute;transform:translateX(-50%);white-space:nowrap;font-variant-numeric:tabular-nums;top:1px}
-  .mte-tl{position:relative;height:66px;display:flex;border-radius:8px;overflow:hidden;background:#1c1c1e}
-  .mte-thumbs{position:absolute;inset:0;z-index:1;overflow:hidden}
+  .mte-tl{position:relative;height:66px;display:flex;border-radius:8px;overflow:visible;background:#1c1c1e}
+  .mte-thumbs{position:absolute;inset:0;z-index:1;overflow:hidden;border-radius:8px}
   .mte-thumbs div{position:absolute;top:0;bottom:0;background-size:cover;background-position:center}
   .mte-seg{position:relative;height:100%;border-right:2px solid #000;box-sizing:border-box;flex:0 0 auto;z-index:2}
   .mte-seg:last-child{border-right:0}
@@ -3066,7 +3066,7 @@ async function mteDecodeWave(id){
     const N=1600; const peaks=new Float32Array(N); const step=Math.max(1,Math.floor(ch0.length/N)); let mx=0.0001;
     for(let i=0;i<N;i++){ let p=0; const s=i*step, e=Math.min(ch0.length,s+step); for(let j=s;j<e;j+=8){ const a=ch0[j]<0?-ch0[j]:ch0[j]; if(a>p)p=a; } peaks[i]=p; if(p>mx)mx=p; }
     for(let i=0;i<N;i++)peaks[i]=Math.min(1,peaks[i]/mx);
-    if(mteId===id){ mteWaveId=id; mteWavePeaks=peaks; mteRenderWave(); }
+    if(mteId===id){ mteWaveId=id; mteWavePeaks=peaks; mteRenderWave(); setTimeout(mteRenderWave,150); }
   }catch(e){ /* no audio track / decode unsupported -> leave the strip blank */ }
   mteWaveBusy=false;
 }
@@ -3076,6 +3076,8 @@ function mteRenderWave(){
   const dpr=Math.min(2,window.devicePixelRatio||1); const cw=cv.clientWidth||1, chh=cv.clientHeight||40;
   if(cv.width!==Math.round(cw*dpr)||cv.height!==Math.round(chh*dpr)){ cv.width=Math.round(cw*dpr); cv.height=Math.round(chh*dpr); }
   const ctx=cv.getContext('2d'); if(!ctx)return; ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,cw,chh);
+  const mid0=chh/2;
+  ctx.fillStyle='rgba(255,255,255,.10)'; ctx.fillRect(0,mid0-0.5,cw,1);   // baseline so the audio lane is always visible
   if(!mteWavePeaks||mteWaveId!==mteId||!mteDuration)return;
   const pad=(scroll.clientWidth||320)/2, sl=scroll.scrollLeft, total=mteTotalKept();
   const bd=mteDuration/mteWavePeaks.length, mid=chh/2;
@@ -3246,7 +3248,12 @@ function mteBindTl(){
     if(mteTrimming)return;   // a trim-handle drag just ended; don't treat it as a tap
     if(!tapPinch&&!tapMoved&&(Date.now()-tapT)<350){ mteSelectAtClientX(tapX); }   // quick tap = select the clip
   },{passive:true});
-  scroll.addEventListener('scroll',()=>{ if(mteTrimming||mteOTrimming)return; if(!mteThumbRaf)mteThumbRaf=requestAnimationFrame(()=>{ mteThumbRaf=0; mteRenderThumbs(); mteRenderWave(); }); if(mtePlaying||mteProgScroll)return; mteSeekTarget=Math.max(0,Math.min(mteTotalKept(),scroll.scrollLeft/mtePps)); if(!mteSeekRaf)mteSeekRaf=requestAnimationFrame(mteApplySeek); });
+  scroll.addEventListener('scroll',()=>{ if(mteTrimming||mteOTrimming)return; if(!mteThumbRaf)mteThumbRaf=requestAnimationFrame(()=>{ mteThumbRaf=0; mteRenderThumbs(); mteRenderWave(); }); if(mtePlaying||mteProgScroll)return;
+    let k=Math.max(0,Math.min(mteTotalKept(),scroll.scrollLeft/mtePps));
+    // magnetic snap: when the marker passes near a cut, it locks onto it (drag past to pull through)
+    const SN=10/mtePps, cuts=mteCutPoints();
+    for(let i=0;i<cuts.length;i++){ if(Math.abs(k-cuts[i])<SN){ k=cuts[i]; mteProgScroll=true; scroll.scrollLeft=k*mtePps; clearTimeout(mteProgT); mteProgT=setTimeout(()=>{mteProgScroll=false;},60); break; } }
+    mteSeekTarget=k; if(!mteSeekRaf)mteSeekRaf=requestAnimationFrame(mteApplySeek); });
   // Scrubbing in the black gap below the timeline also scrolls the timeline (handy thumb area)
   const gap=document.querySelector('.mte-gap');
   if(gap){
