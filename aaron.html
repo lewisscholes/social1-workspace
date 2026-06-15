@@ -2849,7 +2849,7 @@ function epInitTextDrag(){
 // keep old refs for other parts of the app
 // ---------- MOBILE TIKTOK-STYLE EDITOR ----------
 let mteId=null, mteDuration=0, mteSegments=[], mteSelSeg=-1, mteThumbs=[], mtePlaying=false, mteTexts=[], mteEditingOv=null, mteOvSeq=0, mteMedia=[], mteMovSeq=0, mteSelMedia=null, mteOTrimming=false;
-let mtePps=0, mtePpsFit=0, mteProgScroll=false, mteProgT=0, mteRaf=0, mteMuted=false, mteBound=false, mteSeekTarget=null, mteSeekRaf=0, mteThumbKey='';
+let mtePps=0, mtePpsFit=0, mteProgScroll=false, mteProgT=0, mteRaf=0, mteMuted=false, mteBound=false, mteSeekTarget=null, mteSeekRaf=0, mteThumbKey='', mteScrubT=0;
 let mteCurColor='#ffffff', mteCurSize=28, mteCurFont='classic', mteCurStyle='outline', mtePinchBase=0, mtePinchPps=0, mtePinchRaf=0, mteThumbRaf=0, mteTrimming=false, mteTrimContentW=0, mteLastScrubSeek=0, mteScrubEndT=0, mteSeeking=false;
 function mteContrast(hex){ const m=/^#?([0-9a-f]{6})$/i.exec(hex||''); if(!m)return '#000'; const n=parseInt(m[1],16); const r=(n>>16)&255,g=(n>>8)&255,b=n&255; return (0.299*r+0.587*g+0.114*b)>150?'#000':'#fff'; }
 function mteSyncKb(){ const sh=document.getElementById('mteSheet'); if(!sh)return; const vv=window.visualViewport; if(vv){ sh.style.height=vv.height+'px'; sh.style.top=vv.offsetTop+'px'; } }
@@ -3271,7 +3271,11 @@ function mteBindTl(){
     // magnetic snap: when the marker passes near a cut, it locks onto it (drag past to pull through)
     const SN=10/mtePps, cuts=mteCutPoints();
     for(let i=0;i<cuts.length;i++){ if(Math.abs(k-cuts[i])<SN){ k=cuts[i]; mteProgScroll=true; scroll.scrollLeft=k*mtePps; clearTimeout(mteProgT); mteProgT=setTimeout(()=>{mteProgScroll=false;},60); break; } }
-    mteSeekTarget=k; if(!mteSeekRaf)mteSeekRaf=requestAnimationFrame(mteApplySeek); });
+    mteSeekTarget=k;
+    var _te=document.getElementById('mteTime'); if(_te) _te.innerHTML='<b>'+mteFmt(k)+'</b> / '+mteFmt(mteTotalKept());   // live timecode from scroll (no decode)
+    // Filmstrip-while-scrubbing: thumbnails + playhead track the finger instantly; decode the real
+    // preview frame only once the scroll settles -> removes the per-move seek lag.
+    clearTimeout(mteScrubT); mteScrubT=setTimeout(function(){ if(!mteSeekRaf)mteSeekRaf=requestAnimationFrame(mteApplySeek); }, 90); });
   // Scrubbing in the black gap below the timeline also scrolls the timeline (handy thumb area)
   const gap=document.querySelector('.mte-gap');
   if(gap){
