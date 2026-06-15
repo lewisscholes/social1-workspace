@@ -2835,7 +2835,8 @@ async function mteOpen(id){
   mteRenderOverlays(); mteRenderMedia();   // clear any overlays left on screen from the previous video right away
   let url=signed[id];
   if(!url){ const {data:s}=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600); url=s&&s.signedUrl; if(url)signed[id]=url; }
-  mteWavePeaks=null; mteWaveId=null; mteDecodeWave(id);   // build the audio waveform for this clip
+  mteWavePeaks=null; mteWaveId=null; mteWaveFailed=false; mteDecodeWave(id);   // build the audio waveform for this clip
+  setTimeout(mteRenderWave,400); setTimeout(mteRenderWave,1200);   // ensure the lane draws once the timeline has laid out (mobile)
   const es=v.edit_state;
   if(es&&es.overlays&&es.overlays.length){ mteTexts=es.overlays.map(o=>({id:++mteOvSeq,text:o.text,x:o.x,y:o.y,color:o.color,size:o.size||24,scale:o.scale||1,font:(o.font==='TikTok Sans'?'classic':(o.font||'classic')),style:(o.style||(o.box?'box':(o.outline===false?'plain':'outline')))})); }
   else if(v.caption_suggested){ mteTexts.push({id:++mteOvSeq,text:mteClampLines(v.caption_suggested),x:50,y:MTE_OV_TOP,color:'#ffffff',size:24,font:'classic',style:'outline'}); }
@@ -2889,6 +2890,7 @@ async function mtePrefetchBlob(id, v){
     mteBlob[id]=URL.createObjectURL(blob); mteBlobOrder.push(id);
     while(mteBlobOrder.length>3){ const o=mteBlobOrder.shift(); if(o!==id && mteBlob[o]){ try{URL.revokeObjectURL(mteBlob[o]);}catch(e){} delete mteBlob[o]; } }
     if(!mtePlaying) mteApplyBlob();                // swap now if paused; otherwise it swaps on the next pause/scrub
+    mteDecodeWave(id, blob);                       // build the audio waveform straight from the cached proxy (reliable on mobile)
   }catch(e){}
 }
 function mteApplyBlob(){
@@ -2988,40 +2990,49 @@ function mteMarkerSrc(){ return mteKeptToSrc(mteMarkerKept()); }
 // Virtualized thumbnail strip: only the cells visible in the scroll viewport are drawn, at a fixed crisp width.
 // Zooming widens the strip (more frames spaced out by TIME) without magnifying any single image, and stays fast at any zoom.
 // ---------- Audio waveform (Premiere-style) ----------
-let mteWaveId=null, mteWavePeaks=null, mteWaveAC=null, mteWaveBusy=false;
-async function mteDecodeWave(id){
+let mteWaveId=null, mteWavePeaks=null, mteWaveAC=null, mteWaveBusy=false, mteWaveFailed=false;
+// Decode the clip's audio into peaks. Prefer the already-cached proxy blob (local, reliable on
+// iOS); fall back to the signed URL. Always redraws the lane afterwards (and a couple of retries
+// in case the timeline hadn't laid out yet on mobile).
+async function mteDecodeWave(id, blob){
   if(mteWaveId===id && mteWavePeaks){ mteRenderWave(); return; }
   if(mteWaveBusy)return; mteWaveBusy=true;
   try{
-    const su=signed[id]; if(!su){ mteWaveBusy=false; return; }
+    let ab;
+    if(blob){ ab=await blob.arrayBuffer(); }
+    else { const su=mteBlob[id]||signed[id]; if(!su){ mteWaveBusy=false; return; } ab=await (await fetch(su)).arrayBuffer(); }
     if(!mteWaveAC){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC){ mteWaveBusy=false; return; } mteWaveAC=new AC(); }
-    const ab=await (await fetch(su)).arrayBuffer();
     const audio=await mteWaveAC.decodeAudioData(ab.slice(0));
     const ch0=audio.getChannelData(0);
     const N=1600; const peaks=new Float32Array(N); const step=Math.max(1,Math.floor(ch0.length/N)); let mx=0.0001;
     for(let i=0;i<N;i++){ let p=0; const s=i*step, e=Math.min(ch0.length,s+step); for(let j=s;j<e;j+=8){ const a=ch0[j]<0?-ch0[j]:ch0[j]; if(a>p)p=a; } peaks[i]=p; if(p>mx)mx=p; }
     for(let i=0;i<N;i++)peaks[i]=Math.min(1,peaks[i]/mx);
-    if(mteId===id){ mteWaveId=id; mteWavePeaks=peaks; mteRenderWave(); setTimeout(mteRenderWave,150); }
-  }catch(e){ /* no audio track / decode unsupported -> leave the strip blank */ }
+    if(mteId===id){ mteWaveId=id; mteWavePeaks=peaks; mteWaveFailed=false; mteRenderWave(); requestAnimationFrame(mteRenderWave); setTimeout(mteRenderWave,250); setTimeout(mteRenderWave,800); }
+  }catch(e){ mteWaveFailed=true; try{mteRenderWave();}catch(_){ } }
   mteWaveBusy=false;
 }
 function mteRenderWave(){
   const cv=document.getElementById('mteWave'); const scroll=document.getElementById('mteTlScroll');
-  if(!cv||!scroll||!mtePps)return;
+  if(!cv||!scroll)return;
   const dpr=Math.min(2,window.devicePixelRatio||1); const cw=cv.clientWidth||1, chh=cv.clientHeight||40;
   if(cv.width!==Math.round(cw*dpr)||cv.height!==Math.round(chh*dpr)){ cv.width=Math.round(cw*dpr); cv.height=Math.round(chh*dpr); }
   const ctx=cv.getContext('2d'); if(!ctx)return; ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,cw,chh);
-  const mid0=chh/2;
-  ctx.fillStyle='rgba(255,255,255,.10)'; ctx.fillRect(0,mid0-0.5,cw,1);   // baseline so the audio lane is always visible
-  if(!mteWavePeaks||mteWaveId!==mteId||!mteDuration)return;
+  const mid=chh/2;
+  // Always draw a visible audio lane (panel + baseline + label) so it's clearly there, even
+  // before the peaks decode or if the clip has no audio.
+  ctx.fillStyle='#15171c'; ctx.fillRect(0,0,cw,chh);
+  ctx.fillStyle='rgba(255,255,255,.18)'; ctx.fillRect(0,mid-0.5,cw,1);
+  ctx.font='9px -apple-system,Helvetica,Arial,sans-serif'; ctx.fillStyle='rgba(255,255,255,.40)'; ctx.fillText('AUDIO',6,11);
+  if(!mtePps||!mteDuration)return;
+  if(mteWaveId!==mteId || !mteWavePeaks){ if(mteWaveFailed){ ctx.fillStyle='rgba(255,255,255,.35)'; ctx.fillText('no audio',cw-52,11); } return; }
   const pad=(scroll.clientWidth||320)/2, sl=scroll.scrollLeft, total=mteTotalKept();
-  const bd=mteDuration/mteWavePeaks.length, mid=chh/2;
-  ctx.fillStyle='#3e9bff';
+  const bd=mteDuration/mteWavePeaks.length;
+  ctx.fillStyle='#46a0ff';
   for(let x=0;x<cw;x++){
     const keptT=(sl + x - pad)/mtePps;
     if(keptT<0||keptT>total)continue;
     const srcT=mteKeptToSrc(keptT); let bi=Math.floor(srcT/bd); if(bi<0)bi=0; if(bi>=mteWavePeaks.length)bi=mteWavePeaks.length-1;
-    const h=Math.max(1, mteWavePeaks[bi]*(chh-6));
+    const h=Math.max(1, mteWavePeaks[bi]*(chh-12));
     ctx.fillRect(x, mid-h/2, 1, h);
   }
 }
