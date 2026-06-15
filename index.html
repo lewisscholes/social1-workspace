@@ -2835,7 +2835,10 @@ async function mteOpen(id){
   mteRenderOverlays(); mteRenderMedia();   // clear any overlays left on screen from the previous video right away
   let url=signed[id];
   if(!url){ const {data:s}=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600); url=s&&s.signedUrl; if(url)signed[id]=url; }
-  mteWavePeaks=null; mteWaveId=null; mteWaveFailed=false; mteDecodeWave(id);   // build the audio waveform for this clip
+  // Audio waveform: prefer the peaks computed on the workhorse (reliable on iOS, no phone-side
+  // audio decoding); fall back to decoding in the browser only if none are stored yet.
+  mteWavePeaks=null; mteWaveId=null; mteWaveFailed=false;
+  (function(){ var wv=(swVids&&swVids.find&&swVids.find(function(x){return x.id===id;}))||(state.videos&&state.videos.find&&state.videos.find(function(x){return x.id===id;})); var st=wv?mteWaveParse(wv.waveform):null; if(st){ mteWaveId=id; mteWavePeaks=st; } else { mteDecodeWave(id); } })();
   setTimeout(mteRenderWave,400); setTimeout(mteRenderWave,1200);   // ensure the lane draws once the timeline has laid out (mobile)
   const es=v.edit_state;
   if(es&&es.overlays&&es.overlays.length){ mteTexts=es.overlays.map(o=>({id:++mteOvSeq,text:o.text,x:o.x,y:o.y,color:o.color,size:o.size||24,scale:o.scale||1,font:(o.font==='TikTok Sans'?'classic':(o.font||'classic')),style:(o.style||(o.box?'box':(o.outline===false?'plain':'outline')))})); }
@@ -2991,6 +2994,8 @@ function mteMarkerSrc(){ return mteKeptToSrc(mteMarkerKept()); }
 // Zooming widens the strip (more frames spaced out by TIME) without magnifying any single image, and stays fast at any zoom.
 // ---------- Audio waveform (Premiere-style) ----------
 let mteWaveId=null, mteWavePeaks=null, mteWaveAC=null, mteWaveBusy=false, mteWaveFailed=false;
+// Parse the workhorse-computed peaks string ("12,40,255,...") into a 0..1 Float32Array.
+function mteWaveParse(s){ try{ if(!s)return null; var a=(typeof s==='string')?s.split(','):s; if(!a||!a.length)return null; var f=new Float32Array(a.length); for(var i=0;i<a.length;i++){ var n=+a[i]; f[i]=Math.max(0,Math.min(1,(isNaN(n)?0:n)/255)); } return f; }catch(e){ return null; } }
 // Decode the clip's audio into peaks. Prefer the already-cached proxy blob (local, reliable on
 // iOS); fall back to the signed URL. Always redraws the lane afterwards (and a couple of retries
 // in case the timeline hadn't laid out yet on mobile).
