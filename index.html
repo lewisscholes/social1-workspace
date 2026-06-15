@@ -4140,7 +4140,7 @@ function fileRow(f){
       +'<div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(f.filename||'video')+'</div>'
       +'<div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">'+acctTag+'<span class="h-sub" style="font-size:12px">'+sub+'</span></div>'
     +'</div>'
-    +'<button class="btn sm" onclick="downloadTempFile(\''+f.id+'\')"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-download"></use></svg> '+(done?'Re-download':'Download')+'</button>'
+    +'<button class="btn sm" onpointerdown="prefetchTempFile(\''+f.id+'\')" onclick="downloadTempFile(\''+f.id+'\')"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-download"></use></svg> '+(done?'Re-download':'Download')+'</button>'
     +'<button class="btn ghost sm" onclick="deleteTempFile(\''+f.id+'\')" aria-label="Delete"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trash"></use></svg></button>'
     +'</div>';
 }
@@ -4158,15 +4158,29 @@ async function saveAccount(id){
 // Shared: on a phone, push a stored clip into the camera roll via the iOS share sheet
 // ("Save Video"). Returns true if it handled the save (shared or the user cancelled the sheet);
 // returns false so the caller can fall back to a plain file download (desktop / unsupported).
+// Cache the fetched File per clip so a second save is instant, and let callers PREFETCH it
+// (e.g. on finger-down) so the bytes are already downloading before the tap completes -> the
+// "Save Video" sheet opens as soon as possible instead of waiting for the whole fetch on tap.
+const _mfCache={};
+function getMediaFile(storage_path, filename){
+  if(_mfCache[storage_path]) return _mfCache[storage_path];
+  const p=(async()=>{
+    try{
+      const {data,error}=await sb.storage.from(BUCKET).createSignedUrl(storage_path,600); if(error) throw error;
+      const blob=await (await fetch(data.signedUrl)).blob();
+      return new File([blob], filename||'video.mp4', {type: blob.type||'video/mp4'});
+    }catch(e){ return null; }
+  })();
+  _mfCache[storage_path]=p;
+  p.then(f=>{ if(!f) delete _mfCache[storage_path]; }).catch(()=>{ delete _mfCache[storage_path]; });   // failed -> allow a retry
+  return p;
+}
+function prefetchMediaFile(storage_path, filename){ if(storage_path) getMediaFile(storage_path, filename); }
+function prefetchTempFile(id){ const f=(state.files||[]).find(x=>x.id===id); if(f) prefetchMediaFile(f.storage_path, f.filename); }
 async function shareToCameraRoll(storage_path, filename){
   if(!(isMobileDevice() && navigator.canShare)) return false;
   let file=null;
-  try{
-    toast('Preparing video…');
-    const {data,error}=await sb.storage.from(BUCKET).createSignedUrl(storage_path,300); if(error) throw error;
-    const blob=await (await fetch(data.signedUrl)).blob();
-    file=new File([blob], filename||'video.mp4', {type: blob.type||'video/mp4'});
-  }catch(e){ return false; }
+  try{ file=await getMediaFile(storage_path, filename); }catch(e){ file=null; }   // reuses the prefetch if it was already started
   if(!(file && navigator.canShare({files:[file]}))) return false;
   try{ await navigator.share({files:[file]}); return true; }              // share sheet -> "Save Video" -> camera roll
   catch(err){ if(err && err.name==='AbortError') return true; promptShareGeneric(file); return true; }   // activation expired -> fresh tap
