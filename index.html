@@ -3014,6 +3014,8 @@ async function mteDecodeWave(id, blob){
 function mteRenderWave(){
   const cv=document.getElementById('mteWave'); const scroll=document.getElementById('mteTlScroll');
   if(!cv||!scroll)return;
+  // Pin the lane to exactly the strip's width/position so it sits under the timeline and lines up.
+  const cssW=scroll.clientWidth||0; if(cssW && Math.abs((cv.clientWidth||0)-cssW)>2){ cv.style.left=(scroll.offsetLeft||0)+'px'; cv.style.right='auto'; cv.style.width=cssW+'px'; }
   const dpr=Math.min(2,window.devicePixelRatio||1); const cw=cv.clientWidth||1, chh=cv.clientHeight||40;
   if(cv.width!==Math.round(cw*dpr)||cv.height!==Math.round(chh*dpr)){ cv.width=Math.round(cw*dpr); cv.height=Math.round(chh*dpr); }
   const ctx=cv.getContext('2d'); if(!ctx)return; ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,cw,chh);
