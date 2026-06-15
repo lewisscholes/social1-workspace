@@ -3766,7 +3766,9 @@ async function swDownload(id){
     if(pending){ toast('Your edit is still rendering -- try Download again in a few seconds','err'); return; }
   }
   closeModal();
-  await fileDownload(edited||v, id);        // edited file if ready, else original; records as Downloaded
+  const target=edited||v;                    // edited file if ready, else original
+  const handled=await shareToCameraRoll(target.storage_path, target.filename);   // phone -> camera roll via share sheet
+  if(handled){ await recordDownload(id); } else { await fileDownload(target, id); }   // desktop falls back to a plain download; both record as Downloaded
   const card=document.querySelector('.sw-card.is-top');
   if(card&&card.dataset.id===id){ card.classList.add('fly-left'); setTimeout(()=>swAdvance(),420); } else { swRender(); }
 }
@@ -4153,18 +4155,46 @@ async function saveAccount(id){
   const f=(state.files||[]).find(x=>x.id===id); if(f)f.account=a;
   closeModal(); toast('Account set to '+a,'ok'); renderFiles();
 }
+// Shared: on a phone, push a stored clip into the camera roll via the iOS share sheet
+// ("Save Video"). Returns true if it handled the save (shared or the user cancelled the sheet);
+// returns false so the caller can fall back to a plain file download (desktop / unsupported).
+async function shareToCameraRoll(storage_path, filename){
+  if(!(isMobileDevice() && navigator.canShare)) return false;
+  let file=null;
+  try{
+    toast('Preparing video…');
+    const {data,error}=await sb.storage.from(BUCKET).createSignedUrl(storage_path,300); if(error) throw error;
+    const blob=await (await fetch(data.signedUrl)).blob();
+    file=new File([blob], filename||'video.mp4', {type: blob.type||'video/mp4'});
+  }catch(e){ return false; }
+  if(!(file && navigator.canShare({files:[file]}))) return false;
+  try{ await navigator.share({files:[file]}); return true; }              // share sheet -> "Save Video" -> camera roll
+  catch(err){ if(err && err.name==='AbortError') return true; promptShareGeneric(file); return true; }   // activation expired -> fresh tap
+}
+function promptShareGeneric(file){
+  showModal(`<h3>Save to camera roll</h3><p class="h-sub" style="margin:6px 0 14px">Your video is ready. Tap <b>Save video</b>, then choose <b>"Save Video"</b> in the share sheet.</p><div class="actions"><button class="btn" id="shareGenNow">Save video</button><button class="btn ghost" onclick="closeModal()">Cancel</button></div>`);
+  const b=document.getElementById('shareGenNow');
+  if(b) b.onclick=async()=>{ try{ await navigator.share({files:[file]}); closeModal(); }catch(e){ if(e&&e.name==='AbortError')return; closeModal(); toast('Could not open the share sheet','err'); } };
+}
+async function markTempDownloaded(id){
+  const f=(state.files||[]).find(x=>x.id===id); if(!f)return;
+  if(!f.downloaded_at){
+    try{ await sb.from('temp_files').update({downloaded_at:new Date().toISOString(),downloaded_by:displayName(state.user)}).eq('id',id); }catch(e){}
+    f.downloaded_at=new Date().toISOString(); f.downloaded_by=displayName(state.user);
+    toast('Saved -- moved to Downloaded','ok');
+  } else { toast('Saved','ok'); }
+  renderFiles();
+}
 async function downloadTempFile(id){
   const f=(state.files||[]).find(x=>x.id===id); if(!f)return;
-  try{
-    const {data}=await sb.storage.from(BUCKET).createSignedUrl(f.storage_path,300,{download:f.filename||'video.mp4'});
-    if(data&&data.signedUrl){ const a=document.createElement('a'); a.href=data.signedUrl; a.download=f.filename||'video.mp4'; document.body.appendChild(a); a.click(); a.remove(); }
-  }catch(e){ toast('Download failed','err'); return; }
-  if(!f.downloaded_at){
-    await sb.from('temp_files').update({downloaded_at:new Date().toISOString(),downloaded_by:displayName(state.user)}).eq('id',id);
-    f.downloaded_at=new Date().toISOString(); f.downloaded_by=displayName(state.user);
-    toast('Downloaded -- moved to Downloaded','ok');
-  } else { toast('Downloading...','ok'); }
-  renderFiles();
+  const handled=await shareToCameraRoll(f.storage_path, f.filename);   // phone -> camera roll via share sheet
+  if(!handled){
+    try{
+      const {data}=await sb.storage.from(BUCKET).createSignedUrl(f.storage_path,300,{download:f.filename||'video.mp4'});
+      if(data&&data.signedUrl){ const a=document.createElement('a'); a.href=data.signedUrl; a.download=f.filename||'video.mp4'; document.body.appendChild(a); a.click(); a.remove(); }
+    }catch(e){ toast('Download failed','err'); return; }
+  }
+  await markTempDownloaded(id);
 }
 async function deleteTempFile(id){
   const f=(state.files||[]).find(x=>x.id===id); if(!f)return;
