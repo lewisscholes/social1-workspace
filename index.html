@@ -12,6 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:wght@300..900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
 <style>
   :root{
     --bg:#f3f4fb; --sidebar:#fbfcff; --panel:#ffffff; --ink:#10122a; --muted:#8a90a6;
@@ -2819,6 +2820,20 @@ async function mteAutoSuggest(id){
   }catch(e){}
 }
 
+let mteUsingHls=false, mteHlsInst=[];
+function mteDestroyHls(){ mteHlsInst.forEach(function(h){ try{h.destroy();}catch(e){} }); mteHlsInst=[]; }
+// Point a <video> at the clip's HLS stream when available (segment-based -> instant scrubbing on
+// any length), falling back to the mp4 proxy. iPhone/Safari play HLS natively; desktop uses hls.js.
+function mteAttachSource(el, v, fallbackUrl){
+  if(!el) return;
+  var hlsUrl = v && v.hls_url;
+  el.onerror=function(){ if(hlsUrl && el.src!==fallbackUrl){ mteUsingHls=false; try{ el.src=fallbackUrl||''; }catch(e){} } };
+  if(hlsUrl){
+    if(el.canPlayType && el.canPlayType('application/vnd.apple.mpegurl')){ el.src=hlsUrl; return; }   // native HLS (iOS/Safari)
+    if(window.Hls && window.Hls.isSupported()){ try{ var h=new window.Hls({maxBufferLength:20,maxMaxBufferLength:30}); h.loadSource(hlsUrl); h.attachMedia(el); h.on(window.Hls.Events.ERROR,function(e,d){ if(d&&d.fatal){ try{h.destroy();}catch(_){} mteUsingHls=false; try{el.src=fallbackUrl||'';}catch(_){} } }); mteHlsInst.push(h); return; }catch(e){} }
+  }
+  el.src=fallbackUrl||'';
+}
 async function mteOpen(id){
   let v=swVids.find(x=>x.id===id); if(!v) return;
   // NEVER edit a burned render -- its text is baked into the pixels, so editing it again
@@ -2862,7 +2877,8 @@ async function mteOpen(id){
   document.querySelectorAll('.sw-card video').forEach(x=>{ try{x.pause(); x.removeAttribute('src'); x.load();}catch(e){} });   // fully release the deck's video decoders -> the editor's player isn't starved (no multi-second play stalls)
   mteLockScroll(true);
   mteBindTl();
-  vid.src=url||''; vidB.src=url||'';
+  mteUsingHls=!!(v&&v.hls_url); mteDestroyHls();
+  mteAttachSource(vid, v, url); mteAttachSource(vidB, v, url);   // HLS stream when available, else the mp4 proxy
   try{ const pb=vidB.play(); if(pb&&pb.then)pb.then(()=>vidB.pause()).catch(()=>{}); }catch(e){}   // unlock buffer 2 for later programmatic swaps
   vid.play().then(()=>{mtePlaying=true;mteSyncPlay();mteStartTick();mtePrimeStandby();}).catch(()=>{mtePlaying=false;mteSyncPlay();});
   mtePrefetchBlob(id, v);   // pull the small proxy fully into memory so seeks/scrubs are instant (no network)
@@ -2870,6 +2886,7 @@ async function mteOpen(id){
 
 function mteClose(){
   mteStopTick();
+  mteDestroyHls(); mteUsingHls=false;
   mtePriming=false;
   mteThumbToken++;   // abort any in-flight thumbnail build and free its decoder
   ['mteVideo','mteVideo2'].forEach(id=>{ const v=document.getElementById(id); if(v){ v.pause(); v.removeAttribute('src'); try{v.load();}catch(e){} } });
@@ -2884,6 +2901,7 @@ function mteClose(){
 // never interrupts playback; cached for the last few clips for instant re-open. ----
 const mteBlob={}; let mteBlobOrder=[];
 async function mtePrefetchBlob(id, v){
+  if(mteUsingHls) return;                          // streaming HLS -> don't override the source with a blob
   if(!v || !v.proxy_path) return;                 // only the small proxy, never the full original
   if(mteBlob[id]){ if(!mtePlaying) mteApplyBlob(); return; }
   const su=signed[id]; if(!su) return;
@@ -2897,6 +2915,7 @@ async function mtePrefetchBlob(id, v){
   }catch(e){}
 }
 function mteApplyBlob(){
+  if(mteUsingHls) return;
   const u=mteBlob[mteId]; if(!u || mtePlaying) return;
   ['mteVideo','mteVideo2'].forEach(eid=>{ const el=document.getElementById(eid); if(el && el.src!==u){ const ct=el.currentTime||0; el.src=u; el.addEventListener('loadedmetadata',()=>{ try{el.currentTime=ct;}catch(e){} },{once:true}); } });
 }
