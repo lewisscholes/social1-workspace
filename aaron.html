@@ -2891,7 +2891,7 @@ function mteDestroyHls(){ mteHlsInst.forEach(function(h){ try{h.destroy();}catch
 // any length), falling back to the mp4 proxy. iPhone/Safari play HLS natively; desktop uses hls.js.
 function mteAttachSource(el, v, fallbackUrl){
   if(!el) return;
-  var hlsUrl = v && v.hls_url;
+  var hlsUrl = mteUsingHls && v && v.hls_url;
   el.onerror=function(){ if(hlsUrl && el.src!==fallbackUrl){ mteUsingHls=false; try{ el.src=fallbackUrl||''; }catch(e){} } };
   if(hlsUrl){
     if(el.canPlayType && el.canPlayType('application/vnd.apple.mpegurl')){ el.src=hlsUrl; return; }   // native HLS (iOS/Safari)
@@ -2942,7 +2942,10 @@ async function mteOpen(id){
   document.querySelectorAll('.sw-card video').forEach(x=>{ try{x.pause(); x.removeAttribute('src'); x.load();}catch(e){} });   // fully release the deck's video decoders -> the editor's player isn't starved (no multi-second play stalls)
   mteLockScroll(true);
   mteBindTl();
-  mteUsingHls=!!(v&&v.hls_url); mteDestroyHls();
+  // Engine choice: for normal clip lengths the in-memory 480p proxy is FASTER than streaming
+  // (instant in-memory seeks, seamless double-buffer cuts, instant play). HLS/Cloudflare only wins
+  // for long clips too big to hold in memory -> use it as a fallback (no proxy, or >120s).
+  mteUsingHls = !!(v&&v.hls_url) && ( !(v&&v.proxy_path) || (v&&v.duration>120) ); mteDestroyHls();
   mteAttachSource(vid, v, url); mteAttachSource(vidB, v, url);   // HLS stream when available, else the mp4 proxy
   try{ const pb=vidB.play(); if(pb&&pb.then)pb.then(()=>vidB.pause()).catch(()=>{}); }catch(e){}   // unlock buffer 2 for later programmatic swaps
   vid.play().then(()=>{mtePlaying=true;mteSyncPlay();mteStartTick();mtePrimeStandby();}).catch(()=>{mtePlaying=false;mteSyncPlay();});
@@ -3292,9 +3295,10 @@ function mteBindTl(){
     for(let i=0;i<cuts.length;i++){ if(Math.abs(k-cuts[i])<SN){ k=cuts[i]; mteProgScroll=true; scroll.scrollLeft=k*mtePps; clearTimeout(mteProgT); mteProgT=setTimeout(()=>{mteProgScroll=false;},60); break; } }
     mteSeekTarget=k;
     var _te=document.getElementById('mteTime'); if(_te) _te.innerHTML='<b>'+mteFmt(k)+'</b> / '+mteFmt(mteTotalKept());   // live timecode from scroll (no decode)
-    // Filmstrip-while-scrubbing: thumbnails + playhead track the finger instantly; decode the real
-    // preview frame only once the scroll settles -> removes the per-move seek lag.
-    clearTimeout(mteScrubT); mteScrubT=setTimeout(function(){ if(!mteSeekRaf)mteSeekRaf=requestAnimationFrame(mteApplySeek); }, 90); });
+    // Live scrub (TikTok-style): the preview chases the finger frame-by-frame. The in-memory 480p
+    // proxy makes every seek instant; mteApplySeek self-throttles (one in-flight seek, always
+    // chasing the newest position) so rapid scrubbing never backlogs into lag.
+    if(!mteSeekRaf) mteSeekRaf=requestAnimationFrame(mteApplySeek); });
   // Scrubbing in the black gap below the timeline also scrolls the timeline (handy thumb area)
   const gap=document.querySelector('.mte-gap');
   if(gap){
