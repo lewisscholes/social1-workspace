@@ -4306,9 +4306,12 @@ function renderFiles(){
   const cd=document.getElementById('fcDown'); if(cd)cd.textContent=down.length;
   const list=(state.filesTab==='downloaded')?down:up;
   const wrap=document.getElementById('filesList'); const empty=document.getElementById('filesEmpty');
-  if(empty)empty.classList.toggle('hide',list.length>0);
-  if(wrap)wrap.innerHTML=list.map(fileRow).join('');
+  const fails=(window.__ufFailed||[]).length;
+  const banner=fails?('<div class="card" style="border:1px solid #f3c2c2;background:#fff4f4;display:flex;align-items:center;gap:10px;padding:12px 14px;margin-bottom:10px"><div style="flex:1;min-width:0;font-size:13px;color:#a32d2d;font-weight:600">'+fails+' upload'+(fails===1?'':'s')+' failed to save.</div><button class="btn sm" onclick="ufRetryFailed()">Retry '+fails+'</button></div>'):'';
+  if(empty)empty.classList.toggle('hide',list.length>0||fails>0);
+  if(wrap)wrap.innerHTML=banner+list.map(fileRow).join('');
 }
+function ufRetryFailed(){ const f=(window.__ufFailed||[]); if(!f.length){ toast('Nothing to retry','ok'); return; } window.__ufFailed=[]; renderFiles(); toast('Retrying '+f.length+' upload'+(f.length===1?'':'s'),'ok'); bgUploadTemp(f.map(function(x){ return {file:x.file,account:x.account}; })); }
 function acctColors(a){
   if(a==='@LinkedByLinacre') return ['#e6f1fb','#0c447c'];
   if(a==='@YasAndLew') return ['#eeedfe','#3c3489'];
@@ -4444,11 +4447,17 @@ async function bgUploadTemp(jobs){
   __bgT+=jobs.length; __bgA++;
   jobs.forEach(j=>{ j.__id='u'+(++__bgSeq); __bgSent[j.__id]=0; __bgTotalBytes+=(j.file.size||0); });
   drawBg();
+  if(!window.__ufFailed) window.__ufFailed=[];
   await runPool(jobs,async j=>{
-    try{ await uploadTempOne(j.file, j.account, (sent)=>{ __bgSent[j.__id]=sent; drawBg(); }); __bgD++; __bgSent[j.__id]=(j.file.size||__bgSent[j.__id]); }
-    catch(e){ __bgF++; toast('Upload failed: '+j.file.name+((e&&e.message)?(' -- '+e.message):''),'err'); console.log('temp upload failed',j.file.name,e); }
+    var ok=false,lastErr;
+    for(var a=0;a<3&&!ok;a++){
+      try{ if(a>0){ __bgSent[j.__id]=0; drawBg(); } await uploadTempOne(j.file, j.account, (sent)=>{ __bgSent[j.__id]=sent; drawBg(); }); ok=true; }
+      catch(e){ lastErr=e; await new Promise(function(r){ setTimeout(r,1500*(a+1)); }); }   // back off, then retry (gets a fresh auth token each attempt)
+    }
+    if(ok){ __bgD++; __bgSent[j.__id]=(j.file.size||__bgSent[j.__id]); }
+    else { __bgF++; window.__ufFailed.push({file:j.file,account:j.account}); toast('Upload failed after retries: '+j.file.name+((lastErr&&lastErr.message)?(' -- '+lastErr.message):''),'err'); console.log('temp upload failed',j.file.name,lastErr); }
     drawBg();
-  },4);
+  },2);
   __bgA--;
   if(state.currentView==='files'){ await loadFiles(); }
   drawBg();
