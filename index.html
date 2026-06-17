@@ -2360,6 +2360,9 @@ function previewPath(v){
   }
   return v.storage_path;
 }
+// Cache signed URLs for overlay/asset images (keyed by path) so re-opening a clip shows
+// its overlays instantly instead of re-fetching a URL every time.
+async function mteMediaUrl(path){ if(!path) return ''; const k='m:'+path; if(signed[k]) return signed[k]; try{ const {data}=await sb.storage.from(BUCKET).createSignedUrl(path,3600); if(data&&data.signedUrl){ signed[k]=data.signedUrl; return data.signedUrl; } }catch(e){} return ''; }
 async function hydrateBankUrls(){ for(const v of state.videos){ if(signed[v.id])continue; const {data}=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600); if(data&&data.signedUrl) signed[v.id]=data.signedUrl; } renderBankVideos(); }
 function renderBankVideos(){ const b=bankBuckets(); const list=b[state.bankTab]; if(list.length) paintBank(list); }
 function isMobileDevice(){ return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints>1); }
@@ -2862,6 +2865,7 @@ async function mteOpen(id){
       : {id:++mteOvSeq,text:o.text,x:o.x,y:o.y,color:o.color,size:o.size||24,scale:o.scale||1,font:(o.font==='TikTok Sans'?'classic':(o.font||'classic')),style:(o.style||(o.box?'box':(o.outline===false?'plain':'outline')))}); }
   else if(v.caption_suggested){ mteTexts.push({id:++mteOvSeq,text:mteClampLines(v.caption_suggested),x:50,y:MTE_OV_TOP,color:'#ffffff',size:24,font:'classic',style:'outline'}); }
   if(!mteTexts.length && v.product_uid){ mteAutoSuggest(id); }
+  mteRenderOverlays();   // paint text/caption overlays immediately (don't wait for the video to load) -> no lag on re-open
   mteActive=0; mteRunIdx=0;
   const vid=document.getElementById('mteVideo'); const vidB=document.getElementById('mteVideo2');
   vid.muted=false; vidB.muted=true; vid.classList.remove('off'); vidB.classList.add('off');
@@ -2870,7 +2874,7 @@ async function mteOpen(id){
     if(es&&es.segments&&es.segments.length){ mteSegments=es.segments.map(s=>({start:Math.max(0,s.start),end:Math.min(mteDuration,s.end),zoom:s.zoom||1})).filter(s=>s.end-s.start>0.05); }
     if(!mteSegments.length) mteSegments=[{start:0,end:mteDuration}];
     mteRenderTL(); mteRenderOverlays(); mteUpdTime(); setTimeout(mteBuildThumbs,450);   // let the preview load first, then build the filmstrip
-    mteMedia=[]; if(es&&es.media&&es.media.length){ const tot=mteTotalKept()||0.001; es.media.forEach(m=>{ const item={id:++mteMovSeq,path:m.path,x:m.x,y:m.y,wfrac:m.wfrac||0.5,start:(m.start!=null?m.start:0),end:(m.end!=null?m.end:tot),url:''}; mteMedia.push(item); sb.storage.from(BUCKET).createSignedUrl(m.path,3600).then(({data})=>{ if(data&&data.signedUrl){ item.url=data.signedUrl; mteRenderMedia(); mteRenderOTrack(); } }).catch(()=>{}); }); }
+    mteMedia=[]; if(es&&es.media&&es.media.length){ const tot=mteTotalKept()||0.001; es.media.forEach(m=>{ const item={id:++mteMovSeq,path:m.path,x:m.x,y:m.y,wfrac:m.wfrac||0.5,start:(m.start!=null?m.start:0),end:(m.end!=null?m.end:tot),url:''}; mteMedia.push(item); mteMediaUrl(m.path).then((u)=>{ if(u){ item.url=u; mteRenderMedia(); mteRenderOTrack(); } }).catch(()=>{}); }); }
     mteRenderMedia(); mteRenderOTrack();   // always render (clears any overlay/track left from the previous video, even when this one has none)
   };
   vid.ontimeupdate=mteOnTimeUpdate; vidB.ontimeupdate=mteOnTimeUpdate;
