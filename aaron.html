@@ -4726,26 +4726,67 @@ async function uploadAsset(file,vid,kind){
   var ins=await sb.from('ed_video_assets').insert({video_id:vid,creator_id:cid,kind:kind,storage_path:path,filename:file.name,content_type:file.type||null,size_bytes:file.size});
   if(ins.error) throw ins.error;
 }
-async function ufSubmitSingle(){
+function ufSubmitSingle(){
   if(!ufState.video){ toast('Choose a video first','err'); return; }
   var notes=(document.getElementById('uf_notes')&&document.getElementById('uf_notes').value)||ufState.notes||'';
-  var payload={video:ufState.video,images:ufState.images.slice(),voice:ufState.voice,notes:notes};
+  uqEnqueue({file:ufState.video,images:ufState.images.slice(),voice:ufState.voice,notes:notes});
   ufState={mode:'single',video:null,images:[],voice:null,notes:'',bulk:[]}; ufRender();
-  toast('Uploading video + attachments in the background','ok');
-  try{
-    var vid=await uploadVideoReturnId(payload.video);
-    for(var i=0;i<payload.images.length;i++){ try{ await uploadAsset(payload.images[i],vid,'image'); }catch(e){ console.log('image asset failed',e); } }
-    if(payload.voice){ try{ await uploadAsset(payload.voice,vid,'voiceover'); }catch(e){ console.log('voice asset failed',e); } }
-    if(payload.notes){ try{ await sb.from('ed_videos').update({notes:payload.notes}).eq('id',vid); }catch(e){ console.log('notes failed',e); } }
-    toast('Uploaded'+(payload.images.length||payload.voice||payload.notes?' with attachments':''),'ok');
-  }catch(e){ toast('Upload failed: '+((e&&e.message)||e),'err'); }
+  toast('Added to the upload queue -- keep going if you like','ok');
 }
 function ufSubmitBulk(){
   var b=ufState.bulk||[]; if(!b.length){ toast('Choose videos first','err'); return; }
-  var jobs=b.map(function(x){ return {file:x,prod:null}; });
+  b.forEach(function(f){ uqEnqueue({file:f,images:[],voice:null,notes:''}); });
   ufState={mode:'bulk',video:null,images:[],voice:null,notes:'',bulk:[]}; ufRender();
-  toast('Uploading '+jobs.length+' in the background','ok');
-  bgUpload(jobs);
+  toast('Added '+b.length+' to the upload queue','ok');
+}
+
+// ===== Background upload queue with a live ETA (keeps running while you add more) =====
+var uq={items:[],active:false,total:0,done:0,curSent:0,start:0,count:0,idx:0,tick:null};
+function uqFmtETA(sec){ if(!isFinite(sec)||sec<0) return 'calculating...'; sec=Math.round(sec); if(sec<60) return '~'+sec+'s left'; var m=Math.floor(sec/60), s=sec%60; return '~'+m+'m '+(s<10?'0':'')+s+'s left'; }
+function uqEnqueue(item){
+  uq.items.push(item);
+  uq.total+=(item.file&&item.file.size||0);
+  (item.images||[]).forEach(function(f){ uq.total+=f.size||0; });
+  if(item.voice) uq.total+=(item.voice.size||0);
+  uq.count++;
+  if(!uq.start) uq.start=Date.now();
+  uqRender(); uqStartTick(); uqRun();
+}
+function uqStartTick(){ if(uq.tick) return; uq.tick=setInterval(function(){ if(uq.active||uq.items.length){ uqRender(); } else { clearInterval(uq.tick); uq.tick=null; } },1000); }
+async function uqUploadVideo(file,onProg){
+  var safe=file.name.replace(/[^\w.\-]+/g,'_'); var cid=(ME&&ME.id);
+  var path=(cid||'root')+'/'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'_'+safe;
+  await tusUpload(file,path,onProg);
+  var ins=await sb.from('ed_videos').insert({creator_id:cid,kind:'raw',title:file.name,filename:file.name,storage_path:path,size_bytes:file.size,content_type:'video/mp4',status:'new'}).select('id').single();
+  if(ins.error) throw ins.error; return ins.data.id;
+}
+async function uqProcess(item){
+  uq.curSent=0; uqRender();
+  var vid=await uqUploadVideo(item.file,function(sent,total){ uq.curSent=sent; uqRender(); });
+  uq.done+=(item.file&&item.file.size||0); uq.curSent=0; uqRender();
+  for(var i=0;i<(item.images||[]).length;i++){ try{ await uploadAsset(item.images[i],vid,'image'); }catch(e){} uq.done+=(item.images[i].size||0); uqRender(); }
+  if(item.voice){ try{ await uploadAsset(item.voice,vid,'voiceover'); }catch(e){} uq.done+=(item.voice.size||0); uqRender(); }
+  if(item.notes){ try{ await sb.from('ed_videos').update({notes:item.notes}).eq('id',vid); }catch(e){} }
+  try{ if(state.currentView==='cdash') loadCDash(); }catch(e){}
+}
+async function uqRun(){
+  if(uq.active) return; uq.active=true;
+  while(uq.items.length){ uq.idx++; var item=uq.items.shift(); try{ await uqProcess(item); }catch(e){ toast('An upload failed: '+((e&&e.message)||e),'err'); } }
+  uq.active=false; uqRender();
+  toast('All uploads finished','ok'); try{ loadCDash(); }catch(e){}
+  setTimeout(function(){ if(!uq.active&&!uq.items.length){ uq.total=0; uq.done=0; uq.curSent=0; uq.start=0; uq.count=0; uq.idx=0; uqRender(); } },3000);
+}
+function uqRender(){
+  var busy=uq.active||uq.items.length>0;
+  var el=document.getElementById('uqWidget');
+  if(!busy){ if(el&&el.parentNode) el.parentNode.removeChild(el); return; }
+  if(!el){ el=document.createElement('div'); el.id='uqWidget'; el.style.cssText='position:fixed;right:12px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:500;background:#15171c;color:#fff;border-radius:14px;padding:11px 13px;box-shadow:0 10px 26px rgba(0,0,0,.45);width:220px;font-family:inherit'; document.body.appendChild(el); }
+  var sent=uq.done+uq.curSent; var pct=uq.total?Math.min(99,Math.round(sent/uq.total*100)):0;
+  var elapsed=(Date.now()-uq.start)/1000; var speed=elapsed>1?sent/elapsed:0; var remain=speed>0?(uq.total-sent)/speed:Infinity;
+  el.innerHTML='<div style="display:flex;align-items:center;gap:8px"><span class="ph-spin"></span><div style="font-weight:700;font-size:13px;flex:1;min-width:0">Uploading '+Math.min(uq.idx,uq.count)+' of '+uq.count+'</div></div>'
+    +'<div style="font-size:12px;color:#9fb4e6;font-weight:700;margin-top:5px">'+uqFmtETA(remain)+'</div>'
+    +'<div style="height:6px;background:#2a2f37;border-radius:4px;margin:8px 0 7px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#2f6df6,#6d28d9);border-radius:4px;transition:width .25s"></div></div>'
+    +'<div style="font-size:10.5px;color:#ff9b9b;font-weight:700;line-height:1.35">Please do not close the app while uploading</div>';
 }
 
 // ===== Aaron side: client attachments flow into the editor =====
