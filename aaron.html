@@ -4429,7 +4429,10 @@ function ufRows(){ const w=document.getElementById('uf_rows'); const f=window.__
 function ufRm(i){ window.__ufFiles.splice(i,1); ufRows(); }
 async function ufUpload(){ const f=window.__ufFiles||[]; if(!f.length){toast('Add clips','err');return;} const acct=val('uf_acct')||FILE_ACCOUNTS[0]; const jobs=f.map(x=>({file:x,account:acct})); window.__ufFiles=[]; closeModal(); toast('Uploading '+jobs.length+' to '+acct,'ok'); bgUploadTemp(jobs); }
 async function uploadTempOne(file,account,onProgress){
-  const safe=file.name.replace(/[^\w.\-]+/g,'_');
+  if(!file) throw new Error('no file');
+  // account may arrive as a string; guard against anything non-string (e.g. a stray callback)
+  if(typeof account!=='string') account=null;
+  const safe=(file.name||'video').replace(/[^\w.\-]+/g,'_');
   const path='tempfiles/'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'_'+safe;
   await tusUpload(file,path,onProgress);
   if(onProgress)onProgress(file.size||0,file.size||0);
@@ -4442,8 +4445,8 @@ async function bgUploadTemp(jobs){
   jobs.forEach(j=>{ j.__id='u'+(++__bgSeq); __bgSent[j.__id]=0; __bgTotalBytes+=(j.file.size||0); });
   drawBg();
   await runPool(jobs,async j=>{
-    try{ await uploadTempOne(j.file,(sent)=>{ __bgSent[j.__id]=sent; drawBg(); }); __bgD++; __bgSent[j.__id]=(j.file.size||__bgSent[j.__id]); }
-    catch(e){ __bgF++; toast('Upload failed: '+j.file.name,'err'); }
+    try{ await uploadTempOne(j.file, j.account, (sent)=>{ __bgSent[j.__id]=sent; drawBg(); }); __bgD++; __bgSent[j.__id]=(j.file.size||__bgSent[j.__id]); }
+    catch(e){ __bgF++; toast('Upload failed: '+j.file.name+((e&&e.message)?(' -- '+e.message):''),'err'); console.log('temp upload failed',j.file.name,e); }
     drawBg();
   },4);
   __bgA--;
