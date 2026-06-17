@@ -4749,24 +4749,40 @@ async function edLoadClipAssets(id){
   edRenderBrief();
 }
 function edRenderBrief(){
-  var mte=document.getElementById('mte'); if(!mte) return;
+  var bar=document.getElementById('mteBar'); if(!bar) return;
   var has=(state.clipAssets&&state.clipAssets.length)||state.clipNote;
   var btn=document.getElementById('edBriefBtn');
-  if(!has){ if(btn) btn.parentNode.removeChild(btn); return; }
-  if(!btn){ btn=document.createElement('button'); btn.id='edBriefBtn'; btn.type='button'; btn.onclick=edOpenBrief; btn.style.cssText='position:absolute;top:12px;left:12px;z-index:60;background:var(--grad);color:#fff;border:0;border-radius:20px;padding:8px 13px;font-weight:700;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.35);cursor:pointer'; mte.appendChild(btn); }
+  if(!has){ if(btn&&btn.parentNode) btn.parentNode.removeChild(btn); return; }
+  if(!btn){ btn=document.createElement('button'); btn.id='edBriefBtn'; btn.type='button'; btn.onclick=edOpenBrief;
+    // thin full-width blue bar across the bottom, under the Overlay/Captions row
+    btn.style.cssText='width:100%;flex:0 0 auto;height:auto;background:var(--grad);color:#fff;border:0;border-radius:11px;padding:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:6px';
+    bar.appendChild(btn);
+  }
   var n=((state.clipAssets&&state.clipAssets.length)||0);
-  btn.innerHTML='Client brief'+(n?(' &middot; '+n):'');
+  btn.innerHTML='Client brief'+(n?(' &middot; '+n+' attachment'+(n>1?'s':'')):'');
 }
 function edOpenBrief(){
   var imgs=(state.clipAssets||[]).filter(function(a){return a.kind==='image';});
   var voice=(state.clipAssets||[]).find(function(a){return a.kind==='voiceover';});
   var h='<h3>Client brief</h3>';
-  if(state.clipNote){ h+='<div class="lbl-ed" style="margin-top:6px">Notes</div><div class="card" style="white-space:pre-wrap;font-size:13px">'+esc(state.clipNote)+'</div>'; }
-  if(imgs.length){ h+='<div class="lbl-ed">Images</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">'+imgs.map(function(a){ return '<div onclick="mtePickClientImg(\''+a.id+'\')" style="width:60px;height:60px;border-radius:9px;border:1px solid #ccc;cursor:pointer;background:#11151c '+(a.url?("url(\'"+a.url+"\') center/cover"):'')+'"></div>'; }).join('')+'</div><div class="h-sub" style="font-size:12px;margin-bottom:6px">Tap an image to drop it on the clip.</div>'; }
-  if(voice){ h+='<div class="lbl-ed">Voiceover</div><button class="btn ghost" style="width:100%;justify-content:center;margin-bottom:4px" onclick="edDownloadAsset(\''+voice.id+'\')">Download voiceover ('+esc(voice.filename||'mp3')+')</button>'; }
+  if(imgs.length){
+    h+='<div class="lbl-ed" style="margin-top:6px">Images</div>';
+    h+=imgs.map(function(a){ return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="width:46px;height:46px;border-radius:8px;flex:0 0 auto;border:1px solid #ccc;background:#11151c '+(a.url?("url(\'"+a.url+"\') center/cover"):'')+'"></div><div style="flex:1;min-width:0;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(a.filename||'image')+'</div><button class="btn sm" onclick="mtePickClientImg(\''+a.id+'\')">Add as overlay</button></div>'; }).join('');
+  }
+  if(voice){
+    var added=(state.clipVoiceover&&state.clipVoiceover===voice.storage_path);
+    h+='<div class="lbl-ed">Voiceover</div><div style="display:flex;gap:8px"><button class="btn" style="flex:1;justify-content:center" onclick="edAddVoiceover(\''+voice.id+'\')">'+(added?'Voiceover added':'Add voiceover')+'</button><button class="btn ghost" style="flex:0 0 auto;justify-content:center" onclick="edDownloadAsset(\''+voice.id+'\')">Download</button></div><div class="h-sub" style="font-size:11.5px;margin-top:6px">Adds the voiceover to the final export (mixed over the clip on render).</div>';
+  }
+  if(state.clipNote){ h+='<div class="lbl-ed" style="margin-top:'+((imgs.length||voice)?'14px':'6px')+'">Notes</div><div class="card" style="white-space:pre-wrap;font-size:13px">'+esc(state.clipNote)+'</div>'; }
   if(!state.clipNote&&!imgs.length&&!voice){ h+='<div class="h-sub">No attachments on this clip.</div>'; }
-  h+='<div class="actions"><button class="btn" onclick="closeModal()">Close</button></div>';
+  h+='<div class="actions"><button class="btn ghost" onclick="closeModal()">Close</button></div>';
   showModal(h);
+}
+async function edAddVoiceover(aid){
+  var a=(state.clipAssets||[]).find(function(x){return String(x.id)===String(aid);}); if(!a) return;
+  var vid=(typeof mteId!=='undefined'&&mteId)?mteId:null; if(!vid){ toast('Open a clip first','err'); return; }
+  try{ var r=await sb.from('ed_videos').update({voiceover_path:a.storage_path}).eq('id',vid); if(r.error) throw r.error; state.clipVoiceover=a.storage_path; closeModal(); toast('Voiceover added -- it will be mixed into the export','ok'); }
+  catch(e){ toast('Could not add voiceover: '+((e&&e.message)||e),'err'); }
 }
 function edDownloadAsset(aid){ var a=(state.clipAssets||[]).find(function(x){return String(x.id)===String(aid);}); if(!a)return; sb.storage.from(BUCKET).createSignedUrl(a.storage_path,300,{download:a.filename||'voiceover.mp3'}).then(function(s){ if(s&&s.data&&s.data.signedUrl){ var el=document.createElement('a'); el.href=s.data.signedUrl; el.download=a.filename||'voiceover.mp3'; document.body.appendChild(el); el.click(); el.remove(); } }); }
 async function mteAddClientImage(path,filename){
