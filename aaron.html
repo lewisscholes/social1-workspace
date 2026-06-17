@@ -613,6 +613,47 @@
   .edov-btn.go{background:var(--grad);color:#fff}
   .edov-mount{flex:1;position:relative;background:#0b0b0f;overflow:hidden}
   .edov-ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#cbd5e1;padding:30px;font-size:14px;line-height:1.6}
+  /* ---- client uploader (single/bulk + attachments) : matches the mockup ---- */
+  .uam-seg{display:flex;background:#e7ebf2;border-radius:12px;padding:4px;gap:4px;margin-bottom:14px}
+  .uam-seg button{flex:1;border:0;background:transparent;border-radius:9px;padding:9px 6px;font-weight:700;font-size:13px;color:#56606e;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:inherit}
+  .uam-seg button .s{font-weight:500;font-size:10px;color:#8a93a0}
+  .uam-seg button.on{background:#fff;color:var(--blue-d);box-shadow:0 1px 4px rgba(20,40,80,.10)}
+  .uam-seg button.on .s{color:var(--muted)}
+  .uam-drop{border:2px dashed #c7d0dc;border-radius:14px;background:#fafcff;padding:22px 14px;text-align:center;color:#5b6573;cursor:pointer}
+  .uam-drop .ic{width:42px;height:42px;border-radius:50%;background:#e8f0ff;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--blue)}
+  .uam-drop b{color:#2a2f37;font-size:14px;display:block}
+  .uam-vidchip{display:flex;align-items:center;gap:10px;background:#eef4ff;border:1px solid #d7e3ff;border-radius:12px;padding:10px 12px;margin-top:10px}
+  .uam-vidchip .thm{width:38px;height:52px;border-radius:7px;background:linear-gradient(160deg,#3b4252,#11151c);flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:#9fb4e6}
+  .uam-vidchip .nm{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .uam-vidchip .mt{color:var(--muted);font-size:11.5px}
+  .uam-vidchip .chg{margin-left:auto;flex:0 0 auto;font-size:12px;font-weight:700;color:var(--blue-d);cursor:pointer}
+  .uam-block{background:#fff;border:1px solid var(--line);border-radius:13px;margin-bottom:11px;overflow:hidden}
+  .uam-bhead{display:flex;align-items:center;gap:10px;padding:13px}
+  .uam-bicon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .uam-bicon.img{background:#eaf3ff;color:#2f6df6}
+  .uam-bicon.aud{background:#e9fbf0;color:#16a34a}
+  .uam-bicon.note{background:#f3eefe;color:#6d28d9}
+  .uam-btitle{font-weight:700;font-size:13.5px}
+  .uam-btitle .o{font-weight:500;color:#9aa3af;font-size:11px;margin-left:4px}
+  .uam-bdesc{color:var(--muted);font-size:11.5px;margin-top:1px}
+  .uam-bplus{margin-left:auto;width:26px;height:26px;border-radius:8px;background:#f0f3f8;color:#444;display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;cursor:pointer}
+  .uam-bbody{padding:0 13px 13px}
+  .uam-thumbrow{display:flex;gap:8px;flex-wrap:wrap}
+  .uam-thumb{width:52px;height:52px;border-radius:9px;background:#dde6f2;border:1px solid #cdd8e8;position:relative;overflow:hidden}
+  .uam-thumb.add{display:flex;align-items:center;justify-content:center;color:#8a93a0;border-style:dashed;font-size:20px;background:#f7faff;cursor:pointer}
+  .uam-thumb img{width:100%;height:100%;object-fit:cover}
+  .uam-thumb .x{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#15171c;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .uam-audrow{display:flex;align-items:center;gap:10px;background:#f3fbf6;border:1px solid #cdeed8;border-radius:10px;padding:9px 11px}
+  .uam-audrow .play{width:28px;height:28px;border-radius:50%;background:#16a34a;color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .uam-wave{flex:1;height:22px;background:repeating-linear-gradient(90deg,#9fe0b6 0 2px,transparent 2px 5px);border-radius:4px;opacity:.8}
+  .uam-audrow .nm{font-size:11.5px;color:#246b3e;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+  .uam-audrow .x{margin-left:2px;color:#246b3e;cursor:pointer;font-size:17px;flex:0 0 auto}
+  .uam-note{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;font-size:13px;resize:vertical;min-height:64px;color:#2a2f37;box-sizing:border-box}
+  .uam-bulkgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+  .uam-bulkgrid .b{aspect-ratio:9/13;border-radius:10px;background:linear-gradient(160deg,#3b4252,#11151c);position:relative;overflow:hidden}
+  .uam-bulkgrid .b span{position:absolute;left:6px;bottom:6px;font-size:10px;color:#cfe;opacity:.85;max-width:80%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .uam-bulkgrid .b .x{position:absolute;top:4px;right:4px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .uam-info{background:#fff7ec;border:1px solid #f3dcb5;border-radius:10px;padding:10px 12px;color:#7a5712;font-size:11.5px;line-height:1.5;margin-top:12px}
 </style></head>
 <body><svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><symbol id="i-arrow-down" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></symbol><symbol id="i-arrow-right" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></symbol><symbol id="i-arrow-up" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></symbol><symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5.76.76 1.23 1.52 1.41 2.5"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol><symbol id="i-cap" viewBox="0 0 24 24"><path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 2.5 2 6 2s6-1 6-2v-5"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol><symbol id="i-check-circle" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol><symbol id="i-chevron-up" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol><symbol id="i-corner" viewBox="0 0 24 24"><polyline points="15 10 20 15 15 20"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></symbol><symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol><symbol id="i-film" viewBox="0 0 24 24"><rect x="2.5" y="3" width="19" height="18" rx="2"/><line x1="7.5" y1="3" x2="7.5" y2="21"/><line x1="16.5" y1="3" x2="16.5" y2="21"/><line x1="2.5" y1="12" x2="21.5" y2="12"/><line x1="2.5" y1="7.5" x2="7.5" y2="7.5"/><line x1="2.5" y1="16.5" x2="7.5" y2="16.5"/><line x1="16.5" y1="16.5" x2="21.5" y2="16.5"/><line x1="16.5" y1="7.5" x2="21.5" y2="7.5"/></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></symbol><symbol id="i-grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1.4" fill="currentColor" stroke="none"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol><symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.59-1.41L12 12l-4.41 4.42A2 2 0 0 0 7 17.83V22"/><path d="M7 2v4.17a2 2 0 0 0 .59 1.41L12 12l4.41-4.42A2 2 0 0 0 17 6.17V2"/></symbol><symbol id="i-inbox" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></symbol><symbol id="i-message" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol><symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"/></symbol><symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol><symbol id="i-pencil" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20" fill="currentColor" stroke="none"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-7.7L21 8"/><path d="M21 3v5h-5"/></symbol><symbol id="i-repeat" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></symbol><symbol id="i-rows" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="1"/><rect x="3" y="13" width="18" height="7" rx="1"/></symbol><symbol id="i-ruler" viewBox="0 0 24 24"><path d="M21.3 8.7 8.7 21.3a1 1 0 0 1-1.4 0l-4.6-4.6a1 1 0 0 1 0-1.4L15.3 2.7a1 1 0 0 1 1.4 0l4.6 4.6a1 1 0 0 1 0 1.4Z"/><path d="m7.5 10.5 2 2"/><path d="m10.5 7.5 2 2"/><path d="m13.5 4.5 2 2"/></symbol><symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9"/></symbol><symbol id="i-sparkles" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8L4.3 10.7l5.8 1.9L12 18.4l1.9-5.8 5.8-1.9-5.8-1.9z" fill="currentColor" stroke="none"/><path d="M19 4v3"/><path d="M17.5 5.5h3"/></symbol><symbol id="i-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26" fill="currentColor" stroke="none"/></symbol><symbol id="i-table" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="12" y1="3" x2="12" y2="21"/></symbol><symbol id="i-tag" viewBox="0 0 24 24"><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol><symbol id="i-type" viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></symbol><symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a4 4 0 0 1 0 8h-1"/></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol><symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol><symbol id="i-volume" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></symbol><symbol id="i-volume-x" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/></symbol><symbol id="i-wand" viewBox="0 0 24 24"><path d="m3 21 18-18"/><path d="M14 7l3 3"/><path d="M5 6v3"/><path d="M3.5 7.5h3"/><path d="M19 14v3"/><path d="M17.5 15.5h3"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol></svg>
 <div id="authgate">
@@ -643,6 +684,7 @@
     <div class="nav-workflow">
       <button class="nav-btn active" id="nav-dashboard" onclick="showView('dashboard')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-home"></use></svg></span> Dashboard</button>
       <button class="nav-btn" id="nav-clients" onclick="showView('clients')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-users"></use></svg></span> Clients</button>
+      <button class="nav-btn" id="nav-cdash" onclick="showView('cdash')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></span> Dashboard</button>
       <button class="nav-btn" id="nav-upload" onclick="showView('upload')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-upload"></use></svg></span> Upload</button>
       <button class="nav-btn" id="nav-bank" onclick="showView('bank')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-film"></use></svg></span> Video bank</button>
       <button class="nav-btn" id="nav-editor" onclick="showView('editor')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-scissors"></use></svg></span> Editor</button>
@@ -1083,12 +1125,14 @@
       <div id="scraperEmpty" class="h-sub hide" style="padding:18px 0">Nothing scraped yet. Create a run to populate this.</div>
     </section>
   <section id="view-clients" class="hide"><div style="max-width:780px;margin:0 auto;padding:18px"><div style="margin-bottom:14px"><div style="font-size:22px;font-weight:800">Clients</div><div class="h-sub">Everyone you are creating content for.</div></div><div id="clientsBody"></div></div></section>
-  <section id="view-upload" class="hide"><div class="ph-top"><span class="ph-logo">PH</span><span class="ph-ttl">Post Haus</span><span class="ph-who" id="phWho"></span></div><div style="max-width:620px;margin:0 auto;padding:16px"><div id="uploadBody"></div></div></section>
+  <section id="view-cdash" class="hide"><div class="ph-top"><span class="ph-logo">PH</span><span class="ph-ttl">Post Haus</span><span class="ph-who" id="phWho"></span></div><div style="max-width:620px;margin:0 auto;padding:16px"><div id="cdashBody"></div></div></section>
+  <section id="view-upload" class="hide"><div class="ph-top"><span class="ph-logo">PH</span><span class="ph-ttl">Post Haus</span><span class="ph-who"></span></div><div style="max-width:620px;margin:0 auto;padding:16px"><div id="uploadBody"></div></div></section>
   </main>
 
   <nav class="bottomnav">
     <button id="bnav-dashboard" onclick="showView('dashboard')" class="active"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-home"></use></svg></span>Dashboard</button>
     <button id="bnav-clients" onclick="showView('clients')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-users"></use></svg></span>Clients</button>
+    <button id="bnav-cdash" onclick="showView('cdash')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></span>Dashboard</button>
     <button id="bnav-upload" onclick="showView('upload')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-upload"></use></svg></span>Upload</button>
     <button id="bnav-bank" onclick="showView('bank')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-film"></use></svg></span>Bank</button>
     <button class="bnav-plus" onclick="openToolsSheet()" aria-label="Tools menu"><span class="plusic" style="display:flex;align-items:center;justify-content:center"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="width:24px;height:24px"><use href="#i-more"></use></svg></span></button>
@@ -4464,13 +4508,13 @@ async function loadProducts(){ state.products=[]; }
 
 function edApplyRole(){
   var admin=!!state.isAdmin;
-  var show={'nav-clients':admin,'nav-bank':admin,'nav-editor':admin,'nav-schedule':admin,'nav-upload':!admin};
+  var show={'nav-clients':admin,'nav-bank':admin,'nav-editor':admin,'nav-schedule':admin,'nav-upload':!admin,'nav-cdash':!admin};
   Object.keys(show).forEach(function(id){ var e=document.getElementById(id); if(e) e.style.display=show[id]?'':'none'; });
   ['nav-dashboard','nav-priority','nav-products','nav-files','nav-scraper','nav-overlays','nav-training','nav-team','nav-access'].forEach(function(id){ var e=document.getElementById(id); if(e) e.style.display='none'; });
   var tp=document.getElementById('toolsPanel'); if(tp) tp.style.display='none';
   var ag=document.getElementById('adminGroup'); if(ag) ag.style.display='none';
   var tl=document.getElementById('teamLink'); if(tl) tl.style.display='none';
-  var bshow={'bnav-clients':admin,'bnav-bank':admin,'bnav-editor':admin,'bnav-schedule':admin,'bnav-upload':!admin};
+  var bshow={'bnav-clients':admin,'bnav-bank':admin,'bnav-editor':admin,'bnav-schedule':admin,'bnav-upload':!admin,'bnav-cdash':!admin};
   Object.keys(bshow).forEach(function(id){ var e=document.getElementById(id); if(e) e.style.display=bshow[id]?'':'none'; });
   var bd=document.getElementById('bnav-dashboard'); if(bd) bd.style.display='none';
   var plus=document.querySelector('.bnav-plus'); if(plus) plus.style.display='none';
@@ -4480,21 +4524,23 @@ async function enterApp(){
   setView('app');
   var sn=document.getElementById('sideName'); if(sn) sn.textContent=(ME?ME.name:'')+(state.isAdmin?' (admin)':' (creator)');
   edApplyRole();
-  var w=document.getElementById('phWho'); if(w) w.textContent=(ME&&ME.name)||'';
-  if(!state.isAdmin){ showView('upload'); if(!ME.name_set){ edAskName(); } return; }
+  edSetWho((ME&&ME.name)||'');
+  if(!state.isAdmin){ showView('cdash'); if(!ME.name_set){ edAskName(); } return; }
   showView('clients');
 }
+function edSetWho(n){ try{ var els=document.querySelectorAll('.ph-who'); for(var i=0;i<els.length;i++) els[i].textContent=n||''; }catch(e){} }
 function edAskName(){ showModal('<h3>Welcome to Post Haus!</h3><p class="h-sub" style="margin:-2px 0 12px">What is your name?</p><input id="phName" placeholder="Your name" style="width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;font-size:15px;box-sizing:border-box"><div class="actions"><button class="btn" onclick="edSaveName()">Continue</button></div>'); setTimeout(function(){ var e=document.getElementById('phName'); if(e) e.focus(); },60); }
-async function edSaveName(){ var n=val('phName').trim(); if(!n){ toast('Enter your name','err'); return; } var r=await sb.from('ed_members').update({name:n,name_set:true}).eq('id',ME.id); if(r.error){ toast('Failed: '+r.error.message,'err'); return; } ME.name=n; ME.name_set=true; state.user.first_name=n; var w=document.getElementById('phWho'); if(w) w.textContent=n; closeModal(); loadUpload(); toast('Welcome, '+n+'!','ok'); }
+async function edSaveName(){ var n=val('phName').trim(); if(!n){ toast('Enter your name','err'); return; } var r=await sb.from('ed_members').update({name:n,name_set:true}).eq('id',ME.id); if(r.error){ toast('Failed: '+r.error.message,'err'); return; } ME.name=n; ME.name_set=true; state.user.first_name=n; edSetWho(n); closeModal(); loadCDash(); toast('Welcome, '+n+'!','ok'); }
 function showView(v){
-  if(!state.isAdmin && v!=='upload') v='upload';
+  if(!state.isAdmin && v!=='upload' && v!=='cdash') v='cdash';
   state.currentView=v;
-  ['dashboard','bank','files','products','priority','scraper','editor','schedule','overlays','training','team','clients','upload'].forEach(function(n){ var s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); var b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); var bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
+  ['dashboard','bank','files','products','priority','scraper','editor','schedule','overlays','training','team','clients','upload','cdash'].forEach(function(n){ var s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); var b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); var bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
   try{ closeDrawer(); }catch(e){} try{ closeToolsSheet(); }catch(e){}
   if(v==='clients') loadClients();
   if(v==='bank') loadBank();
   if(v==='editor') loadEditor();
   if(v==='schedule') loadSchedule();
+  if(v==='cdash') loadCDash();
   if(v==='upload') loadUpload();
 }
 
@@ -4561,10 +4607,10 @@ async function ccDisconnect(){
   await sb.from('ed_members').update({tiktok_account_id:null,tiktok_handle:null,tiktok_connected_at:null}).eq('id',ME.id);
   toast('Disconnected'); loadUpload();
 }
-async function loadUpload(){
-  var root=document.getElementById('uploadBody'); if(!root) return;
+async function loadCDash(){
+  var root=document.getElementById('cdashBody'); if(!root) return;
   var me=null; try{ var mr=await sb.from('ed_members').select('*').eq('id',ME.id).maybeSingle(); me=mr.data; }catch(e){}
-  var w=document.getElementById('phWho'); if(w) w.textContent=(ME&&ME.name)||'';
+  edSetWho((ME&&ME.name)||'');
   var connected=me&&me.tiktok_account_id;
   var ttIcon='<svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M16.5 3c.3 2.1 1.6 3.6 3.7 3.8v2.4c-1.3.1-2.5-.3-3.7-1v5.9c0 3.5-2.6 5.9-5.9 5.4-2.8-.5-4.4-3.1-3.9-5.9.4-2.3 2.5-4 4.8-3.8v2.5c-.4-.1-.8-.1-1.2 0-1 .3-1.7 1.2-1.5 2.3.2 1.1 1.3 1.8 2.4 1.5.9-.2 1.5-1 1.5-2V3h3.5z"/></svg>';
   var infoIco='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
@@ -4579,7 +4625,7 @@ async function loadUpload(){
   }
   var q=await sb.from('ed_videos').select('*').eq('workspace_id',WS).eq('creator_id',ME.id).order('created_at',{ascending:false});
   var vids=q.data||[];
-  var up='<div class="card"><div class="lbl-ed">Step 2 - your videos</div><div class="up-dash" onclick="edCreatorUpload()"><div class="big">Upload videos</div><div class="sm">Add raw clips for Aaron to edit</div></div>';
+  var up='<div class="card"><div class="lbl-ed">Step 2 - your videos</div><div class="up-dash" onclick="showView(\'upload\')"><div class="big">Upload videos</div><div class="sm">Add raw clips for Aaron to edit</div></div>';
   up+='<div style="margin-top:14px;font-weight:700;font-size:13px">Uploads ('+vids.length+')</div>';
   if(!vids.length){ up+='<div class="h-sub" style="margin-top:6px">Nothing uploaded yet.</div>'; }
   else { up+=vids.map(function(v){ var st=(v.posted_at||v.status==='posted')?'Posted':((v.kind==='edited'||v.status==='edited')?'Edited':'Uploaded'); return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line2)"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="opacity:.5"><use href="#i-film"></use></svg><div style="flex:1;min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(v.title||v.filename||'clip')+'</div><div class="h-sub" style="font-size:12px">'+new Date(v.created_at).toLocaleString()+'</div></div><span class="tf-pill">'+st+'</span></div>'; }).join(''); }
@@ -4588,7 +4634,167 @@ async function loadUpload(){
   root.innerHTML=hi+conn+up;
   if(state.ccConnecting) ccPickList();
 }
-function edCreatorUpload(){ openUploadManager(); }
+function edCreatorUpload(){ showView('upload'); }
+
+// ===== Client uploader: single / bulk + Notion-style attachments (matches the mockup) =====
+var ufState={mode:'single',video:null,images:[],voice:null,notes:'',bulk:[]};
+function ufMB(b){ b=b||0; return (b>=1048576)?((b/1048576).toFixed(1)+' MB'):(Math.max(1,Math.round(b/1024))+' KB'); }
+function ufShort(n){ n=n||'clip'; return n.length>14?(n.slice(0,11)+'...'):n; }
+var UF_FILM='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+var UF_UP='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V6M5 12l7-7 7 7"/></svg>';
+var UF_PLAY='<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+var UF_IMG='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="M21 15l-5-5L5 21"/></svg>';
+var UF_AUD='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>';
+var UF_NOTE='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>';
+function loadUpload(){ edSetWho((ME&&ME.name)||''); if(!ufState) ufState={}; ufState.mode=ufState.mode||'single'; ufRender(); }
+function ufSetMode(m){ ufState.mode=m; ufRender(); }
+function ufInputs(){ return '<input id="uf_video" type="file" accept="video/*" style="display:none" onchange="ufPickVideo(this.files)">'
+  +'<input id="uf_imgs" type="file" accept="image/*" multiple style="display:none" onchange="ufAddImages(this.files)">'
+  +'<input id="uf_voice" type="file" accept="audio/*" style="display:none" onchange="ufAddVoice(this.files)">'
+  +'<input id="uf_bulk" type="file" accept="video/*" multiple style="display:none" onchange="ufAddBulk(this.files)">'; }
+function ufClick(id){ var e=document.getElementById(id); if(e) e.click(); }
+function ufPickVideoBtn(){ ufClick('uf_video'); }
+function ufPickImgs(){ ufClick('uf_imgs'); }
+function ufPickVoice(){ ufClick('uf_voice'); }
+function ufPickBulk(){ ufClick('uf_bulk'); }
+function ufPickVideo(files){ if(files&&files[0]) ufState.video=files[0]; ufRender(); }
+function ufAddImages(files){ for(var i=0;i<files.length;i++) ufState.images.push(files[i]); ufRender(); }
+function ufAddVoice(files){ if(files&&files[0]) ufState.voice=files[0]; ufRender(); }
+function ufAddBulk(files){ ufState.bulk=[].slice.call(files); ufRender(); }
+function ufRemoveImage(i){ ufState.images.splice(i,1); ufRender(); }
+function ufRemoveVoice(){ ufState.voice=null; ufRender(); }
+function ufRemoveBulk(i){ ufState.bulk.splice(i,1); ufRender(); }
+function ufRender(){
+  var root=document.getElementById('uploadBody'); if(!root) return;
+  var seg='<div class="uam-seg"><button class="'+(ufState.mode==='single'?'on':'')+'" onclick="ufSetMode(\'single\')">Single upload<span class="s">1 video + extras</span></button>'
+    +'<button class="'+(ufState.mode==='bulk'?'on':'')+'" onclick="ufSetMode(\'bulk\')">Bulk upload<span class="s">many at once</span></button></div>';
+  var head='<div style="font-size:21px;font-weight:800;margin:2px 2px 2px">Hi '+esc((ME&&ME.name)||'there')+'</div><div class="h-sub" style="margin:0 2px 14px">Upload your clips for Aaron to edit.</div>';
+  root.innerHTML=head+seg+(ufState.mode==='single'?ufSingle():ufBulk())+ufInputs();
+}
+function ufSingle(){
+  var v=ufState.video;
+  var vidcard='<div class="card"><div class="lbl-ed">The video</div>'
+    +(v?('<div class="uam-vidchip"><div class="thm">'+UF_FILM+'</div><div style="flex:1;min-width:0"><div class="nm">'+esc(v.name)+'</div><div class="mt">'+ufMB(v.size)+'</div></div><span class="chg" onclick="ufPickVideoBtn()">Change</span></div>')
+        :('<div class="uam-drop" onclick="ufPickVideoBtn()"><div class="ic">'+UF_UP+'</div><b>Tap to choose a video</b><div class="h-sub" style="margin-top:4px">MP4 / MOV from your camera roll</div></div>'))
+    +'</div>';
+  var imgs=ufState.images.map(function(f,i){ return '<div class="uam-thumb"><img src="'+URL.createObjectURL(f)+'"><div class="x" onclick="ufRemoveImage('+i+')">&times;</div></div>'; }).join('');
+  var imgBlock='<div class="uam-block"><div class="uam-bhead"><div class="uam-bicon img">'+UF_IMG+'</div><div><div class="uam-btitle">Text overlays <span class="o">images</span></div><div class="uam-bdesc">Logos / graphics to overlay on the video</div></div><div class="uam-bplus" onclick="ufPickImgs()">+</div></div><div class="uam-bbody"><div class="uam-thumbrow">'+imgs+'<div class="uam-thumb add" onclick="ufPickImgs()">+</div></div></div></div>';
+  var voiceInner=ufState.voice
+    ?('<div class="uam-audrow"><div class="play">'+UF_PLAY+'</div><div class="uam-wave"></div><div class="nm">'+esc(ufState.voice.name)+'</div><div class="x" onclick="ufRemoveVoice()">&times;</div></div>')
+    :('<div class="uam-drop" style="padding:14px" onclick="ufPickVoice()"><b>Add a voiceover MP3</b><div class="h-sub" style="margin-top:3px">Tap to choose an audio file</div></div>');
+  var voiceBlock='<div class="uam-block"><div class="uam-bhead"><div class="uam-bicon aud">'+UF_AUD+'</div><div><div class="uam-btitle">Voiceover <span class="o">MP3</span></div><div class="uam-bdesc">Upload an audio file to use as the voiceover</div></div><div class="uam-bplus" onclick="ufPickVoice()">+</div></div><div class="uam-bbody">'+voiceInner+'</div></div>';
+  var noteBlock='<div class="uam-block"><div class="uam-bhead"><div class="uam-bicon note">'+UF_NOTE+'</div><div><div class="uam-btitle">Notes</div><div class="uam-bdesc">Anything Aaron should know for the edit</div></div></div><div class="uam-bbody"><textarea class="uam-note" id="uf_notes" placeholder="e.g. keep the first 3s hook, logo top-left, use the voiceover, CTA: link in bio" oninput="ufState.notes=this.value">'+esc(ufState.notes||'')+'</textarea></div></div>';
+  var btn='<button class="btn" style="margin-top:6px;width:100%;justify-content:center" onclick="ufSubmitSingle()">Upload video + attachments</button>';
+  return vidcard+'<div class="lbl-ed" style="margin:4px 2px 8px">Attachments <span style="font-weight:500;color:#9aa3af;text-transform:none;letter-spacing:0">(optional)</span></div>'+imgBlock+voiceBlock+noteBlock+btn;
+}
+function ufBulk(){
+  var b=ufState.bulk||[];
+  var grid=b.length?('<div class="uam-bulkgrid">'+b.map(function(f,i){ return '<div class="b"><span>'+esc(ufShort(f.name))+'</span><div class="x" onclick="ufRemoveBulk('+i+')">&times;</div></div>'; }).join('')+'</div>'):'';
+  var drop='<div class="uam-drop" onclick="ufPickBulk()"><div class="ic">'+UF_UP+'</div><b>Tap to choose multiple videos</b><div class="h-sub" style="margin-top:4px">Select as many as you like</div></div>';
+  var info='<div class="uam-info">Attachments (overlays, voiceover, notes) are turned off in bulk mode - they are a per-video thing. Upload singly when a clip needs extras.</div>';
+  var btn='<button class="btn" style="margin-top:12px;width:100%;justify-content:center" onclick="ufSubmitBulk()">'+(b.length?('Upload '+b.length+' videos'):'Upload videos')+'</button>';
+  return '<div class="card"><div class="lbl-ed">Bulk upload</div>'+drop+grid+info+'</div>'+btn;
+}
+async function uploadVideoReturnId(file){
+  var safe=file.name.replace(/[^\w.\-]+/g,'_');
+  var cid=(ME&&ME.id);
+  var path=(cid||'root')+'/'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'_'+safe;
+  await tusUpload(file,path);
+  var ins=await sb.from('ed_videos').insert({creator_id:cid,kind:'raw',title:file.name,filename:file.name,storage_path:path,size_bytes:file.size,content_type:'video/mp4',status:'new'}).select('id').single();
+  if(ins.error) throw ins.error;
+  return ins.data.id;
+}
+async function uploadAsset(file,vid,kind){
+  var safe=file.name.replace(/[^\w.\-]+/g,'_');
+  var cid=(ME&&ME.id);
+  var path=(cid||'root')+'/assets/'+vid+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_'+safe;
+  var up=await sb.storage.from(BUCKET).upload(path,file,{contentType:(file.type||(kind==='image'?'image/jpeg':'audio/mpeg')),upsert:true});
+  if(up.error) throw up.error;
+  var ins=await sb.from('ed_video_assets').insert({video_id:vid,creator_id:cid,kind:kind,storage_path:path,filename:file.name,content_type:file.type||null,size_bytes:file.size});
+  if(ins.error) throw ins.error;
+}
+async function ufSubmitSingle(){
+  if(!ufState.video){ toast('Choose a video first','err'); return; }
+  var notes=(document.getElementById('uf_notes')&&document.getElementById('uf_notes').value)||ufState.notes||'';
+  var payload={video:ufState.video,images:ufState.images.slice(),voice:ufState.voice,notes:notes};
+  ufState={mode:'single',video:null,images:[],voice:null,notes:'',bulk:[]}; ufRender();
+  toast('Uploading video + attachments in the background','ok');
+  try{
+    var vid=await uploadVideoReturnId(payload.video);
+    for(var i=0;i<payload.images.length;i++){ try{ await uploadAsset(payload.images[i],vid,'image'); }catch(e){ console.log('image asset failed',e); } }
+    if(payload.voice){ try{ await uploadAsset(payload.voice,vid,'voiceover'); }catch(e){ console.log('voice asset failed',e); } }
+    if(payload.notes){ try{ await sb.from('ed_videos').update({notes:payload.notes}).eq('id',vid); }catch(e){ console.log('notes failed',e); } }
+    toast('Uploaded'+(payload.images.length||payload.voice||payload.notes?' with attachments':''),'ok');
+  }catch(e){ toast('Upload failed: '+((e&&e.message)||e),'err'); }
+}
+function ufSubmitBulk(){
+  var b=ufState.bulk||[]; if(!b.length){ toast('Choose videos first','err'); return; }
+  var jobs=b.map(function(x){ return {file:x,prod:null}; });
+  ufState={mode:'bulk',video:null,images:[],voice:null,notes:'',bulk:[]}; ufRender();
+  toast('Uploading '+jobs.length+' in the background','ok');
+  bgUpload(jobs);
+}
+
+// ===== Aaron side: client attachments flow into the editor =====
+async function edLoadClipAssets(id){
+  state.clipAssets=[]; state.clipNote='';
+  var vid=(typeof mteId!=='undefined'&&mteId)?mteId:id;
+  try{
+    var r=await sb.from('ed_video_assets').select('*').eq('video_id',vid);
+    var arr=r.data||[];
+    for(var i=0;i<arr.length;i++){ if(arr[i].kind==='image'){ try{ var s=await sb.storage.from(BUCKET).createSignedUrl(arr[i].storage_path,3600); arr[i].url=s&&s.data&&s.data.signedUrl; }catch(e){} } }
+    state.clipAssets=arr;
+  }catch(e){}
+  try{ var nr=await sb.from('ed_videos').select('notes').eq('id',vid).maybeSingle(); state.clipNote=(nr.data&&nr.data.notes)||''; }catch(e){}
+  edRenderBrief();
+}
+function edRenderBrief(){
+  var mte=document.getElementById('mte'); if(!mte) return;
+  var has=(state.clipAssets&&state.clipAssets.length)||state.clipNote;
+  var btn=document.getElementById('edBriefBtn');
+  if(!has){ if(btn) btn.parentNode.removeChild(btn); return; }
+  if(!btn){ btn=document.createElement('button'); btn.id='edBriefBtn'; btn.type='button'; btn.onclick=edOpenBrief; btn.style.cssText='position:absolute;top:12px;left:12px;z-index:60;background:var(--grad);color:#fff;border:0;border-radius:20px;padding:8px 13px;font-weight:700;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.35);cursor:pointer'; mte.appendChild(btn); }
+  var n=((state.clipAssets&&state.clipAssets.length)||0);
+  btn.innerHTML='Client brief'+(n?(' &middot; '+n):'');
+}
+function edOpenBrief(){
+  var imgs=(state.clipAssets||[]).filter(function(a){return a.kind==='image';});
+  var voice=(state.clipAssets||[]).find(function(a){return a.kind==='voiceover';});
+  var h='<h3>Client brief</h3>';
+  if(state.clipNote){ h+='<div class="lbl-ed" style="margin-top:6px">Notes</div><div class="card" style="white-space:pre-wrap;font-size:13px">'+esc(state.clipNote)+'</div>'; }
+  if(imgs.length){ h+='<div class="lbl-ed">Images</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">'+imgs.map(function(a){ return '<div onclick="mtePickClientImg(\''+a.id+'\')" style="width:60px;height:60px;border-radius:9px;border:1px solid #ccc;cursor:pointer;background:#11151c '+(a.url?("url(\'"+a.url+"\') center/cover"):'')+'"></div>'; }).join('')+'</div><div class="h-sub" style="font-size:12px;margin-bottom:6px">Tap an image to drop it on the clip.</div>'; }
+  if(voice){ h+='<div class="lbl-ed">Voiceover</div><button class="btn ghost" style="width:100%;justify-content:center;margin-bottom:4px" onclick="edDownloadAsset(\''+voice.id+'\')">Download voiceover ('+esc(voice.filename||'mp3')+')</button>'; }
+  if(!state.clipNote&&!imgs.length&&!voice){ h+='<div class="h-sub">No attachments on this clip.</div>'; }
+  h+='<div class="actions"><button class="btn" onclick="closeModal()">Close</button></div>';
+  showModal(h);
+}
+function edDownloadAsset(aid){ var a=(state.clipAssets||[]).find(function(x){return String(x.id)===String(aid);}); if(!a)return; sb.storage.from(BUCKET).createSignedUrl(a.storage_path,300,{download:a.filename||'voiceover.mp3'}).then(function(s){ if(s&&s.data&&s.data.signedUrl){ var el=document.createElement('a'); el.href=s.data.signedUrl; el.download=a.filename||'voiceover.mp3'; document.body.appendChild(el); el.click(); el.remove(); } }); }
+async function mteAddClientImage(path,filename){
+  var su=null; try{ var s=await sb.storage.from(BUCKET).createSignedUrl(path,3600); su=s&&s.data&&s.data.signedUrl; }catch(e){}
+  if(!su){ toast('Could not load image','err'); return; }
+  var total=mteTotalKept()||0.001; var st=mteMarkerKept(); var en=Math.min(total,st+3); if(en-st<0.3){ st=Math.max(0,en-3); en=Math.min(total,st+3); }
+  if(typeof mtePushUndo==='function') mtePushUndo();
+  mteMedia.push({id:++mteMovSeq,url:su,path:path,x:50,y:50,wfrac:0.5,start:Math.round(st*100)/100,end:Math.round(en*100)/100,uploading:false});
+  mteRenderMedia(); mteRenderOTrack(); toast('Image added as overlay','ok');
+}
+function mtePickClientImg(aid){ var a=(state.clipAssets||[]).find(function(x){return String(x.id)===String(aid);}); if(a){ closeModal(); mteAddClientImage(a.storage_path,a.filename); } }
+function mtePickFromRoll(){ closeModal(); var inp=document.getElementById('mteOvFile'); if(inp) inp.click(); }
+// Offer the client's images first when adding an overlay, else the normal camera-roll picker.
+(function(){
+  var _p=(typeof mtePickOverlay==='function')?mtePickOverlay:null;
+  mtePickOverlay=function(){
+    var imgs=(state.clipAssets||[]).filter(function(a){return a.kind==='image';});
+    if(!imgs.length){ if(_p) return _p(); var inp=document.getElementById('mteOvFile'); if(inp) inp.click(); return; }
+    var th=imgs.map(function(a){ return '<div onclick="mtePickClientImg(\''+a.id+'\')" style="width:60px;height:60px;border-radius:9px;border:1px solid #ccc;cursor:pointer;background:#11151c '+(a.url?("url(\'"+a.url+"\') center/cover"):'')+'"></div>'; }).join('');
+    showModal('<h3>Add an overlay</h3><div class="h-sub" style="margin:-2px 0 8px">Client images for this clip</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'+th+'</div><div class="actions"><button class="btn ghost" onclick="mtePickFromRoll()">From camera roll</button><button class="btn" onclick="closeModal()">Cancel</button></div>');
+  };
+})();
+// When a clip opens in the editor, pull its client attachments in.
+(function(){
+  if(typeof mteOpen!=='function') return;
+  var _o=mteOpen;
+  mteOpen=async function(id){ var r=await _o(id); try{ edLoadClipAssets((typeof mteId!=='undefined'&&mteId)?mteId:id); }catch(e){} return r; };
+})();
 
 // ---- upload pipeline (anon token + workspace/creator stamping) ----
 function tusUpload(file,objectPath,onProgress){ return new Promise(function(res,rej){ if(!window.tus)return rej(new Error('tus')); var token=SUPABASE_KEY; var up=new tus.Upload(file,{endpoint:SUPABASE_URL+'/storage/v1/upload/resumable',retryDelays:[0,1000,3000,5000,10000],headers:{authorization:'Bearer '+token,apikey:SUPABASE_KEY,'x-upsert':'true'},uploadDataDuringCreation:false,removeFingerprintOnSuccess:true,chunkSize:6*1024*1024,metadata:{bucketName:BUCKET,objectName:objectPath,contentType:'video/mp4',cacheControl:'3600'},onError:rej,onProgress:function(s,t){ if(onProgress)onProgress(s,t); },onSuccess:res}); up.findPreviousUploads().then(function(p){ if(p&&p.length)up.resumeFromPreviousUpload(p[0]); up.start(); }).catch(function(){ up.start(); }); }); }
