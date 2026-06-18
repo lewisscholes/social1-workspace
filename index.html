@@ -3464,7 +3464,7 @@ function mteOvParts(o,H){
   var sz=(o.size||24)*((H||640)/640);
   var sty=o.style||(o.box?'box':(o.outline===false?'plain':'outline'));
   var wght=(sty==='outline')?MTE_OUTLINE_WEIGHT:MTE_WEIGHT;
-  var wcss='font-weight:'+wght+";font-variation-settings:'wght' "+wght+';';
+  var wcss='font-weight:'+wght+";font-variation-settings:'wght' "+wght+';font-synthesis:none;';
   var pos='left:'+o.x+'%;top:'+o.y+'%;transform:translate(-50%,-50%) scale('+(o.scale||1)+');';
   var base='font-family:'+fam+';'+wcss+'font-style:'+fst+';font-size:'+sz+'px;text-align:center;width:max-content;max-width:84%;overflow-wrap:break-word;word-break:normal;white-space:pre-wrap;letter-spacing:-0.025em;padding:0;';
   if(sty==='box'){
