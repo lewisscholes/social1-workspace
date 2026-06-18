@@ -4692,7 +4692,7 @@ async function enterApp(){
   var sn=document.getElementById('sideName'); if(sn) sn.textContent=(ME?ME.name:'')+(state.isAdmin?' (admin)':' (creator)');
   edApplyRole();
   edSetWho((ME&&ME.name)||'');
-  if(!state.isAdmin){ showView('cdash'); if(!ME.name_set){ edAskName(); } return; }
+  if(!state.isAdmin){ showView('cdash'); try{ duResume(); }catch(e){} if(!ME.name_set){ edAskName(); } return; }
   showView('clients');
 }
 function edSetWho(n){ try{ var els=document.querySelectorAll('.ph-who'); for(var i=0;i<els.length;i++) els[i].textContent=n||''; }catch(e){} }
@@ -4983,8 +4983,49 @@ function ufSubmitBulk(){
 
 // ===== Background upload queue with a live ETA (keeps running while you add more) =====
 var uq={items:[],active:false,total:0,done:0,curSent:0,start:0,count:0,idx:0,tick:null};
+
+// ===== Durable uploads: an accidental swipe-off PAUSES (never loses) an upload =====
+// The picked file vanishes from memory when iOS kills the web app, so we stash the bytes
+// in IndexedDB the moment it's queued. The tus transfer separately remembers its resume
+// URL. On reopen we rebuild the File from IndexedDB and resume from the last byte.
+var DU_DB='phaus_uploads', DU_STORE='jobs', _duDB=null, _duWake=null, _duActive={}, _duResuming=false;
+function duOpen(){ return new Promise(function(res,rej){ if(_duDB) return res(_duDB); try{ var r=indexedDB.open(DU_DB,1); r.onupgradeneeded=function(){ var db=r.result; if(!db.objectStoreNames.contains(DU_STORE)) db.createObjectStore(DU_STORE,{keyPath:'id'}); }; r.onsuccess=function(){ _duDB=r.result; res(_duDB); }; r.onerror=function(){ rej(r.error); }; }catch(e){ rej(e); } }); }
+function duPut(rec){ return duOpen().then(function(db){ return new Promise(function(res,rej){ try{ var tx=db.transaction(DU_STORE,'readwrite'); tx.objectStore(DU_STORE).put(rec); tx.oncomplete=function(){res(true);}; tx.onerror=function(){rej(tx.error);}; }catch(e){ rej(e); } }); }).catch(function(){}); }
+function duDel(id){ return duOpen().then(function(db){ return new Promise(function(res){ try{ var tx=db.transaction(DU_STORE,'readwrite'); tx.objectStore(DU_STORE).delete(id); tx.oncomplete=function(){res(true);}; tx.onerror=function(){res(false);}; }catch(e){ res(false); } }); }).catch(function(){}); }
+function duAll(){ return duOpen().then(function(db){ return new Promise(function(res){ try{ var r=db.transaction(DU_STORE,'readonly').objectStore(DU_STORE).getAll(); r.onsuccess=function(){res(r.result||[]);}; r.onerror=function(){res([]);}; }catch(e){ res([]); } }); }).catch(function(){ return []; }); }
+function duPersist(item){ try{ duPut({id:item.duId,path:item.path,file:item.file,fileName:(item.file&&item.file.name)||'video.mp4',fileType:(item.file&&item.file.type)||'video/mp4',images:(item.images||[]).map(function(f){ return {blob:f,name:f.name,type:f.type}; }),voice:item.voice?{blob:item.voice,name:item.voice.name,type:item.voice.type}:null,notes:item.notes||'',inspo:item.inspo||'',account:item.account||null,vid:item.vid||null,imgDone:item.imgDone||0,voiceDone:!!item.voiceDone,createdAt:item.createdAt||Date.now()}); }catch(e){} }
+// keep the screen awake during uploads so iOS is less likely to sleep mid-transfer (best-effort)
+function duWakeOn(){ try{ if('wakeLock' in navigator && !_duWake){ navigator.wakeLock.request('screen').then(function(w){ _duWake=w; w.addEventListener('release',function(){ _duWake=null; }); }).catch(function(){}); } }catch(e){} }
+function duWakeOff(){ try{ if(_duWake){ _duWake.release(); _duWake=null; } }catch(e){} }
+// On reopen / return to foreground: re-feed any unfinished jobs (tus resumes from the last byte).
+async function duResume(){
+  if(_duResuming) return; _duResuming=true;
+  try{
+    var recs=await duAll(); if(!recs||!recs.length) return;
+    recs.sort(function(a,b){ return (a.createdAt||0)-(b.createdAt||0); });
+    var n=0;
+    recs.forEach(function(rec){
+      if(_duActive[rec.id]) return;   // already queued / uploading this session
+      try{
+        var f=new File([rec.file],rec.fileName||'video.mp4',{type:rec.fileType||'video/mp4'});
+        var imgs=(rec.images||[]).map(function(im){ return new File([im.blob],im.name||'image.jpg',{type:im.type||'image/jpeg'}); });
+        var voice=rec.voice?new File([rec.voice.blob],rec.voice.name||'voice.mp3',{type:(rec.voice.type||'audio/mpeg')}):null;
+        uqEnqueue({file:f,images:imgs,voice:voice,notes:rec.notes||'',inspo:rec.inspo||'',account:rec.account||null,duId:rec.id,path:rec.path,vid:rec.vid||null,imgDone:rec.imgDone||0,voiceDone:!!rec.voiceDone,createdAt:rec.createdAt,__restored:true});
+        n++;
+      }catch(e){}
+    });
+    if(n){ try{ toast('Resuming '+n+' upload'+(n===1?'':'s')+' you had in progress','ok'); }catch(e){} }
+  } finally { _duResuming=false; }
+}
+try{ document.addEventListener('visibilitychange',function(){ if(!document.hidden && typeof ME!=='undefined' && ME && !state.isAdmin) duResume(); }); }catch(e){}
+
 function uqFmtETA(sec){ if(!isFinite(sec)||sec<0) return 'calculating...'; sec=Math.round(sec); if(sec<60) return '~'+sec+'s left'; var m=Math.floor(sec/60), s=sec%60; return '~'+m+'m '+(s<10?'0':'')+s+'s left'; }
 function uqEnqueue(item){
+  if(!item.duId) item.duId='u'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  if(!item.path){ var cid=(ME&&ME.id)||'root'; var safe=((item.file&&item.file.name)||'video.mp4').replace(/[^\w.\-]+/g,'_'); item.path=cid+'/'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'_'+safe; }
+  if(!item.createdAt) item.createdAt=Date.now();
+  _duActive[item.duId]=true;
+  if(!item.__restored) duPersist(item);   // stash the bytes immediately so a swipe-off can't lose it
   uq.items.push(item);
   uq.total+=(item.file&&item.file.size||0);
   (item.images||[]).forEach(function(f){ uq.total+=f.size||0; });
@@ -4994,10 +5035,10 @@ function uqEnqueue(item){
   uqRender(); uqStartTick(); uqRun();
 }
 function uqStartTick(){ if(uq.tick) return; uq.tick=setInterval(function(){ if(uq.active||uq.items.length){ uqRender(); } else { clearInterval(uq.tick); uq.tick=null; } },1000); }
-async function uqUploadVideo(file,onProg,account){
-  var safe=file.name.replace(/[^\w.\-]+/g,'_'); var cid=(ME&&ME.id);
-  var path=(cid||'root')+'/'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'_'+safe;
-  await tusUpload(file,path,onProg);
+async function uqUploadVideo(file,onProg,account,path,fp){
+  var cid=(ME&&ME.id);
+  if(!path){ var safe=file.name.replace(/[^\w.\-]+/g,'_'); path=(cid||'root')+'/'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'_'+safe; }
+  await tusUpload(file,path,onProg,fp);
   var row={creator_id:cid,kind:'raw',title:file.name,filename:file.name,storage_path:path,size_bytes:file.size,content_type:'video/mp4',status:'new'};
   if(account&&account.id){ row.account_id=account.id; row.account_handle=account.handle||''; }   // tag the TikTok account the client chose
   var ins=await sb.from('ed_videos').insert(row).select('id').single();
@@ -5005,18 +5046,23 @@ async function uqUploadVideo(file,onProg,account){
 }
 async function uqProcess(item){
   uq.curSent=0; uqRender();
-  var vid=await uqUploadVideo(item.file,function(sent,total){ uq.curSent=sent; uqRender(); }, item.account);
+  var vid=item.vid;
+  if(!vid){
+    vid=await uqUploadVideo(item.file,function(sent,total){ uq.curSent=sent; uqRender(); }, item.account, item.path, item.duId);
+    item.vid=vid; duPersist(item);   // remember the row id so a resume can't insert a duplicate
+  }
   uq.done+=(item.file&&item.file.size||0); uq.curSent=0; uqRender();
-  for(var i=0;i<(item.images||[]).length;i++){ try{ await uploadAsset(item.images[i],vid,'image'); }catch(e){} uq.done+=(item.images[i].size||0); uqRender(); }
-  if(item.voice){ try{ await uploadAsset(item.voice,vid,'voiceover'); }catch(e){} uq.done+=(item.voice.size||0); uqRender(); }
+  for(var i=(item.imgDone||0);i<(item.images||[]).length;i++){ try{ await uploadAsset(item.images[i],vid,'image'); }catch(e){} item.imgDone=i+1; duPersist(item); uq.done+=(item.images[i].size||0); uqRender(); }
+  if(item.voice && !item.voiceDone){ try{ await uploadAsset(item.voice,vid,'voiceover'); }catch(e){} item.voiceDone=true; duPersist(item); uq.done+=(item.voice.size||0); uqRender(); }
   if(item.notes){ try{ await sb.from('ed_videos').update({notes:item.notes}).eq('id',vid); }catch(e){} }
   if(item.inspo){ try{ await sb.from('ed_videos').update({inspo_url:item.inspo}).eq('id',vid); }catch(e){} }
+  try{ await duDel(item.duId); }catch(e){} if(item.duId) delete _duActive[item.duId];   // fully done -> drop the durable copy
   try{ if(state.currentView==='cdash') loadCDash(); }catch(e){}
 }
 async function uqRun(){
-  if(uq.active) return; uq.active=true;
-  while(uq.items.length){ uq.idx++; var item=uq.items.shift(); try{ await uqProcess(item); }catch(e){ toast('An upload failed: '+((e&&e.message)||e),'err'); } }
-  uq.active=false; uqRender();
+  if(uq.active) return; uq.active=true; duWakeOn();
+  while(uq.items.length){ uq.idx++; var item=uq.items.shift(); try{ await uqProcess(item); }catch(e){ toast('An upload failed: '+((e&&e.message)||e)+' -- it will resume when you reopen','err'); } }
+  uq.active=false; duWakeOff(); uqRender();
   toast('All uploads finished','ok'); try{ loadCDash(); }catch(e){}
   setTimeout(function(){ if(!uq.active&&!uq.items.length){ uq.total=0; uq.done=0; uq.curSent=0; uq.start=0; uq.count=0; uq.idx=0; uqRender(); } },3000);
 }
@@ -5030,7 +5076,7 @@ function uqRender(){
   el.innerHTML='<div style="display:flex;align-items:center;gap:8px"><span class="ph-spin"></span><div style="font-weight:700;font-size:13px;flex:1;min-width:0">Uploading '+Math.min(uq.idx,uq.count)+' of '+uq.count+'</div></div>'
     +'<div style="font-size:12px;color:#9fb4e6;font-weight:700;margin-top:5px">'+uqFmtETA(remain)+'</div>'
     +'<div style="height:6px;background:#2a2f37;border-radius:4px;margin:8px 0 7px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#2f6df6,#6d28d9);border-radius:4px;transition:width .25s"></div></div>'
-    +'<div style="font-size:10.5px;color:#ff9b9b;font-weight:700;line-height:1.35">Please do not close the app while uploading</div>';
+    +'<div style="font-size:10.5px;color:#9fb4e6;font-weight:600;line-height:1.35">Safe to leave -- if you close the app, uploads resume automatically when you reopen.</div>';
 }
 
 // ===== Aaron side: client attachments flow into the editor =====
@@ -5113,7 +5159,7 @@ function mtePickFromRoll(){ closeModal(); var inp=document.getElementById('mteOv
 })();
 
 // ---- upload pipeline (anon token + workspace/creator stamping) ----
-function tusUpload(file,objectPath,onProgress){ return new Promise(function(res,rej){ if(!window.tus)return rej(new Error('tus')); var token=SUPABASE_KEY; var up=new tus.Upload(file,{endpoint:SUPABASE_URL+'/storage/v1/upload/resumable',retryDelays:[0,1000,3000,5000,10000],headers:{authorization:'Bearer '+token,apikey:SUPABASE_KEY,'x-upsert':'true'},uploadDataDuringCreation:false,removeFingerprintOnSuccess:true,chunkSize:6*1024*1024,metadata:{bucketName:BUCKET,objectName:objectPath,contentType:'video/mp4',cacheControl:'3600'},onError:rej,onProgress:function(s,t){ if(onProgress)onProgress(s,t); },onSuccess:res}); up.findPreviousUploads().then(function(p){ if(p&&p.length)up.resumeFromPreviousUpload(p[0]); up.start(); }).catch(function(){ up.start(); }); }); }
+function tusUpload(file,objectPath,onProgress,fp){ return new Promise(function(res,rej){ if(!window.tus)return rej(new Error('tus')); var token=SUPABASE_KEY; var opts={endpoint:SUPABASE_URL+'/storage/v1/upload/resumable',retryDelays:[0,1000,3000,5000,10000,30000],headers:{authorization:'Bearer '+token,apikey:SUPABASE_KEY,'x-upsert':'true'},uploadDataDuringCreation:false,storeFingerprintForResuming:true,removeFingerprintOnSuccess:true,chunkSize:6*1024*1024,metadata:{bucketName:BUCKET,objectName:objectPath,contentType:'video/mp4',cacheControl:'3600'},onError:rej,onProgress:function(s,t){ if(onProgress)onProgress(s,t); },onSuccess:res}; if(fp){ opts.fingerprint=function(){ return Promise.resolve('phaus-'+fp); }; }   /* stable id so the transfer resumes after a reload, not restarts */ var up=new tus.Upload(file,opts); up.findPreviousUploads().then(function(p){ if(p&&p.length)up.resumeFromPreviousUpload(p[0]); up.start(); }).catch(function(){ up.start(); }); }); }
 async function uploadOne(file,prodId,onProgress){
   var safe=file.name.replace(/[^\w.\-]+/g,'_');
   var cid = state.isAdmin ? (state.creatorFilter||null) : (ME&&ME.id);
