@@ -5251,14 +5251,21 @@ async function edDoSend(id){
   var v=swVids.find(function(x){ return x.id===id; }); if(!v) return;
   var acct=window.edSchedAcct;
   if(!acct||!acct.id){ toast('Pick which account to post to','err'); return; }
-  var cap=val('edCap');
-  var target=v; try{ var ed=await swResolveEdited(id); if(ed&&ed.storage_path) target=ed; }catch(e){}
-  var ins=await sb.from('ed_send_jobs').insert({video_id:target.id, source_video_id:id, account_tag:'@'+(acct.handle||''), account_id:acct.id, caption:cap, draft:true, status:'queued'});
-  if(ins.error){ toast('Could not queue: '+ins.error.message,'err'); return; }
-  var ids=[id]; if(target.id!==id) ids.push(target.id);
-  try{ await sb.from('ed_videos').update({status:'scheduled'}).in('id',ids); }catch(e){}
-  closeModal(); toast('Queued to @'+(acct.handle||'client')+' inbox','ok');
-  swAdvance();
+  if(window.__edSending){ return; } window.__edSending=true;   // guard: a double-tap must not queue two jobs
+  try{
+    // don't queue a second job for the same clip+account if one is already in flight
+    try{ var dup=await sb.from('ed_send_jobs').select('id').eq('source_video_id',id).eq('account_id',acct.id).in('status',['queued','waiting','sending']).limit(1);
+      if(dup&&dup.data&&dup.data.length){ toast('Already queued for @'+(acct.handle||'client'),'ok'); closeModal(); return; } }catch(e){}
+    var cap=val('edCap');
+    var target=v, haveEdit=false; try{ var ed=await swResolveEdited(id); if(ed&&ed.storage_path){ target=ed; haveEdit=true; } }catch(e){}
+    var ins=await sb.from('ed_send_jobs').insert({video_id:target.id, source_video_id:id, account_tag:'@'+(acct.handle||''), account_id:acct.id, caption:cap, draft:true, status:'queued'});
+    if(ins.error){ toast('Could not queue: '+ins.error.message,'err'); return; }
+    var ids=[id]; if(target.id!==id) ids.push(target.id);
+    try{ await sb.from('ed_videos').update({status:'scheduled'}).in('id',ids); }catch(e){}
+    closeModal();
+    toast(haveEdit ? ('Queued to @'+(acct.handle||'client')+' inbox') : 'Queued -- it will send the edited version as soon as it finishes rendering','ok');
+    swAdvance();
+  } finally { window.__edSending=false; }
 }
 
 // ===================== JOB BOARD (Uploaded / Edited / Posted) =====================
