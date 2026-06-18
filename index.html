@@ -2813,6 +2813,7 @@ function mteKbBind(){ if(window.visualViewport){ window.visualViewport.addEventL
 function mteKbUnbind(){ if(window.visualViewport){ window.visualViewport.removeEventListener('resize',mteSyncKb); window.visualViewport.removeEventListener('scroll',mteSyncKb); } const sh=document.getElementById('mteSheet'); if(sh){ sh.style.height=''; sh.style.top=''; } }
 
 let mteActive=0, mteRunIdx=0, mteRolling=false, mteSbReady=false;
+let mtePaintTs=0, mteKickTs=0, mtePaintEl=null;   // frame-stall watchdog (audio keeps going but the picture freezes)
 function mteV(){ return document.getElementById(mteActive?'mteVideo2':'mteVideo'); }   // active (visible) video
 function mteVB(){ return document.getElementById(mteActive?'mteVideo':'mteVideo2'); }  // standby buffer
 
@@ -2985,8 +2986,45 @@ function mteAdvance(){
   // next clip never appears mid-decode. Hard deadline so we can never stall on the boundary.
   if(mteRolling && t>=run.end-0.012 && (mteSbReady || t>=run.end+0.06)){ mteSwapTo(ni); }
 }
-function mteStartTick(){ if(mteRaf)return; const loop=()=>{ if(!mtePlaying){ mteRaf=0; return; } mteAdvance(); mteUpdScroll(); mteUpdTime(); mteApplyVideoZoom(); mteUpdMediaVis(); mteUpdCaptions(); mteRenderWave(); mteRaf=requestAnimationFrame(loop); }; mteRaf=requestAnimationFrame(loop); }
-function mteStopTick(){ if(mteRaf){ cancelAnimationFrame(mteRaf); mteRaf=0; } }
+// ---- Frame-stall watchdog ---------------------------------------------------
+// On iOS the visible <video> sometimes keeps its clock + audio running but stops
+// PRESENTING new frames (the picture freezes), usually when the standby buffer is
+// decoding in parallel just before a cut and starves the single hardware decoder.
+// requestVideoFrameCallback only fires when a frame is actually painted, so we use
+// it as a liveness signal: if the clock is moving but no frame has landed for a
+// while, we nudge the decoder (pause+play, which keeps the audio position) to make
+// it resume painting. No-op on browsers without rVFC.
+function mteArmPaint(){
+  const el=mteV();
+  if(!el || !el.requestVideoFrameCallback){ mtePaintTs=performance.now(); return; }
+  if(mtePaintEl===el && el.__mtePaintArmed) return;   // already watching this element
+  mtePaintEl=el; el.__mtePaintArmed=true; mtePaintTs=performance.now();
+  const cb=()=>{
+    if(el!==mteV()){ el.__mtePaintArmed=false; return; }   // a cut swap moved us to the other buffer
+    mtePaintTs=performance.now();
+    try{ el.requestVideoFrameCallback(cb); }catch(e){ el.__mtePaintArmed=false; }
+  };
+  try{ el.requestVideoFrameCallback(cb); }catch(e){ el.__mtePaintArmed=false; }
+}
+function mteResetPaint(){
+  mtePaintTs=0; mteKickTs=0; mtePaintEl=null;
+  ['mteVideo','mteVideo2'].forEach(id=>{ const el=document.getElementById(id); if(el) el.__mtePaintArmed=false; });
+}
+function mteWatchStall(){
+  if(!mtePlaying || mteSeeking) return;
+  const el=mteV(); if(!el || el.paused || el.seeking) return;
+  if(!el.requestVideoFrameCallback) return;   // can't tell frames apart -> nothing to do
+  mteArmPaint();
+  const now=performance.now();
+  // Picture frozen: clock/audio still running but no painted frame for >360ms, and we
+  // haven't just kicked it. pause()+play() restarts presentation without losing position.
+  if(mtePaintTs && (now-mtePaintTs)>360 && (now-mteKickTs)>900){
+    mteKickTs=now; mtePaintTs=now;   // give the kick room before re-judging
+    try{ el.pause(); const p=el.play(); if(p&&p.catch)p.catch(()=>{}); }catch(e){}
+  }
+}
+function mteStartTick(){ if(mteRaf)return; mteResetPaint(); const loop=()=>{ if(!mtePlaying){ mteRaf=0; return; } mteAdvance(); mteWatchStall(); mteUpdScroll(); mteUpdTime(); mteApplyVideoZoom(); mteUpdMediaVis(); mteUpdCaptions(); mteRenderWave(); mteRaf=requestAnimationFrame(loop); }; mteRaf=requestAnimationFrame(loop); }
+function mteStopTick(){ if(mteRaf){ cancelAnimationFrame(mteRaf); mteRaf=0; } mteResetPaint(); }
 
 function mteFmt(s){ s=Math.max(0,Math.round(s||0)); const m=Math.floor(s/60); const ss=s%60; return m+':'+(ss<10?'0':'')+ss; }
 function mteTotalKept(){ return mteSegments.reduce((a,s)=>a+(s.end-s.start),0); }
