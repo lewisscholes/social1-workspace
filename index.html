@@ -4444,7 +4444,9 @@ function getMediaFile(storage_path, filename){
   if(_mfCache[storage_path]) return _mfCache[storage_path];
   const p=(async()=>{
     try{
-      const {data,error}=await sb.storage.from(BUCKET).createSignedUrl(storage_path,600); if(error) throw error;
+      let {data,error}=await sb.storage.from(BUCKET).createSignedUrl(storage_path,600);
+      if(error || !(data&&data.signedUrl)){ try{ await sb.auth.refreshSession(); }catch(e){} ({data,error}=await sb.storage.from(BUCKET).createSignedUrl(storage_path,600)); }   // stale/expired login -> refresh + retry
+      if(error || !(data&&data.signedUrl)) throw (error||new Error('no signed url'));
       const blob=await (await fetch(data.signedUrl)).blob();
       return new File([blob], filename||'video.mp4', {type: blob.type||'video/mp4'});
     }catch(e){ return null; }
@@ -4510,14 +4512,20 @@ async function downloadTempFile(id){
   }
   // desktop / share unavailable / large clip -> streamed download (no in-memory copy), mark once triggered
   try{
-    const {data}=await sb.storage.from(BUCKET).createSignedUrl(f.storage_path,600,{download:f.filename||'video.mp4'});
+    const dlname=f.filename||'video.mp4';
+    let {data,error}=await sb.storage.from(BUCKET).createSignedUrl(f.storage_path,600,{download:dlname});
+    if(error || !(data&&data.signedUrl)){ try{ await sb.auth.refreshSession(); }catch(e){} ({data,error}=await sb.storage.from(BUCKET).createSignedUrl(f.storage_path,600,{download:dlname})); }   // stale/expired login -> refresh + retry
     if(data&&data.signedUrl){
-      const a=document.createElement('a'); a.href=data.signedUrl; a.download=f.filename||'video.mp4'; document.body.appendChild(a); a.click(); a.remove();
+      const a=document.createElement('a'); a.href=data.signedUrl; a.download=dlname; a.rel='noopener'; document.body.appendChild(a); a.click(); a.remove();
       if(isMobileDevice()) toast('Large clip -- saving to Files. Open it there, then Share -> Save Video to add it to your camera roll.','ok');
       onSaved();
     }
-    else { toast('Download failed','err'); }
-  }catch(e){ toast('Download failed','err'); }
+    else {
+      const em=(error&&(error.message||error.error||''))||'';
+      const hint=/jwt|expired|token|unauthor|invalid/i.test(em)?' -- your session expired, please sign out and back in':'';
+      toast('Download failed'+(em?(': '+em):'')+hint,'err');
+    }
+  }catch(e){ toast('Download failed: '+((e&&e.message)||e),'err'); }
 }
 async function recoverTempFile(id){
   const f=(state.files||[]).find(x=>x.id===id); if(!f)return;
