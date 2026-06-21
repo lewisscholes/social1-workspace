@@ -635,7 +635,7 @@ html,body{overscroll-behavior:none;}
     <div class="nav-sep"></div>
     <div class="nav-scroll" id="toolsPanel">
       <div class="grp-l">Tools</div>
-      <button class="nav-btn" id="nav-priority" onclick="showView('priority')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"></use></svg></span> Priority</button>
+      <button class="nav-btn" id="nav-watch" onclick="showView('watch')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"></use></svg></span> Watch list</button>
       <button class="nav-btn" id="nav-products" onclick="showView('products')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tag"></use></svg></span> Products</button>
       <button class="nav-btn" id="nav-files" onclick="showView('files')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg></span> Files</button>
       <button class="nav-btn" id="nav-scraper" onclick="showView('scraper')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-inbox"></use></svg></span> Scraper Results</button>
@@ -1025,6 +1025,28 @@ html,body{overscroll-behavior:none;}
       <div id="productsEmpty" class="h-sub hide" style="padding:18px 0">Nothing here yet.</div>
     </section>
 
+    <section id="view-watch" class="hide">
+      <div class="head">
+        <div>
+          <h2 class="h-title">Creator watch list</h2>
+          <div class="h-sub">Track creators in your niche. We snapshot their recent videos and flag any that are gaining views fast, so you can order the product and film your own.</div>
+        </div>
+        <button class="btn ghost" onclick="loadWatch()"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-refresh"></use></svg> Refresh</button>
+      </div>
+      <div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div style="font-size:13.5px">Flag videos gaining over <input id="wThresh" type="text" inputmode="numeric" style="width:110px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit" onchange="saveWatchThreshold(this.value)"> views / 24h</div>
+        <span class="h-sub" id="wThreshNote" style="font-size:12px"></span>
+        <span style="flex:1"></span>
+        <button class="btn" onclick="watchAddPrompt()"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-2px"><use href="#i-plus"></use></svg> Add creator</button>
+      </div>
+      <div class="seg" id="wTabs" style="margin:14px 0 4px">
+        <button class="active" id="wtab-creators" onclick="setWatchTab('creators')">Watched creators</button>
+        <button id="wtab-flagged" onclick="setWatchTab('flagged')">Flagged videos</button>
+      </div>
+      <div id="wPaneCreators"><div id="wCreators" class="cards"></div></div>
+      <div id="wPaneFlagged" class="hide"><div id="wFlagged" class="cards"></div></div>
+    </section>
+
     <section id="view-priority" class="hide">
       <div class="head">
         <div>
@@ -1072,7 +1094,7 @@ html,body{overscroll-behavior:none;}
     <button id="bnav-dashboard" onclick="showView('dashboard')" class="active"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-home"></use></svg></span>Dashboard</button>
     <button id="bnav-products" onclick="showView('products')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tag"></use></svg></span>Products</button>
     <button class="bnav-plus" onclick="openToolsSheet()" aria-label="Tools menu"><span class="plusic" style="display:flex;align-items:center;justify-content:center"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="width:24px;height:24px"><use href="#i-more"></use></svg></span></button>
-    <button id="bnav-priority" onclick="showView('priority')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"></use></svg></span>Priority</button>
+    <button id="bnav-watch" onclick="showView('watch')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"></use></svg></span>Watch</button>
     <button id="bnav-files" onclick="showView('files')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg></span>Files</button>
   </nav>
 
@@ -1111,13 +1133,14 @@ function prodName(id){ const p=state.products.find(x=>x.id===id); return p?p.nam
 // ---------- nav ----------
 function showView(v){
   state.currentView=v;
-  ['dashboard','bank','files','products','priority','scraper','editor','schedule','overlays','training','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
+  ['dashboard','bank','files','products','priority','watch','scraper','editor','schedule','overlays','training','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
   var na=document.getElementById('nav-access'); if(na) na.classList.toggle('active', v==='team');
   closeDrawer(); closeToolsSheet();
   if(v==='dashboard') loadDashboard();
   if(v==='files') loadFiles();
   if(v==='products') loadProductsView();
   if(v==='priority') loadPriorityView();
+  if(v==='watch') loadWatch();
   if(v==='scraper') loadScraperView();
   if(v==='bank') loadBank();
   if(v==='editor') loadEditor();
@@ -1840,6 +1863,111 @@ async function addProductSave(){
 
 // ---------- PRIORITY (kanban) ----------
 async function loadPriorityView(){ await loadProducts(); renderPriority(); }
+// ---------- Creator watch list ----------
+var watchState={creators:[],videos:[],tab:'creators',threshold:100000};
+function wNum(n){ n=+n||0; if(n>=1e6)return (n/1e6).toFixed(n>=1e7?0:1).replace(/\.0$/,'')+'M'; if(n>=1e3)return Math.round(n/1e3)+'k'; return ''+n; }
+function wHandleFromUrl(u){ try{ var m=(''+u).match(/@([A-Za-z0-9_.]+)/); return m?('@'+m[1]):''; }catch(e){ return ''; } }
+function wTimeAgo(iso){ try{ var s=(Date.now()-new Date(iso).getTime())/1000; if(s<3600)return Math.max(1,Math.round(s/60))+'m ago'; if(s<86400)return Math.round(s/3600)+'h ago'; return Math.round(s/86400)+'d ago'; }catch(e){ return ''; } }
+async function loadWatch(){
+  try{ var s=await sb.from('watch_settings').select('default_threshold').eq('id',1).single(); if(s.data&&s.data.default_threshold)watchState.threshold=s.data.default_threshold; }catch(e){}
+  var th=document.getElementById('wThresh'); if(th)th.value=watchState.threshold.toLocaleString();
+  try{ var c=await sb.from('watch_creators').select('*').order('created_at',{ascending:false}); watchState.creators=c.data||[]; }catch(e){ watchState.creators=[]; }
+  try{ var v=await sb.from('watch_videos').select('*').eq('flagged',true).neq('status','dismissed').order('vel_24h',{ascending:false}).limit(60); watchState.videos=v.data||[]; }catch(e){ watchState.videos=[]; }
+  renderWatch();
+}
+function setWatchTab(t){ watchState.tab=t; var a=document.getElementById('wtab-creators'),b=document.getElementById('wtab-flagged'); if(a)a.classList.toggle('active',t==='creators'); if(b)b.classList.toggle('active',t==='flagged'); var pc=document.getElementById('wPaneCreators'),pf=document.getElementById('wPaneFlagged'); if(pc)pc.classList.toggle('hide',t!=='creators'); if(pf)pf.classList.toggle('hide',t!=='flagged'); }
+function renderWatch(){
+  var flagByC={}; watchState.videos.forEach(function(v){ flagByC[v.creator_id]=(flagByC[v.creator_id]||0)+1; });
+  var cEl=document.getElementById('wCreators');
+  if(cEl) cEl.innerHTML=watchState.creators.length? watchState.creators.map(function(c){ return wCreatorCard(c, flagByC[c.id]||0); }).join('')
+    : '<div class="empty"><div>No creators yet. Tap <b>Add creator</b> and paste a TikTok profile URL to start watching.</div></div>';
+  var fEl=document.getElementById('wFlagged');
+  if(fEl) fEl.innerHTML=watchState.videos.length? watchState.videos.map(wVideoCard).join('')
+    : '<div class="empty"><div>No breakout videos yet. Once a watched creator posts something gaining '+wNum(watchState.threshold)+'+ views in 24h, it appears here.</div></div>';
+  var ft=document.getElementById('wtab-flagged'); if(ft) ft.textContent='Flagged videos'+(watchState.videos.length?(' ('+watchState.videos.length+')'):'');
+  var note=document.getElementById('wThreshNote'); if(note) note.textContent=watchState.creators.length+' creator'+(watchState.creators.length===1?'':'s')+' watched';
+}
+function wStatusPill(c){ var s=c.status||'queued';
+  if(s==='running')return '<span class="tf-badge" style="background:#eef1ff;color:#3340b6">checking...</span>';
+  if(s==='error')return '<span class="tf-badge" style="background:#fdecec;color:#a3261f">error</span>';
+  if(!c.backfilled)return '<span class="tf-badge" style="background:#fff4e6;color:#b45309">first scan queued</span>';
+  return ''; }
+function wCreatorCard(c,flag){
+  var init=((c.handle||c.display_name||'@?').replace('@','')[0]||'?').toUpperCase();
+  var tags=(c.style_tags||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+  var last=c.last_run_at?('checked '+wTimeAgo(c.last_run_at)):'not checked yet';
+  return '<div class="card"><div style="display:flex;align-items:center;gap:11px">'
+    +'<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#6a8bff,#9a6aff);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex:none">'+esc(init)+'</div>'
+    +'<div style="min-width:0;flex:1"><div style="font-weight:700">'+esc(c.handle||wHandleFromUrl(c.profile_url)||'(creator)')+'</div>'
+    +'<div class="h-sub" style="font-size:12px">'+(c.followers?(esc(c.followers)+' followers . '):'')+esc(last)+'</div></div>'+wStatusPill(c)+'</div>'
+    +(tags.length?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:9px">'+tags.map(function(t){return '<span class="tf-pill" style="background:#eef1ff;color:#3340b6">'+esc(t)+'</span>';}).join('')+'</div>':'')
+    +'<div style="display:flex;align-items:center;gap:10px;margin-top:11px;padding-top:10px;border-top:1px solid var(--line)">'
+    +(flag?'<span class="tf-badge" style="background:#fff4e6;color:#b45309">'+flag+' flagged</span>':'<span class="h-sub" style="font-size:12px">no breakouts yet</span>')
+    +'<span class="h-sub" style="font-size:12px">every '+Math.round((c.every_minutes||360)/60)+'h</span><span style="flex:1"></span>'
+    +'<button class="btn ghost sm" onclick="watchCheckNow(\''+c.id+'\')">Check now</button>'
+    +'<button class="btn ghost sm" onclick="watchRemove(\''+c.id+'\')" title="Remove">&times;</button></div></div>';
+}
+function wVideoCard(v){
+  var prod=v.product_name?('<div class="h-sub" style="font-size:12px;margin:6px 0 8px">Product: <b style="color:var(--ink)">'+esc(v.product_name)+'</b></div>')
+    :'<div class="h-sub" style="font-size:12px;margin:6px 0 8px">Product not detected</div>';
+  var thumb=v.thumb?('background-image:url(\''+esc(v.thumb)+'\');background-size:cover;background-position:center'):'background:linear-gradient(160deg,#5b2440,#2a1f3a 60%,#0e1019)';
+  return '<div class="card" style="padding:0;overflow:hidden">'
+    +'<div style="position:relative;aspect-ratio:9/16;max-height:220px;'+thumb+'">'
+    +'<span style="position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.62);color:#fff;font-weight:800;font-size:14px;padding:4px 8px;border-radius:7px">&#9650; +'+wNum(v.vel_24h)+' / 24h</span>'
+    +'<span style="position:absolute;right:8px;top:8px;background:#fe2c55;color:#fff;font-size:10px;font-weight:800;padding:3px 7px;border-radius:999px">NEW</span></div>'
+    +'<div style="padding:11px 12px"><div style="font-size:13px;line-height:1.35;max-height:36px;overflow:hidden">'+esc(v.caption||'(no caption)')+'</div>'
+    +'<div class="h-sub" style="font-size:12px;margin:5px 0 0">'+esc(v.handle||'')+' . '+wNum(v.views)+' total'+(v.posted_date?(' . '+esc(v.posted_date)):'')+'</div>'+prod
+    +'<div style="display:flex;gap:7px;flex-wrap:wrap">'
+    +(v.product_name?'<button class="btn sm" onclick="watchOrderSample(\''+v.id+'\')">Order sample</button>':'<button class="btn ghost sm" onclick="watchOpen(\''+v.id+'\')">Find product</button>')
+    +'<button class="btn ghost sm" onclick="watchAddFilm(\''+v.id+'\')">Add to film</button>'
+    +'<button class="btn ghost sm" onclick="watchOpen(\''+v.id+'\')">Open</button>'
+    +'<button class="btn ghost sm" onclick="watchDismiss(\''+v.id+'\')">Dismiss</button></div></div></div>';
+}
+function watchAddPrompt(){
+  showModal('<div style="text-align:left"><h3 style="margin:0 0 4px">Add a creator to watch</h3>'
+    +'<p class="h-sub" style="margin:0 0 12px;font-size:13px">Paste their TikTok profile URL. We snapshot their recent videos and re-check on a schedule.</p>'
+    +'<div style="margin-bottom:10px"><label class="h-sub" style="display:block;font-size:12px;margin-bottom:4px">Profile URL</label><input id="wcUrl" placeholder="https://www.tiktok.com/@creator" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:9px;font:inherit"></div>'
+    +'<div style="margin-bottom:10px"><label class="h-sub" style="display:block;font-size:12px;margin-bottom:4px">Style tags (optional, comma separated)</label><input id="wcTags" placeholder="skincare, text-on-screen" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:9px;font:inherit"></div>'
+    +'<div style="margin-bottom:6px"><label class="h-sub" style="display:block;font-size:12px;margin-bottom:4px">Flag threshold / 24h (blank = default)</label><input id="wcThr" inputmode="numeric" placeholder="'+watchState.threshold.toLocaleString()+'" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:9px;font:inherit"></div>'
+    +'<div style="display:flex;gap:8px;margin-top:16px"><button class="btn" onclick="watchAddSave()">Add &amp; start watching</button><button class="btn ghost" onclick="closeModal()">Cancel</button></div></div>');
+}
+async function watchAddSave(){
+  var url=(document.getElementById('wcUrl').value||'').trim(); if(!url){ toast('Paste a profile URL','err'); return; }
+  var handle=wHandleFromUrl(url), tags=(document.getElementById('wcTags').value||'').trim();
+  var thr=parseInt((document.getElementById('wcThr').value||'').replace(/[^0-9]/g,''),10); if(isNaN(thr))thr=null;
+  try{ var {error}=await sb.from('watch_creators').insert({profile_url:url,handle:handle,style_tags:tags,threshold:thr,active:true,status:'queued',next_run_at:new Date().toISOString()}); if(error)throw error;
+    closeModal(); toast('Creator added - first scan queued'); loadWatch();
+  }catch(e){ toast('Could not add: '+((e&&e.message)||e),'err'); }
+}
+async function saveWatchThreshold(v){
+  var n=parseInt((''+v).replace(/[^0-9]/g,''),10); if(isNaN(n)||n<1000){ toast('Enter a number (min 1000)','err'); return; }
+  watchState.threshold=n; var th=document.getElementById('wThresh'); if(th)th.value=n.toLocaleString();
+  try{ await sb.from('watch_settings').upsert({id:1,default_threshold:n}); toast('Threshold saved'); renderWatch(); }catch(e){ toast('Save failed','err'); }
+}
+async function watchCheckNow(id){ try{ await sb.from('watch_creators').update({status:'queued',next_run_at:new Date().toISOString()}).eq('id',id); toast('Check queued'); loadWatch(); }catch(e){ toast('Failed','err'); } }
+async function watchRemove(id){ if(!confirm('Remove this creator from your watch list?'))return; try{ await sb.from('watch_creators').delete().eq('id',id); toast('Removed'); loadWatch(); }catch(e){ toast('Failed','err'); } }
+async function watchDismiss(id){ try{ await sb.from('watch_videos').update({status:'dismissed'}).eq('id',id); watchState.videos=watchState.videos.filter(function(v){return v.id!==id;}); renderWatch(); }catch(e){ toast('Failed','err'); } }
+function watchVid(id){ return watchState.videos.find(function(v){return v.id===id;}); }
+function watchOpen(id){ var v=watchVid(id); if(v&&v.url) window.open(v.url,'_blank'); }
+async function watchOrderSample(id){
+  var v=watchVid(id); if(!v)return;
+  try{ var pid=v.product_uid;
+    if(!pid){ var pr=await sb.from('products').insert({name:v.product_name||('From '+(v.handle||'creator')),source_link:v.url,owned:false}).select('id').single(); pid=pr.data&&pr.data.id; }
+    if(pid){ var today=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10); await sb.from('sample_picks').upsert({product_uid:pid,day:today,decision:'yes',created_at:new Date().toISOString()},{onConflict:'product_uid,day'}); }
+    await sb.from('watch_videos').update({status:'sampled'}).eq('id',id);
+    watchState.videos=watchState.videos.filter(function(x){return x.id!==id;}); renderWatch(); toast('Sample requested + added to Products');
+  }catch(e){ toast('Failed: '+((e&&e.message)||e),'err'); }
+}
+async function watchAddFilm(id){
+  var v=watchVid(id); if(!v)return;
+  try{ var pid=v.product_uid;
+    if(!pid && v.product_name){ var pr=await sb.from('products').insert({name:v.product_name,source_link:v.url,owned:false}).select('id').single(); pid=pr.data&&pr.data.id; }
+    var today=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+    await sb.from('ed_film_queue').insert({day:today,product_uid:pid||null,hook:(v.caption||'').slice(0,160),reason:'Watch list: '+(v.handle||'')+' +'+wNum(v.vel_24h)+'/24h',status:'todo'});
+    await sb.from('watch_videos').update({status:'filmed'}).eq('id',id);
+    watchState.videos=watchState.videos.filter(function(x){return x.id!==id;}); renderWatch(); toast('Added to To-Film');
+  }catch(e){ toast('Failed: '+((e&&e.message)||e),'err'); }
+}
 function renderPriority(){
   var all=(state.products||[]).filter(function(p){return p.owned;});  // owned products only
   var notP=all.filter(function(p){return !p.priority;}), yesP=all.filter(function(p){return p.priority;});
