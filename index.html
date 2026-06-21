@@ -630,9 +630,6 @@ html,body{overscroll-behavior:none;}
     <div class="grp-l">Workflow</div>
     <div class="nav-workflow">
       <button class="nav-btn active" id="nav-dashboard" onclick="showView('dashboard')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-home"></use></svg></span> Dashboard</button>
-      <button class="nav-btn" id="nav-bank" onclick="showView('bank')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-film"></use></svg></span> Video bank</button>
-      <button class="nav-btn" id="nav-editor" onclick="showView('editor')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-scissors"></use></svg></span> Editor</button>
-      <button class="nav-btn" id="nav-schedule" onclick="showView('schedule')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-calendar"></use></svg></span> Content Schedule</button>
     </div>
     <div class="nav-grow"></div>
     <div class="nav-sep"></div>
@@ -642,8 +639,6 @@ html,body{overscroll-behavior:none;}
       <button class="nav-btn" id="nav-products" onclick="showView('products')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tag"></use></svg></span> Products</button>
       <button class="nav-btn" id="nav-files" onclick="showView('files')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg></span> Files</button>
       <button class="nav-btn" id="nav-scraper" onclick="showView('scraper')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-inbox"></use></svg></span> Scraper Results</button>
-      <button class="nav-btn" id="nav-overlays" onclick="showView('overlays')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"></use></svg></span> Overlay generator</button>
-      <button class="nav-btn" id="nav-training" onclick="showView('training')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cap"></use></svg></span> Overlay Training</button>
       <div id="adminGroup" style="display:none">
         <div class="grp-l">Admin</div>
         <button class="nav-btn" id="nav-team" onclick="showView('team')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-users"></use></svg></span> Team</button>
@@ -816,7 +811,6 @@ html,body{overscroll-behavior:none;}
 
     <!-- MOBILE TIKTOK-STYLE EDITOR -->
     <div class="mte" id="mte">
-      <div id="mteDbg" style="position:absolute;left:6px;bottom:96px;z-index:99;background:rgba(0,0,0,.78);color:#39ff6a;font:10px/1.35 ui-monospace,Menlo,monospace;padding:4px 7px;border-radius:7px;pointer-events:none;white-space:pre;display:none"></div>
       <div class="mte-top">
         <button class="mte-back" onclick="mteClose()" aria-label="Back">&#8249;</button>
         <button class="mte-next" onclick="mteSave()" aria-label="Save edits">Save <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></button>
@@ -1076,10 +1070,10 @@ html,body{overscroll-behavior:none;}
 
   <nav class="bottomnav">
     <button id="bnav-dashboard" onclick="showView('dashboard')" class="active"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-home"></use></svg></span>Dashboard</button>
-    <button id="bnav-bank" onclick="showView('bank')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-film"></use></svg></span>Bank</button>
+    <button id="bnav-products" onclick="showView('products')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tag"></use></svg></span>Products</button>
     <button class="bnav-plus" onclick="openToolsSheet()" aria-label="Tools menu"><span class="plusic" style="display:flex;align-items:center;justify-content:center"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="width:24px;height:24px"><use href="#i-more"></use></svg></span></button>
-    <button id="bnav-editor" onclick="showView('editor')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-scissors"></use></svg></span>Editor</button>
-    <button id="bnav-schedule" onclick="showView('schedule')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-calendar"></use></svg></span>Schedule</button>
+    <button id="bnav-priority" onclick="showView('priority')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"></use></svg></span>Priority</button>
+    <button id="bnav-files" onclick="showView('files')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg></span>Files</button>
   </nav>
 
   <div class="tsheet-scrim" id="tsheetScrim" onclick="closeToolsSheet()"></div>
@@ -1087,11 +1081,8 @@ html,body{overscroll-behavior:none;}
     <div class="tsheet-grab"></div>
     <div class="tsheet-title">Tools</div>
     <div class="tsheet-sub">Everything outside the daily workflow</div>
-    <button class="tsheet-item" onclick="toolsGo('priority')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"></use></svg></span> Priority</button>
-    <button class="tsheet-item" onclick="toolsGo('products')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tag"></use></svg></span> Products</button>
+    <button class="tsheet-item" onclick="toolsGo('scraper')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-inbox"></use></svg></span> Scraper Results</button>
     <button class="tsheet-item" onclick="toolsGo('files')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg></span> Files</button>
-    <button class="tsheet-item" onclick="toolsGo('overlays')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"></use></svg></span> Overlay generator</button>
-    <button class="tsheet-item" onclick="toolsGo('training')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cap"></use></svg></span> Overlay Training</button>
     <button class="tsheet-item" id="tsheet-team" onclick="toolsGo('team')" style="display:none"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-users"></use></svg></span> Team &amp; Access</button>
   </div>
 </div>
@@ -3516,30 +3507,6 @@ function mteRelayout(){ var m=document.getElementById('mte'); if(!m||!m.classLis
 window.addEventListener('resize', mteRelayout);
 window.addEventListener('orientationchange', function(){ setTimeout(mteRelayout,200); setTimeout(mteRelayout,600); });
 try{ if(window.visualViewport){ window.visualViewport.addEventListener('resize', mteRelayout); } }catch(e){}
-// ---- TEMP editor touch diagnostic (build tag b5). Alfie only; removed once the editor is fixed. ----
-(function(){
-  var ts=0,tm=0,te=0,pd=0,lastTgt='';
-  function tgtOf(e){ try{ var t=e.target, c=t.className; if(c&&c.baseVal!==undefined)c=c.baseVal; c=(''+(c||'')).trim().split(/\s+/)[0]||''; return (t.id?('#'+t.id):((t.tagName||'?').toLowerCase()+(c?('.'+c):''))); }catch(_){ return 'err'; } }
-  document.addEventListener('touchstart',function(e){ts++; lastTgt=tgtOf(e); },true);
-  document.addEventListener('touchmove',function(){tm++;},true);
-  document.addEventListener('touchend',function(){te++;},true);
-  document.addEventListener('pointerdown',function(){pd++;},true);
-  setInterval(function(){
-    var d=document.getElementById('mteDbg'); if(!d)return;
-    var alfie=(typeof BUCKET!=='undefined' && BUCKET==='videos');
-    var open=document.getElementById('mte') && document.getElementById('mte').classList.contains('open');
-    if(!alfie || !open){ d.style.display='none'; return; }
-    d.style.display='block';
-    var sc=document.getElementById('mteTlScroll');
-    var cw=sc?sc.clientWidth:-1, sw=sc?Math.round(sc.scrollWidth):-1;
-    var NL=String.fromCharCode(10);
-    d.textContent=['b6  native:'+(isNativeApp()?'YES':'no')+'  open:'+(open?1:0),
-      'w:'+cw+' sw:'+sw+' pps:'+(Math.round(mtePps*10)/10)+' fit:'+(Math.round(mtePpsFit*10)/10)+' seg:'+(mteSegments?mteSegments.length:-1),
-      'touch ts:'+ts+' tm:'+tm+' te:'+te+'  ptr pd:'+pd,
-      'hdl sc:'+(window.__sc||0)+' gp:'+(window.__gp||0)+' ov:'+(window.__ov||0),
-      'tgt:'+lastTgt].join(NL);
-  },400);
-})();
 
 function mteOnTimeUpdate(){ if(!mtePlaying) mteUpdTime(); }   // during playback the 60fps loop (mteAdvance) handles boundaries
 
