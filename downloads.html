@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Download videos</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--bg:#0f1115;--card:#1a1d24;--line:#2a2e37;--ink:#eef1f6;--mut:#9aa3b2;--accent:#3a56ff;--good:#2fbf71;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:20px 16px 60px}
+  h1{font-size:22px;margin:6px 2px 2px}
+  .sub{color:var(--mut);font-size:13.5px;margin:0 2px 16px;line-height:1.5}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+  .tab{border:1px solid var(--line);background:var(--card);color:var(--ink);font-weight:700;font-size:13px;padding:8px 14px;border-radius:999px;cursor:pointer}
+  .tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn{border:0;background:var(--accent);color:#fff;font-weight:700;font-size:13px;padding:9px 16px;border-radius:10px;cursor:pointer}
+  .btn.dl{background:var(--accent)}
+  .btn[disabled]{opacity:.6;cursor:default}
+  .btn.ghost{background:var(--card);border:1px solid var(--line);color:var(--ink)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
+  .meta{flex:1;min-width:0}
+  .nm{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .det{color:var(--mut);font-size:12px;margin-top:2px}
+  .pill{display:inline-block;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;margin-left:6px}
+  .pill.done{background:#16331f;color:#7fe0a6}
+  .pill.pend{background:#332a16;color:#e6c477}
+  .empty{color:var(--mut);text-align:center;padding:40px 10px;border:1px dashed var(--line);border-radius:12px}
+  .note{font-size:12px;color:var(--mut);margin-top:18px;line-height:1.5}
+  a.plain{color:#8aa0ff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Download videos</h1>
+  <div class="sub" id="head">Loading...</div>
+  <div class="bar">
+    <button class="tab on" id="tabPending" onclick="setFilter('pending')">Pending</button>
+    <button class="tab" id="tabAll" onclick="setFilter('all')">All</button>
+    <span style="flex:1"></span>
+    <button class="btn" id="dlAll" onclick="downloadAll()">Download all pending</button>
+  </div>
+  <div id="list"></div>
+  <div class="note">
+    Tip: this page works best on a <b>computer</b> &mdash; click Download (or "Download all pending") and the files save to your Downloads folder.<br>
+    On an iPhone you can <b>long-press</b> a Download button and choose <b>Download Linked File</b> to save into the Files app.<br>
+    If "Download all" only grabs one, your browser may be asking to allow multiple downloads &mdash; click Allow, or just download them one at a time.
+  </div>
+</div>
+<script>
+var SUPABASE_URL='https://vcrforlyuhapvkewsogq.supabase.co';
+var SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjcmZvcmx5dWhhcHZrZXdzb2dxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzODk4NzAsImV4cCI6MjA5NTk2NTg3MH0.lcFC5aJFUGYrj4iw8oJ8R1bci4y_-aYKyQg8v9zrMqQ';
+var BUCKET='videos';
+var sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+var FILES=[], FILTER='pending';
+
+function mb(b){ b=b||0; return b>=1048576?((b/1048576).toFixed(0)+' MB'):(Math.max(1,Math.round(b/1024))+' KB'); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function fmtDate(iso){ try{ return new Date(iso).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } }
+
+async function load(){
+  try{
+    var r=await sb.from('temp_files').select('id,filename,storage_path,size_bytes,downloaded_at,created_at').order('created_at',{ascending:false});
+    FILES=r.data||[];
+  }catch(e){ document.getElementById('head').textContent='Could not load list: '+(e.message||e); return; }
+  render();
+}
+function setFilter(f){ FILTER=f; document.getElementById('tabPending').classList.toggle('on',f==='pending'); document.getElementById('tabAll').classList.toggle('on',f==='all'); render(); }
+function shown(){ return FILTER==='pending'?FILES.filter(function(f){return !f.downloaded_at;}):FILES; }
+
+function render(){
+  var pend=FILES.filter(function(f){return !f.downloaded_at;});
+  var pmb=pend.reduce(function(a,f){return a+(f.size_bytes||0);},0);
+  document.getElementById('head').innerHTML=pend.length+' video'+(pend.length!==1?'s':'')+' to download ('+mb(pmb)+' total) &middot; '+FILES.length+' total in the system';
+  var list=shown();
+  var el=document.getElementById('list');
+  if(!list.length){ el.innerHTML='<div class="empty">Nothing here.</div>'; return; }
+  el.innerHTML=list.map(function(f){
+    var done=!!f.downloaded_at;
+    return '<div class="card"><div class="meta"><div class="nm">'+esc(f.filename||'video.mov')+(done?'<span class="pill done">downloaded</span>':'<span class="pill pend">pending</span>')+'</div>'
+      +'<div class="det">'+mb(f.size_bytes)+' &middot; '+fmtDate(f.created_at)+'</div></div>'
+      +'<button class="btn dl" id="b-'+f.id+'" onclick="dl(\''+f.id+'\')">Download</button></div>';
+  }).join('');
+}
+
+async function signed(f){
+  var name=f.filename||'video.mov';
+  var r=await sb.storage.from(BUCKET).createSignedUrl(f.storage_path,3600,{download:name});
+  if(r.error || !(r.data&&r.data.signedUrl)) throw (r.error||new Error('could not create link'));
+  return r.data.signedUrl;
+}
+async function dl(id){
+  var f=FILES.find(function(x){return x.id===id;}); if(!f) return;
+  var btn=document.getElementById('b-'+id); if(btn){ btn.disabled=true; btn.textContent='Preparing...'; }
+  try{
+    var url=await signed(f);
+    var a=document.createElement('a'); a.href=url; a.download=f.filename||'video.mov'; document.body.appendChild(a); a.click(); a.remove();
+    if(btn){ btn.textContent='Started'; }
+    markDownloaded(f);
+  }catch(e){ if(btn){ btn.disabled=false; btn.textContent='Retry'; } alert('Could not prepare '+(f.filename||'')+': '+(e.message||e)); }
+}
+async function downloadAll(){
+  var pend=FILES.filter(function(f){return !f.downloaded_at;});
+  if(!pend.length){ alert('Nothing pending.'); return; }
+  var b=document.getElementById('dlAll'); b.disabled=true;
+  for(var i=0;i<pend.length;i++){ b.textContent='Downloading '+(i+1)+' of '+pend.length+'...'; await dl(pend[i].id); await new Promise(function(r){setTimeout(r,1500);}); }
+  b.textContent='Done'; setTimeout(function(){ b.disabled=false; b.textContent='Download all pending'; },2000);
+}
+async function markDownloaded(f){
+  if(f.downloaded_at) return;
+  try{ await sb.from('temp_files').update({downloaded_at:new Date().toISOString(), downloaded_by:'web downloader'}).eq('id',f.id); f.downloaded_at=new Date().toISOString(); }catch(e){}
+}
+load();
+</script>
+</body>
+</html>
