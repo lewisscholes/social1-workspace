@@ -4807,12 +4807,38 @@ async function markTempDownloaded(id){
   } else { toast('Saved','ok'); }
   renderFiles();
 }
+// ===== Native iOS app (Capacitor): stream the file straight to disk, then open the share sheet =====
+// Only active inside the native app once the Filesystem + Share plugins are installed; in a browser
+// or PWA these are absent, so everything falls through to the normal web download below.
+function isNativeApp(){ try{ return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); }catch(e){ return false; } }
+function nativeSaveReady(){ try{ return isNativeApp() && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem && window.Capacitor.Plugins.Share; }catch(e){ return false; } }
+async function nativeSaveFromUrl(url, filename){
+  const C=window.Capacitor.Plugins;
+  const safe=(filename||'video.mp4').replace(/[^\w.\-]+/g,'_');
+  const dl=await C.Filesystem.downloadFile({ url:url, path:safe, directory:'CACHE' });   // streams to disk -- any size, no memory limit
+  let uri=(dl&&dl.uri)||(dl&&dl.path)||'';
+  if(!uri){ try{ const g=await C.Filesystem.getUri({ path:safe, directory:'CACHE' }); uri=g.uri; }catch(e){} }
+  await C.Share.share({ title:filename||'Video', files:[uri] });   // iOS share sheet -> "Save Video" = camera roll, or Save to Files
+  return true;
+}
 async function downloadTempFile(id){
   const f=(state.files||[]).find(x=>x.id===id); if(!f)return;
   // CRITICAL: a file only moves to "Downloaded" once it is ACTUALLY saved (the share sheet
   // completes / "Save Video" tapped). Cancelling, or the sheet not appearing, must leave it
   // in Download so it can be retried -- otherwise videos get "lost".
   const onSaved=()=>markTempDownloaded(id);
+  // NATIVE APP: download straight to disk then open the share sheet -- no Safari, no size limit.
+  if(nativeSaveReady()){
+    dlShowLoading();
+    try{
+      let {data,error}=await sb.storage.from(BUCKET).createSignedUrl(f.storage_path,3600);
+      if(error||!(data&&data.signedUrl)){ try{ await sb.auth.refreshSession(); }catch(e){} ({data,error}=await sb.storage.from(BUCKET).createSignedUrl(f.storage_path,3600)); }
+      if(!(data&&data.signedUrl)) throw (error||new Error('could not create download link'));
+      await nativeSaveFromUrl(data.signedUrl, f.filename);
+      closeModal(); onSaved();
+    }catch(e){ closeModal(); toast('Download failed: '+((e&&e.message)||e),'err'); }
+    return;
+  }
   // iOS can only hand a clip to the "Save to camera roll" share sheet if the whole file fits in
   // memory (fetch -> blob -> File). For big clips (~180MB+) that allocation fails, so don't even
   // try the share sheet for those -- go straight to a streamed download (saves to Files, then
