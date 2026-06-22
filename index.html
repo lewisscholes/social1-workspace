@@ -4310,7 +4310,11 @@ async function swDownload(id){
   }
   closeModal();
   const target=edited||v;                    // edited file if ready, else original
-  const handled=await shareToCameraRoll(target.storage_path, target.filename);   // phone -> camera roll via share sheet
+  let handled=false;
+  if(nativeSaveReady()){   // native app -> download + save straight to the camera roll (one tap)
+    try{ const su=await sb.storage.from(BUCKET).createSignedUrl(target.storage_path,3600); if(su&&su.data&&su.data.signedUrl){ await nativeSaveFromUrl(su.data.signedUrl, target.filename); handled=true; } }catch(e){ handled=false; }
+  }
+  if(!handled){ handled=await shareToCameraRoll(target.storage_path, target.filename); }   // web/PWA -> share sheet
   if(handled){ await recordDownload(id); } else { await fileDownload(target, id); }   // desktop falls back to a plain download; both record as Downloaded
   const card=document.querySelector('.sw-card.is-top');
   if(card&&card.dataset.id===id){ card.classList.add('fly-left'); setTimeout(()=>swAdvance(),420); } else { swRender(); }

@@ -867,20 +867,16 @@ a{color:#B0211A}
       <button class="nav-btn" id="nav-board" onclick="showView('board')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="11" rx="1"/><rect x="17" y="4" width="4" height="7" rx="1"/></svg></span> Job board</button>
       <button class="nav-btn" id="nav-analytics" onclick="showView('analytics')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/></svg></span> Analytics</button>
       <button class="nav-btn" id="nav-imgov" onclick="showView('imgov')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg></span> Image overlays</button>
-      <button class="nav-btn" id="nav-bank" onclick="showView('bank')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-film"></use></svg></span> Video bank</button>
-      <button class="nav-btn" id="nav-editor" onclick="showView('editor')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-scissors"></use></svg></span> Editor</button>
-      <button class="nav-btn" id="nav-schedule" onclick="showView('schedule')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-calendar"></use></svg></span> Content Schedule</button>
+
     </div>
     <div class="nav-grow"></div>
     <div class="nav-sep"></div>
     <div class="nav-scroll" id="toolsPanel">
       <div class="grp-l">Tools</div>
-      <button class="nav-btn" id="nav-priority" onclick="showView('priority')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"></use></svg></span> Priority</button>
+      <button class="nav-btn" id="nav-watch" onclick="showView('watch')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"></use></svg></span> Watch list</button>
       <button class="nav-btn" id="nav-products" onclick="showView('products')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tag"></use></svg></span> Products</button>
       <button class="nav-btn" id="nav-files" onclick="showView('files')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg></span> Files</button>
       <button class="nav-btn" id="nav-scraper" onclick="showView('scraper')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-inbox"></use></svg></span> Scraper Results</button>
-      <button class="nav-btn" id="nav-overlays" onclick="showView('overlays')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"></use></svg></span> Overlay generator</button>
-      <button class="nav-btn" id="nav-training" onclick="showView('training')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cap"></use></svg></span> Overlay Training</button>
       <div id="adminGroup" style="display:none">
         <div class="grp-l">Admin</div>
         <button class="nav-btn" id="nav-team" onclick="showView('team')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-users"></use></svg></span> Team</button>
@@ -1050,7 +1046,6 @@ a{color:#B0211A}
 
     <!-- MOBILE TIKTOK-STYLE EDITOR -->
     <div class="mte" id="mte">
-      <div id="mteDbg" style="position:absolute;left:6px;bottom:96px;z-index:99;background:rgba(0,0,0,.78);color:#39ff6a;font:10px/1.35 ui-monospace,Menlo,monospace;padding:4px 7px;border-radius:7px;pointer-events:none;white-space:pre;display:none"></div>
       <div class="mte-top">
         <button class="mte-back" onclick="mteClose()" aria-label="Back">&#8249;</button>
         <button class="mte-next" onclick="mteSave()" aria-label="Save edits">&#8594;</button>
@@ -1264,6 +1259,28 @@ a{color:#B0211A}
       <div id="productsEmpty" class="h-sub hide" style="padding:18px 0">Nothing here yet.</div>
     </section>
 
+    <section id="view-watch" class="hide">
+      <div class="head">
+        <div>
+          <h2 class="h-title">Creator watch list</h2>
+          <div class="h-sub">Track creators in your niche. We snapshot their recent videos and flag any that are gaining views fast, so you can order the product and film your own.</div>
+        </div>
+        <button class="btn ghost" onclick="loadWatch()"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-refresh"></use></svg> Refresh</button>
+      </div>
+      <div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div style="font-size:13.5px">Flag videos gaining over <input id="wThresh" type="text" inputmode="numeric" style="width:110px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit" onchange="saveWatchThreshold(this.value)"> views / 24h</div>
+        <span class="h-sub" id="wThreshNote" style="font-size:12px"></span>
+        <span style="flex:1"></span>
+        <button class="btn" onclick="watchAddPrompt()"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-2px"><use href="#i-plus"></use></svg> Add creator</button>
+      </div>
+      <div class="seg" id="wTabs" style="margin:14px 0 4px">
+        <button class="active" id="wtab-creators" onclick="setWatchTab('creators')">Watched creators</button>
+        <button id="wtab-flagged" onclick="setWatchTab('flagged')">Winning videos</button>
+      </div>
+      <div id="wPaneCreators"><div id="wCreators" class="cards"></div></div>
+      <div id="wPaneFlagged" class="hide"><div id="wFlagged" class="cards"></div></div>
+    </section>
+
     <section id="view-priority" class="hide">
       <div class="head">
         <div>
@@ -1322,10 +1339,11 @@ a{color:#B0211A}
     <button id="bnav-ready" onclick="showView('ready')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-send"></use></svg></span>To post</button>
     <button id="bnav-board" onclick="showView('board')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="11" rx="1"/><rect x="17" y="4" width="4" height="7" rx="1"/></svg></span>Board</button>
     <button id="bnav-analytics" onclick="showView('analytics')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/></svg></span>Analytics</button>
-    <button id="bnav-bank" onclick="showView('bank')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-film"></use></svg></span>Bank</button>
+
+    <button id="bnav-products" onclick="showView('products')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tag"></use></svg></span>Products</button>
     <button class="bnav-plus" onclick="openToolsSheet()" aria-label="Tools menu"><span class="plusic" style="display:flex;align-items:center;justify-content:center"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="width:24px;height:24px"><use href="#i-more"></use></svg></span></button>
-    <button id="bnav-editor" onclick="showView('editor')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-scissors"></use></svg></span>Editor</button>
-    <button id="bnav-schedule" onclick="showView('schedule')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-calendar"></use></svg></span>Schedule</button>
+    <button id="bnav-watch" onclick="showView('watch')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"></use></svg></span>Watch</button>
+    <button id="bnav-files" onclick="showView('files')"><span class="bi"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg></span>Files</button>
   </nav>
 
   <div class="tsheet-scrim" id="tsheetScrim" onclick="closeToolsSheet()"></div>
@@ -1333,11 +1351,8 @@ a{color:#B0211A}
     <div class="tsheet-grab"></div>
     <div class="tsheet-title">Tools</div>
     <div class="tsheet-sub">Everything outside the daily workflow</div>
-    <button class="tsheet-item" onclick="toolsGo('priority')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"></use></svg></span> Priority</button>
-    <button class="tsheet-item" onclick="toolsGo('products')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tag"></use></svg></span> Products</button>
+    <button class="tsheet-item" onclick="toolsGo('scraper')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-inbox"></use></svg></span> Scraper Results</button>
     <button class="tsheet-item" onclick="toolsGo('files')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg></span> Files</button>
-    <button class="tsheet-item" onclick="toolsGo('overlays')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"></use></svg></span> Overlay generator</button>
-    <button class="tsheet-item" onclick="toolsGo('training')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cap"></use></svg></span> Overlay Training</button>
     <button class="tsheet-item" id="tsheet-team" onclick="toolsGo('team')" style="display:none"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-users"></use></svg></span> Team &amp; Access</button>
   </div>
 </div>
@@ -1366,13 +1381,14 @@ function prodName(id){ const p=state.products.find(x=>x.id===id); return p?p.nam
 // ---------- nav ----------
 function showView(v){
   state.currentView=v;
-  ['dashboard','bank','files','products','priority','scraper','editor','schedule','overlays','training','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
+  ['dashboard','bank','files','products','priority','watch','scraper','editor','schedule','overlays','training','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
   var na=document.getElementById('nav-access'); if(na) na.classList.toggle('active', v==='team');
   closeDrawer(); closeToolsSheet();
   if(v==='dashboard') loadDashboard();
   if(v==='files') loadFiles();
   if(v==='products') loadProductsView();
   if(v==='priority') loadPriorityView();
+  if(v==='watch') loadWatch();
   if(v==='scraper') loadScraperView();
   if(v==='bank') loadBank();
   if(v==='editor') loadEditor();
@@ -1652,9 +1668,19 @@ async function loadDashboard(refresh){
 
 // ---------- TO FILM (dashboard) ----------
 const TF_ACCT_LINACRE='@LinkedByLinacre', TF_ACCT_YAS='@LinkedByYas';
+// Managed accounts (tf_accounts table). Falls back to the original two if the table hasn't loaded.
+function tfAccts(){ var a=(state.tfAccounts&&state.tfAccounts.length)?state.tfAccounts:[
+    {handle:TF_ACCT_LINACRE,label:'LBL',role:'BOF . text on screen',initial:'L',video_type:'music+captions',quota:25,color:'#e6f1fb',ink:'#0c447c',sort:0},
+    {handle:TF_ACCT_YAS,label:'SWY',role:'TOF . talking',initial:'Y',video_type:'',quota:10,color:'#e1f5ee',ink:'#0f6e56',sort:1}];
+  return a.slice().sort(function(x,y){return (x.sort||0)-(y.sort||0);}); }
+function tfAcctHandles(){ return tfAccts().map(function(a){return a.handle;}); }
+function tfAcct(h){ return tfAccts().find(function(a){return a.handle===h;})||null; }
 function tfProduct(pid){ return (state.products||[]).find(p=>p.id===pid); }
-function tfAcctOf(vtype){ return (vtype==='music+captions')?TF_ACCT_LINACRE:TF_ACCT_YAS; }
+function tfAcctOf(vtype){ var as=tfAccts(); var m=as.find(function(a){return a.video_type&&a.video_type===vtype;}); if(m)return m.handle; var c=as.find(function(a){return !a.video_type;}); return (c||as[as.length-1]||{handle:TF_ACCT_YAS}).handle; }
 function tfStyleOf(vtype){ return (vtype==='music+captions')?'Text on screen':'Talking'; }
+function tfQuota(h){ var a=tfAcct(h); return a?(a.quota||0):0; }
+function tfAcctCol(h){ var a=tfAcct(h); return a?[a.color||'#eef2f7',a.ink||'#234']:['#eef2f7','#234']; }
+function tfInitial(h){ var a=tfAcct(h); return (a&&a.initial)||((h||'@').replace('@','')[0]||'?').toUpperCase(); }
 function tfFmt(n){ if(!n)return '0'; if(n>=1e6)return (n/1e6).toFixed(1).replace(/\.0$/,'')+'M'; if(n>=1e3)return Math.round(n/1e3)+'k'; return ''+Math.round(n); }
 function tfToday(){ return new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10); }
 var TF_MONS={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
@@ -1687,6 +1713,7 @@ function tfIsToday(){ return tfActiveDay()===tfToday(); }
 function tfDayLabel(){ var t=tfToday(); var y=new Date(Date.now()-86400000-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10); if(tfActiveDay()===t)return 'Today'; if(tfActiveDay()===y)return 'Yesterday'; return new Date(tfActiveDay()+'T00:00:00').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'}); }
 function tfShiftDay(d){ var p=tfActiveDay().split('-'); var dt=new Date(+p[0], (+p[1])-1, +p[2]); dt.setDate(dt.getDate()+d); var nd=dt.getFullYear()+'-'+('0'+(dt.getMonth()+1)).slice(-2)+'-'+('0'+dt.getDate()).slice(-2); if(nd>tfToday())return; state.tfDay=nd; loadTicks().then(renderToFilm); }
 async function loadTicks(){
+  try{ var ta=await sb.from('tf_accounts').select('*').eq('active',true).order('sort'); if(ta.data&&ta.data.length) state.tfAccounts=ta.data; }catch(e){}
   try{ var r=await sb.from('film_ticks').select('idea_key,count,product_uid,account,angle').eq('day',tfActiveDay()); tfTickRows=r.data||[]; tfTicks={}; tfTickRows.forEach(function(t){tfTicks[t.idea_key]=t.count||0;}); }catch(e){ tfTicks={}; tfTickRows=[]; }
   try{ var sp=await sb.from('sample_picks').select('product_uid,decision').eq('day',tfToday()); tfSamplePicks={}; (sp.data||[]).forEach(function(p){tfSamplePicks[p.product_uid]=p.decision;}); }catch(e){ tfSamplePicks={}; }
   // last 7 days of ticks per idea -> enforce the weekly per-video cap + spread
@@ -1754,7 +1781,7 @@ function tfRecencyCmp(a,b){
 // Build TODAY's plan for an account: assign each video a small daily target so the
 // account quota is met, while no video exceeds 5 films/week (spread across days).
 function tfPlan(acct){
-  var quota=TF_QUOTA[acct]||0;
+  var quota=tfQuota(acct);
   var ideas=tfOwnedIdeas(acct);
   ideas.forEach(function(x){ x.today=tfTicks[x.key]||0; x.weekOther=Math.max(0,(tfWeek[x.key]||0)-x.today); x.maxToday=Math.max(0,TF_WEEK_CAP-x.weekOther); });
   var elig=ideas.filter(function(x){return x.maxToday>0;});
@@ -1774,6 +1801,47 @@ function tfFilmedTotal(){ var s=0; Object.keys(tfTicks).forEach(function(k){ s+=
 function setFilmedMetric(){ var el=document.getElementById('statFilmed'); if(el) el.textContent=tfFilmedTotal(); }
 function setTfAcct(a){ state.tfAcct=a; renderToFilm(); }
 function setTfProd(v){ state.tfProd=v; renderToFilm(); }
+// ---- Manage accounts (drives the daily filming plan) ----
+function tfInk(hex){ try{ var c=(hex||'').replace('#',''); if(c.length===3)c=c.split('').map(function(x){return x+x;}).join(''); function dk(i){ return ('0'+Math.round(parseInt(c.substr(i,2),16)*0.32).toString(16)).slice(-2); } return '#'+dk(0)+dk(2)+dk(4); }catch(e){ return '#0c447c'; } }
+function tfAcctRow(a){ a=a||{};
+  var inp='padding:7px;border:1px solid var(--line);border-radius:7px;font:inherit;min-width:0;width:100%;box-sizing:border-box';
+  return '<div class="tf-arow" data-id="'+esc(a.id||'')+'" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px">'
+    +'<input class="tfa-handle" placeholder="@handle" value="'+esc(a.handle||'')+'" style="'+inp+'">'
+    +'<input class="tfa-label" placeholder="Short label (LBL)" value="'+esc(a.label||'')+'" style="'+inp+'">'
+    +'<input class="tfa-role" placeholder="Role (e.g. BOF . text on screen)" value="'+esc(a.role||'')+'" style="'+inp+'">'
+    +'<input class="tfa-vtype" placeholder="Style key (blank = catch-all)" value="'+esc(a.video_type||'')+'" style="'+inp+'">'
+    +'<input class="tfa-quota" type="number" min="0" placeholder="Videos/day" value="'+esc(a.quota!=null?a.quota:'')+'" style="'+inp+'">'
+    +'<div style="display:flex;gap:6px;align-items:center"><input class="tfa-color" type="color" value="'+esc(a.color||'#e6f1fb')+'" style="width:40px;height:34px;border:1px solid var(--line);border-radius:7px;padding:2px;flex:0 0 auto"><button class="btn ghost sm" onclick="this.closest(&quot;.tf-arow&quot;).remove()" style="margin-left:auto">Remove</button></div>'
+    +'</div>';
+}
+function tfManageAccts(){
+  var rows=tfAccts().map(function(a){return tfAcctRow(a);}).join('');
+  var h='<div style="text-align:left;max-width:560px">'
+    +'<h3 style="margin:0 0 4px">Accounts</h3>'
+    +'<div class="h-sub" style="margin:0 0 12px;font-size:12.5px">Each account drives the daily filming plan. <b>Style key</b> matches a video type from your scrapes (leave one account blank as the catch-all). <b>Videos/day</b> is the daily quota.</div>'
+    +'<div id="tfAcctRows">'+rows+'</div>'
+    +'<button class="btn ghost sm" onclick="tfAddAcctRow()" style="margin-top:4px"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-2px"><use href="#i-plus"></use></svg> Add account</button>'
+    +'<div style="display:flex;gap:8px;margin-top:16px"><button class="btn" onclick="tfSaveAccts()">Save</button><button class="btn ghost" onclick="closeModal()">Cancel</button></div></div>';
+  showModal(h);
+}
+function tfAddAcctRow(){ var c=document.getElementById('tfAcctRows'); if(c) c.insertAdjacentHTML('beforeend', tfAcctRow({color:'#e6f1fb'})); }
+async function tfSaveAccts(){
+  var rows=[].slice.call(document.querySelectorAll('#tfAcctRows .tf-arow'));
+  var ins=[], ups=[], keepIds=[];
+  rows.forEach(function(r,i){ var hv=(r.querySelector('.tfa-handle').value||'').trim(); if(!hv)return; if(hv[0]!=='@')hv='@'+hv;
+    var color=r.querySelector('.tfa-color').value||'#e6f1fb';
+    var rec={ handle:hv, label:(r.querySelector('.tfa-label').value||'').trim(), role:(r.querySelector('.tfa-role').value||'').trim(), video_type:(r.querySelector('.tfa-vtype').value||'').trim(), quota:parseInt(r.querySelector('.tfa-quota').value||'0',10)||0, color:color, ink:tfInk(color), sort:i, active:true };
+    var id=r.getAttribute('data-id'); if(id){ rec.id=id; keepIds.push(id); ups.push(rec); } else { ins.push(rec); } });
+  if(!ins.length && !ups.length){ toast('Add at least one account','err'); return; }
+  try{
+    var cur=await sb.from('tf_accounts').select('id'); var curIds=(cur.data||[]).map(function(x){return x.id;});
+    var del=curIds.filter(function(id){return keepIds.indexOf(id)<0;});
+    if(del.length){ var d=await sb.from('tf_accounts').delete().in('id',del); if(d.error)throw d.error; }
+    if(ups.length){ var u=await sb.from('tf_accounts').upsert(ups); if(u.error)throw u.error; }
+    if(ins.length){ var n=await sb.from('tf_accounts').insert(ins); if(n.error)throw n.error; }
+    closeModal(); toast('Accounts saved'); state.tfAccounts=null; await loadTicks(); renderToFilm();
+  }catch(e){ toast('Save failed: '+((e&&e.message)||e),'err'); }
+}
 function renderToFilm(){
   var card=document.getElementById('toFilmCard'); if(!card) return;
   card.style.display='';
@@ -1782,14 +1850,14 @@ function renderToFilm(){
   var linFilmed=tfFilmed(TF_ACCT_LINACRE), yasFilmed=tfFilmed(TF_ACCT_YAS);
   var DOT=String.fromCharCode(183), DASH=String.fromCharCode(8211);
   // ---- plan data (needed before the hero ring) ----
-  var accts=(state.tfAcct==='all')?[TF_ACCT_LINACRE,TF_ACCT_YAS]:[state.tfAcct];
+  var accts=(state.tfAcct==='all')?tfAcctHandles():[state.tfAcct];
   var planned=[]; if(isToday){ accts.forEach(function(a){ planned=planned.concat(tfPlan(a)); }); }
   var pf=(state.tfProd||'').toLowerCase().trim();
   if(pf) planned=planned.filter(function(x){return (x.pname||'').toLowerCase().indexOf(pf)>=0;});
   planned.sort(tfRecencyCmp);   // newest videos at the top of the to-film list
   var todo=planned.filter(function(x){return (tfTicks[x.key]||0)<x.target;});
   var done=planned.filter(function(x){return (tfTicks[x.key]||0)>=x.target;});
-  var plannedTotal=0, filmedPlanned=0, planBy={}; planBy[TF_ACCT_LINACRE]=0; planBy[TF_ACCT_YAS]=0;
+  var plannedTotal=0, filmedPlanned=0, planBy={}; tfAcctHandles().forEach(function(h){planBy[h]=0;});
   planned.forEach(function(x){ plannedTotal+=x.target; filmedPlanned+=Math.min(x.target,tfTicks[x.key]||0); planBy[x.acct]=(planBy[x.acct]||0)+x.target; });
   // ---- hero ----
   var pct=plannedTotal?Math.round(filmedPlanned/plannedTotal*100):0;
@@ -1805,14 +1873,14 @@ function renderToFilm(){
     return '<div class="tf-acct"><div class="tf-acct-top"><div class="tf-av">'+initial+'</div>'
       +'<div style="min-width:0"><div class="nm">'+handle+'</div><div class="role">'+role+'</div></div>'
       +'<div class="cnt">'+have+' / '+target+' filmed</div></div><div class="tf-bar"><i style="width:'+p+'%"></i></div></div>';};
-  h+='<div class="tf-accts">'+acctCard('@LinkedByLinacre','L','BOF '+DOT+' text on screen',linFilmed,25)
-    +acctCard('@LinkedByYas','Y','TOF '+DOT+' talking',yasFilmed,10)+'</div>';
+  h+='<div class="tf-accts">'+tfAccts().map(function(a){ return acctCard(a.handle,(a.initial||tfInitial(a.handle)),String(a.role||'').replace(/\./g,DOT),tfFilmed(a.handle),(a.quota||0)); }).join('')+'</div>';
   if(isToday) h+='<div class="tf-ring-row">'+tfRingSvg(pct)+'<span class="rr-num">'+filmedPlanned+' / '+plannedTotal+'</span><span class="rr-lbl">videos planned</span></div>';
   if(!isToday){ h+=tfHistory(); card.innerHTML=h; return; }
   // ---- filters ----
   var seg=function(opts){return '<span class="seg">'+opts.map(function(o){return '<button class="'+(o[0]===state.tfAcct?'active':'')+'" onclick="setTfAcct(\''+o[0]+'\')">'+o[1]+'</button>';}).join('')+'</span>';};
   var popts='<option value="">All products</option>'+(state.products||[]).slice().sort(function(a,b){return (a.name||'').localeCompare(b.name||'');}).map(function(p){return '<option value="'+esc(p.name)+'"'+(((state.tfProd||'')===p.name)?' selected':'')+'>'+esc(p.name)+'</option>';}).join('');
-  h+='<div class="tf-filters" style="margin-top:14px">'+seg([['all','All'],[TF_ACCT_LINACRE,'LBL'],[TF_ACCT_YAS,'SWY']])
+  h+='<div class="tf-filters" style="margin-top:14px">'+seg([['all','All']].concat(tfAccts().map(function(a){return [a.handle,(a.label||a.handle)];})))
+    +'<button class="btn ghost sm" onclick="tfManageAccts()" style="margin-left:auto;flex:0 0 auto">Accounts</button>'
     +'<div class="tf-prodwrap"><svg class="tf-prodicon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>'
     +'<select class="tf-prodfilter" onchange="setTfProd(this.value)">'+popts+'</select></div></div>';
   // ---- section callout (desktop: tinted panel + subtext + clapperboard; mobile: plain header) ----
@@ -1851,7 +1919,7 @@ function tfHistory(){
   h+='<div class="tf-secth-sub">A record of what was filmed -- read only.</div>';
   h+=rows.map(function(t){
     var p=tfProduct(t.product_uid); var nm=(p&&p.name)||'(product)';
-    var ac=t.account||''; var acctCol=ac===TF_ACCT_LINACRE?['#e6f1fb','#0c447c']:['#e1f5ee','#0f6e56'];
+    var ac=t.account||''; var acctCol=tfAcctCol(ac);
     return '<div class="card tf-card"><div class="tf-prodname">'+esc(nm)+'</div>'+(t.angle?'<div class="h-sub" style="font-size:12px;margin-top:2px">'+esc(t.angle)+'</div>':'')
       +'<div class="tf-meta">'+(ac?'<span class="tf-pill" style="background:'+acctCol[0]+';color:'+acctCol[1]+'">'+esc(ac)+'</span>':'')+'<span class="tf-badge">filmed '+(t.count||0)+'</span></div></div>';
   }).join('');
@@ -1892,7 +1960,7 @@ function tfSamplesSection(){
   return h;
 }
 function tfSampleCard(x){
-  var acctCol=x.acct===TF_ACCT_LINACRE?['#e6f1fb','#0c447c']:['#e1f5ee','#0f6e56'];
+  var acctCol=tfAcctCol(x.acct);
   var rec=tfRecency(x.days), vel=tfPerDay(x.views,x.days);
   var why='<span class="tf-badge">'+tfFmt(x.views)+' views</span>'+(x.gmv?'<span class="tf-badge">'+String.fromCharCode(163)+tfFmt(x.gmv)+' GMV</span>':'')+(rec?'<span class="tf-badge">'+rec+'</span>':'')+(vel?'<span class="tf-badge" style="background:#fff6e9;border-color:#f4d8a8;color:#8a5b00">'+vel+'</span>':'');
   var tags='<span class="tf-pill" style="background:'+acctCol[0]+';color:'+acctCol[1]+'">'+x.acct+'</span><span class="tf-pill" style="background:#f0ecff;color:#4a3fb8">'+tfStyleOf(x.vtype)+'</span>';
@@ -1944,7 +2012,7 @@ function tfToggleSave(pid){ tfSaved[pid]=!tfSaved[pid]; renderToFilm(); }
 function hydrateTfThumbs(){ try{ [].slice.call(document.querySelectorAll('#toFilmCard .vthumb')).forEach(loadThumbFor); }catch(e){} }
 function tfCard(x,mode){
   var DOT=String.fromCharCode(183);
-  var acctCol = x.acct===TF_ACCT_LINACRE?['#e6f1fb','#0c447c']:['#e1f5ee','#0f6e56'];
+  var acctCol = tfAcctCol(x.acct);
   var rec=tfRecency(x.days), vel=tfPerDay(x.views,x.days);
   var vid=(String(x.link||'').match(/\/video\/(\d+)/)||[])[1];
   var cap=esc(String(x.angle||'').trim());
@@ -2043,6 +2111,111 @@ async function addProductSave(){
 
 // ---------- PRIORITY (kanban) ----------
 async function loadPriorityView(){ await loadProducts(); renderPriority(); }
+// ---------- Creator watch list ----------
+var watchState={creators:[],videos:[],tab:'creators',threshold:100000};
+function wNum(n){ n=+n||0; if(n>=1e6)return (n/1e6).toFixed(n>=1e7?0:1).replace(/\.0$/,'')+'M'; if(n>=1e3)return Math.round(n/1e3)+'k'; return ''+n; }
+function wHandleFromUrl(u){ try{ var m=(''+u).match(/@([A-Za-z0-9_.]+)/); return m?('@'+m[1]):''; }catch(e){ return ''; } }
+function wTimeAgo(iso){ try{ var s=(Date.now()-new Date(iso).getTime())/1000; if(s<3600)return Math.max(1,Math.round(s/60))+'m ago'; if(s<86400)return Math.round(s/3600)+'h ago'; return Math.round(s/86400)+'d ago'; }catch(e){ return ''; } }
+async function loadWatch(){
+  try{ var s=await sb.from('watch_settings').select('default_threshold').eq('id',1).single(); if(s.data&&s.data.default_threshold)watchState.threshold=s.data.default_threshold; }catch(e){}
+  var th=document.getElementById('wThresh'); if(th)th.value=watchState.threshold.toLocaleString();
+  try{ var c=await sb.from('watch_creators').select('*').order('created_at',{ascending:false}); watchState.creators=c.data||[]; }catch(e){ watchState.creators=[]; }
+  try{ var v=await sb.from('watch_videos').select('*').eq('flagged',true).neq('status','dismissed').order('vel_24h',{ascending:false}).limit(60); watchState.videos=v.data||[]; }catch(e){ watchState.videos=[]; }
+  renderWatch();
+}
+function setWatchTab(t){ watchState.tab=t; var a=document.getElementById('wtab-creators'),b=document.getElementById('wtab-flagged'); if(a)a.classList.toggle('active',t==='creators'); if(b)b.classList.toggle('active',t==='flagged'); var pc=document.getElementById('wPaneCreators'),pf=document.getElementById('wPaneFlagged'); if(pc)pc.classList.toggle('hide',t!=='creators'); if(pf)pf.classList.toggle('hide',t!=='flagged'); }
+function renderWatch(){
+  var flagByC={}; watchState.videos.forEach(function(v){ flagByC[v.creator_id]=(flagByC[v.creator_id]||0)+1; });
+  var cEl=document.getElementById('wCreators');
+  if(cEl) cEl.innerHTML=watchState.creators.length? watchState.creators.map(function(c){ return wCreatorCard(c, flagByC[c.id]||0); }).join('')
+    : '<div class="empty"><div>No creators yet. Tap <b>Add creator</b> and paste a TikTok profile URL to start watching.</div></div>';
+  var fEl=document.getElementById('wFlagged');
+  if(fEl) fEl.innerHTML=watchState.videos.length? watchState.videos.map(wVideoCard).join('')
+    : '<div class="empty"><div>No breakout videos yet. Once a watched creator posts something gaining '+wNum(watchState.threshold)+'+ views in 24h, it appears here.</div></div>';
+  var ft=document.getElementById('wtab-flagged'); if(ft) ft.textContent='Winning videos'+(watchState.videos.length?(' ('+watchState.videos.length+')'):'');
+  var note=document.getElementById('wThreshNote'); if(note) note.textContent=watchState.creators.length+' creator'+(watchState.creators.length===1?'':'s')+' watched';
+}
+function wStatusPill(c){ var s=c.status||'queued';
+  if(s==='running')return '<span class="tf-badge" style="background:#eef1ff;color:#3340b6">checking...</span>';
+  if(s==='error')return '<span class="tf-badge" style="background:#fdecec;color:#a3261f">error</span>';
+  if(!c.backfilled)return '<span class="tf-badge" style="background:#fff4e6;color:#b45309">first scan queued</span>';
+  return ''; }
+function wCreatorCard(c,flag){
+  var init=((c.handle||c.display_name||'@?').replace('@','')[0]||'?').toUpperCase();
+  var tags=(c.style_tags||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+  var last=c.last_run_at?('checked '+wTimeAgo(c.last_run_at)):'not checked yet';
+  return '<div class="card"><div style="display:flex;align-items:center;gap:11px">'
+    +'<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#6a8bff,#9a6aff);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex:none">'+esc(init)+'</div>'
+    +'<div style="min-width:0;flex:1"><div style="font-weight:700">'+esc(c.handle||wHandleFromUrl(c.profile_url)||'(creator)')+'</div>'
+    +'<div class="h-sub" style="font-size:12px">'+(c.followers?(esc(c.followers)+' followers . '):'')+esc(last)+'</div></div>'+wStatusPill(c)+'</div>'
+    +(tags.length?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:9px">'+tags.map(function(t){return '<span class="tf-pill" style="background:#eef1ff;color:#3340b6">'+esc(t)+'</span>';}).join('')+'</div>':'')
+    +'<div style="display:flex;align-items:center;gap:10px;margin-top:11px;padding-top:10px;border-top:1px solid var(--line)">'
+    +(flag?'<span class="tf-badge" style="background:#fff4e6;color:#b45309">'+flag+' flagged</span>':'<span class="h-sub" style="font-size:12px">no breakouts yet</span>')
+    +'<span class="h-sub" style="font-size:12px">every '+Math.round((c.every_minutes||360)/60)+'h</span><span style="flex:1"></span>'
+    +'<button class="btn ghost sm" onclick="watchCheckNow(\''+c.id+'\')">Check now</button>'
+    +'<button class="btn ghost sm" onclick="watchRemove(\''+c.id+'\')" title="Remove">&times;</button></div></div>';
+}
+function wVideoCard(v){
+  var prod=v.product_name?('<div class="h-sub" style="font-size:12px;margin:6px 0 8px">Product: <b style="color:var(--ink)">'+esc(v.product_name)+'</b></div>')
+    :'<div class="h-sub" style="font-size:12px;margin:6px 0 8px">Product not detected</div>';
+  var thumb=v.thumb?('background-image:url(\''+esc(v.thumb)+'\');background-size:cover;background-position:center'):'background:linear-gradient(160deg,#5b2440,#2a1f3a 60%,#0e1019)';
+  return '<div class="card" style="padding:0;overflow:hidden">'
+    +'<div style="position:relative;aspect-ratio:9/16;max-height:220px;'+thumb+'">'
+    +'<span style="position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.62);color:#fff;font-weight:800;font-size:14px;padding:4px 8px;border-radius:7px">&#9650; +'+wNum(v.vel_24h)+' / 24h</span>'
+    +'<span style="position:absolute;right:8px;top:8px;background:#fe2c55;color:#fff;font-size:10px;font-weight:800;padding:3px 7px;border-radius:999px">NEW</span></div>'
+    +'<div style="padding:11px 12px"><div style="font-size:13px;line-height:1.35;max-height:36px;overflow:hidden">'+esc(v.caption||'(no caption)')+'</div>'
+    +'<div class="h-sub" style="font-size:12px;margin:5px 0 0">'+esc(v.handle||'')+' . '+wNum(v.views)+' total'+(v.posted_date?(' . '+esc(v.posted_date)):'')+'</div>'+prod
+    +'<div style="display:flex;gap:7px;flex-wrap:wrap">'
+    +(v.product_name?'<button class="btn sm" onclick="watchOrderSample(\''+v.id+'\')">Order sample</button>':'<button class="btn ghost sm" onclick="watchOpen(\''+v.id+'\')">Find product</button>')
+    +'<button class="btn ghost sm" onclick="watchAddFilm(\''+v.id+'\')">Add to film</button>'
+    +'<button class="btn ghost sm" onclick="watchOpen(\''+v.id+'\')">Open</button>'
+    +'<button class="btn ghost sm" onclick="watchDismiss(\''+v.id+'\')">Dismiss</button></div></div></div>';
+}
+function watchAddPrompt(){
+  showModal('<div style="text-align:left"><h3 style="margin:0 0 4px">Add a creator to watch</h3>'
+    +'<p class="h-sub" style="margin:0 0 12px;font-size:13px">Paste their TikTok profile URL. We snapshot their recent videos and re-check on a schedule.</p>'
+    +'<div style="margin-bottom:10px"><label class="h-sub" style="display:block;font-size:12px;margin-bottom:4px">Profile URL</label><input id="wcUrl" placeholder="https://www.tiktok.com/@creator" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:9px;font:inherit"></div>'
+    +'<div style="margin-bottom:10px"><label class="h-sub" style="display:block;font-size:12px;margin-bottom:4px">Style tags (optional, comma separated)</label><input id="wcTags" placeholder="skincare, text-on-screen" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:9px;font:inherit"></div>'
+    +'<div style="margin-bottom:6px"><label class="h-sub" style="display:block;font-size:12px;margin-bottom:4px">Flag threshold / 24h (blank = default)</label><input id="wcThr" inputmode="numeric" placeholder="'+watchState.threshold.toLocaleString()+'" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:9px;font:inherit"></div>'
+    +'<div style="display:flex;gap:8px;margin-top:16px"><button class="btn" onclick="watchAddSave()">Add &amp; start watching</button><button class="btn ghost" onclick="closeModal()">Cancel</button></div></div>');
+}
+async function watchAddSave(){
+  var url=(document.getElementById('wcUrl').value||'').trim(); if(!url){ toast('Paste a profile URL','err'); return; }
+  var handle=wHandleFromUrl(url), tags=(document.getElementById('wcTags').value||'').trim();
+  var thr=parseInt((document.getElementById('wcThr').value||'').replace(/[^0-9]/g,''),10); if(isNaN(thr))thr=null;
+  try{ var {error}=await sb.from('watch_creators').insert({profile_url:url,handle:handle,style_tags:tags,threshold:thr,active:true,status:'queued',next_run_at:new Date().toISOString()}); if(error)throw error;
+    closeModal(); toast('Creator added - first scan queued'); loadWatch();
+  }catch(e){ toast('Could not add: '+((e&&e.message)||e),'err'); }
+}
+async function saveWatchThreshold(v){
+  var n=parseInt((''+v).replace(/[^0-9]/g,''),10); if(isNaN(n)||n<1000){ toast('Enter a number (min 1000)','err'); return; }
+  watchState.threshold=n; var th=document.getElementById('wThresh'); if(th)th.value=n.toLocaleString();
+  try{ await sb.from('watch_settings').upsert({id:1,default_threshold:n}); toast('Threshold saved'); renderWatch(); }catch(e){ toast('Save failed','err'); }
+}
+async function watchCheckNow(id){ try{ await sb.from('watch_creators').update({status:'queued',next_run_at:new Date().toISOString()}).eq('id',id); toast('Check queued'); loadWatch(); }catch(e){ toast('Failed','err'); } }
+async function watchRemove(id){ if(!confirm('Remove this creator from your watch list?'))return; try{ await sb.from('watch_creators').delete().eq('id',id); toast('Removed'); loadWatch(); }catch(e){ toast('Failed','err'); } }
+async function watchDismiss(id){ try{ await sb.from('watch_videos').update({status:'dismissed'}).eq('id',id); watchState.videos=watchState.videos.filter(function(v){return v.id!==id;}); renderWatch(); }catch(e){ toast('Failed','err'); } }
+function watchVid(id){ return watchState.videos.find(function(v){return v.id===id;}); }
+function watchOpen(id){ var v=watchVid(id); if(v&&v.url) window.open(v.url,'_blank'); }
+async function watchOrderSample(id){
+  var v=watchVid(id); if(!v)return;
+  try{ var pid=v.product_uid;
+    if(!pid){ var pr=await sb.from('products').insert({name:v.product_name||('From '+(v.handle||'creator')),source_link:v.url,owned:false}).select('id').single(); pid=pr.data&&pr.data.id; }
+    if(pid){ var today=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10); await sb.from('sample_picks').upsert({product_uid:pid,day:today,decision:'yes',created_at:new Date().toISOString()},{onConflict:'product_uid,day'}); }
+    await sb.from('watch_videos').update({status:'sampled'}).eq('id',id);
+    watchState.videos=watchState.videos.filter(function(x){return x.id!==id;}); renderWatch(); toast('Sample requested + added to Products');
+  }catch(e){ toast('Failed: '+((e&&e.message)||e),'err'); }
+}
+async function watchAddFilm(id){
+  var v=watchVid(id); if(!v)return;
+  try{ var pid=v.product_uid;
+    if(!pid && v.product_name){ var pr=await sb.from('products').insert({name:v.product_name,source_link:v.url,owned:false}).select('id').single(); pid=pr.data&&pr.data.id; }
+    var today=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+    await sb.from('ed_film_queue').insert({day:today,product_uid:pid||null,hook:(v.caption||'').slice(0,160),reason:'Watch list: '+(v.handle||'')+' +'+wNum(v.vel_24h)+'/24h',status:'todo'});
+    await sb.from('watch_videos').update({status:'filmed'}).eq('id',id);
+    watchState.videos=watchState.videos.filter(function(x){return x.id!==id;}); renderWatch(); toast('Added to To-Film');
+  }catch(e){ toast('Failed: '+((e&&e.message)||e),'err'); }
+}
 function renderPriority(){
   var all=(state.products||[]).filter(function(p){return p.owned;});  // owned products only
   var notP=all.filter(function(p){return !p.priority;}), yesP=all.filter(function(p){return p.priority;});
@@ -3710,30 +3883,6 @@ function mteRelayout(){ var m=document.getElementById('mte'); if(!m||!m.classLis
 window.addEventListener('resize', mteRelayout);
 window.addEventListener('orientationchange', function(){ setTimeout(mteRelayout,200); setTimeout(mteRelayout,600); });
 try{ if(window.visualViewport){ window.visualViewport.addEventListener('resize', mteRelayout); } }catch(e){}
-// ---- TEMP editor touch diagnostic (build tag b5). Alfie only; removed once the editor is fixed. ----
-(function(){
-  var ts=0,tm=0,te=0,pd=0,lastTgt='';
-  function tgtOf(e){ try{ var t=e.target, c=t.className; if(c&&c.baseVal!==undefined)c=c.baseVal; c=(''+(c||'')).trim().split(/\s+/)[0]||''; return (t.id?('#'+t.id):((t.tagName||'?').toLowerCase()+(c?('.'+c):''))); }catch(_){ return 'err'; } }
-  document.addEventListener('touchstart',function(e){ts++; lastTgt=tgtOf(e); },true);
-  document.addEventListener('touchmove',function(){tm++;},true);
-  document.addEventListener('touchend',function(){te++;},true);
-  document.addEventListener('pointerdown',function(){pd++;},true);
-  setInterval(function(){
-    var d=document.getElementById('mteDbg'); if(!d)return;
-    var alfie=(typeof BUCKET!=='undefined' && BUCKET==='videos');
-    var open=document.getElementById('mte') && document.getElementById('mte').classList.contains('open');
-    if(!alfie || !open){ d.style.display='none'; return; }
-    d.style.display='block';
-    var sc=document.getElementById('mteTlScroll');
-    var cw=sc?sc.clientWidth:-1, sw=sc?Math.round(sc.scrollWidth):-1;
-    var NL=String.fromCharCode(10);
-    d.textContent=['b6  native:'+(isNativeApp()?'YES':'no')+'  open:'+(open?1:0),
-      'w:'+cw+' sw:'+sw+' pps:'+(Math.round(mtePps*10)/10)+' fit:'+(Math.round(mtePpsFit*10)/10)+' seg:'+(mteSegments?mteSegments.length:-1),
-      'touch ts:'+ts+' tm:'+tm+' te:'+te+'  ptr pd:'+pd,
-      'hdl sc:'+(window.__sc||0)+' gp:'+(window.__gp||0)+' ov:'+(window.__ov||0),
-      'tgt:'+lastTgt].join(NL);
-  },400);
-})();
 
 function mteOnTimeUpdate(){ if(!mtePlaying) mteUpdTime(); }   // during playback the 60fps loop (mteAdvance) handles boundaries
 
@@ -4409,7 +4558,11 @@ async function swDownload(id){
   }
   closeModal();
   const target=edited||v;                    // edited file if ready, else original
-  const handled=await shareToCameraRoll(target.storage_path, target.filename);   // phone -> camera roll via share sheet
+  let handled=false;
+  if(nativeSaveReady()){   // native app -> download + save straight to the camera roll (one tap)
+    try{ const su=await sb.storage.from(BUCKET).createSignedUrl(target.storage_path,3600); if(su&&su.data&&su.data.signedUrl){ await nativeSaveFromUrl(su.data.signedUrl, target.filename); handled=true; } }catch(e){ handled=false; }
+  }
+  if(!handled){ handled=await shareToCameraRoll(target.storage_path, target.filename); }   // web/PWA -> share sheet
   if(handled){ await recordDownload(id); } else { await fileDownload(target, id); }   // desktop falls back to a plain download; both record as Downloaded
   const card=document.querySelector('.sw-card.is-top');
   if(card&&card.dataset.id===id){ card.classList.add('fly-left'); setTimeout(()=>swAdvance(),420); } else { swRender(); }
@@ -5767,9 +5920,12 @@ async function readySave(id){
   if(!v||!v._render||!v._render.storage_path){ toast('This video is still being prepared -- check back shortly','err'); return; }
   var r=v._render; var fn=r.filename||'video.mp4';
   var saved=false;
-  var ok=false; try{ ok=await shareToCameraRoll(r.storage_path, fn); }catch(e){ ok=false; }   // small clips -> one-tap Save to camera roll
+  if(nativeSaveReady()){   // native app -> download + save straight to the camera roll (one tap, like Alfie)
+    try{ var su=await sb.storage.from(BUCKET).createSignedUrl(r.storage_path,3600); if(su&&su.data&&su.data.signedUrl){ await nativeSaveFromUrl(su.data.signedUrl, fn); saved=true; } }catch(e){ saved=false; }
+  }
+  var ok=false; if(!saved){ try{ ok=await shareToCameraRoll(r.storage_path, fn); }catch(e){ ok=false; } }   // web -> share sheet
   if(ok){ saved=true; }
-  else {
+  else if(!saved){
     try{   // desktop / large clip -> streamed download (saves to Files; then Share -> Save Video)
       var s=await sb.storage.from(BUCKET).createSignedUrl(r.storage_path,600,{download:fn});
       if(s&&s.data&&s.data.signedUrl){ var a=document.createElement('a'); a.href=s.data.signedUrl; a.download=fn; document.body.appendChild(a); a.click(); a.remove(); toast(isMobileDevice()?'Saving to Files -- open it, then Share -> Save Video':'Downloading...','ok'); saved=true; }
