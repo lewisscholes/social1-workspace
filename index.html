@@ -1041,7 +1041,7 @@ html,body{overscroll-behavior:none;}
       </div>
       <div class="seg" id="wTabs" style="margin:14px 0 4px">
         <button class="active" id="wtab-creators" onclick="setWatchTab('creators')">Watched creators</button>
-        <button id="wtab-flagged" onclick="setWatchTab('flagged')">Flagged videos</button>
+        <button id="wtab-flagged" onclick="setWatchTab('flagged')">Winning videos</button>
       </div>
       <div id="wPaneCreators"><div id="wCreators" class="cards"></div></div>
       <div id="wPaneFlagged" class="hide"><div id="wFlagged" class="cards"></div></div>
@@ -1884,7 +1884,7 @@ function renderWatch(){
   var fEl=document.getElementById('wFlagged');
   if(fEl) fEl.innerHTML=watchState.videos.length? watchState.videos.map(wVideoCard).join('')
     : '<div class="empty"><div>No breakout videos yet. Once a watched creator posts something gaining '+wNum(watchState.threshold)+'+ views in 24h, it appears here.</div></div>';
-  var ft=document.getElementById('wtab-flagged'); if(ft) ft.textContent='Flagged videos'+(watchState.videos.length?(' ('+watchState.videos.length+')'):'');
+  var ft=document.getElementById('wtab-flagged'); if(ft) ft.textContent='Winning videos'+(watchState.videos.length?(' ('+watchState.videos.length+')'):'');
   var note=document.getElementById('wThreshNote'); if(note) note.textContent=watchState.creators.length+' creator'+(watchState.creators.length===1?'':'s')+' watched';
 }
 function wStatusPill(c){ var s=c.status||'queued';
