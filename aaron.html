@@ -2135,7 +2135,16 @@ function prodCard(p){
     +prodImg(p)
     +'<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.name)+'</div>'+prodLinkBits(p)+'</div>'
     +'<button class="btn ghost sm" style="flex:0 0 auto" onclick="moveWinning(\''+p.id+'\','+(p.winning?0:1)+')">'+(p.winning?'Move to Owned':'Mark winning')+'</button>'
+    +'<button class="btn ghost sm" style="flex:0 0 auto;padding:6px 8px;color:#c0392b" title="Delete product" onclick="deleteProduct(\''+p.id+'\')"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trash"></use></svg></button>'
     +'</div>';
+}
+async function deleteProduct(id){
+  var p=tfProduct(id);
+  if(!confirm('Delete "'+((p&&p.name)||'this product')+'"? This cannot be undone.')) return;
+  var {error}=await sb.from('products').delete().eq('id',id);
+  if(error){ toast('Delete failed: '+error.message,'err'); return; }
+  state.products=(state.products||[]).filter(function(x){return x.id!==id;});
+  toast('Product deleted','ok'); renderProductsView();
 }
 async function moveWinning(id,val){ const {error}=await sb.from('products').update({winning:!!val}).eq('id',id); if(error){toast('Failed','err');return;} const p=tfProduct(id); if(p)p.winning=!!val; toast(val?'Marked winning':'Moved to Owned','ok'); renderProductsView(); }
 var _prodDragId=null;
@@ -2152,6 +2161,7 @@ function prodRow(p){
     +prodImg(p)
     +'<div style="flex:1;min-width:140px"><div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.name)+'</div>'+prodLinkBits(p)+'</div>'
     +'<button class="btn sm" onclick="toggleOwned(\''+p.id+'\')">'+(p.owned?'Owned ✓':'Mark owned')+'</button>'
+    +'<button class="btn ghost sm" style="flex:0 0 auto;padding:6px 8px;color:#c0392b" title="Delete product" onclick="deleteProduct(\''+p.id+'\')"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trash"></use></svg></button>'
     +'</div>';
 }
 async function toggleOwned(id){ const p=tfProduct(id); const v=!(p&&p.owned); const {error}=await sb.from('products').update({owned:v}).eq('id',id); if(error){toast('Failed','err');return;} if(p)p.owned=v; toast(v?'Marked owned':'Marked not owned','ok'); renderProductsView(); }
