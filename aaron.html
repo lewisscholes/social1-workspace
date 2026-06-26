@@ -871,6 +871,7 @@ a{color:#B0211A}
 
       
       
+      
     </div>
     <div class="nav-grow"></div>
     <div class="nav-sep"></div>
@@ -906,7 +907,8 @@ a{color:#B0211A}
         </div>
       </div>
       <div class="metrics" id="dashMetrics"></div>
-      <div class="card" id="toFilmCard" style="display:none"></div>
+      <div id="tfTrackerDash"></div>
+      <div class="card" id="tfPreviewCard" style="display:none"></div>
       <div class="card">
         <div class="toolbar">
           <input id="fHandle" placeholder="Handle contains…" oninput="renderDash()">
@@ -930,6 +932,22 @@ a{color:#B0211A}
         <div id="dashCards" class="cards hide"></div>
         <div class="h-sub" id="dashCount" style="margin-top:10px"></div>
       </div>
+    </section>
+
+    <!-- TO FILM -->
+    <section id="view-tofilm" class="hide">
+      <div class="head">
+        <div>
+          <h2 class="h-title">To film</h2>
+          <div class="h-sub">Owned winners and sample requests from the last 14 days. Winning products take ~60% of filming.</div>
+        </div>
+        <div class="h-actions">
+          <button class="btn ghost" onclick="showView('settings')"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-users"></use></svg> Accounts</button>
+          <button class="btn ghost" onclick="loadToFilm(true)"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-refresh"></use></svg> Refresh</button>
+        </div>
+      </div>
+      <div id="tfTracker"></div>
+      <div class="card" id="toFilmCard"></div>
     </section>
 
     <!-- VIDEO BANK -->
@@ -1406,10 +1424,11 @@ function prodName(id){ const p=state.products.find(x=>x.id===id); return p?p.nam
 // ---------- nav ----------
 function showView(v){
   state.currentView=v;
-  ['dashboard','bank','files','products','priority','watch','scraper','settings','editor','schedule','overlays','training','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
+  ['dashboard','tofilm','bank','files','products','priority','watch','scraper','settings','editor','schedule','overlays','training','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
   var na=document.getElementById('nav-access'); if(na) na.classList.toggle('active', v==='team');
   closeDrawer(); closeToolsSheet();
   if(v==='dashboard') loadDashboard();
+  if(v==='tofilm') loadToFilm();
   if(v==='files') loadFiles();
   if(v==='products') loadProductsView();
   if(v==='priority') loadPriorityView();
@@ -1689,7 +1708,37 @@ async function loadDashboard(refresh){
   renderDash();
   await loadTicks();
   renderToFilm();
+  renderTracker('tfTrackerDash');
+  renderTfPreview();
   if(refresh) toast('Refreshed','ok');
+}
+async function loadToFilm(refresh){ await loadDashboard(); renderTracker('tfTracker'); if(refresh) toast('Refreshed','ok'); }
+function tfFilmedToday(){ var m={}; (tfTickRows||[]).forEach(function(t){ var a=t.account||''; if(a) m[a]=(m[a]||0)+(t.count||0); }); return m; }
+function renderTracker(elId){
+  var el=document.getElementById(elId); if(!el) return;
+  var filmed=tfFilmedToday();
+  el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:18px">'+tfAccts().map(function(a){
+    var f=filmed[a.handle]||0, q=a.quota||0, pct=q?Math.min(100,Math.round(f/q*100)):0;
+    return '<div style="background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px">'
+      +'<div style="font-weight:700;font-size:14px">'+esc(a.label||a.handle)+'</div>'
+      +'<div class="h-sub" style="font-size:12.5px;margin:3px 0 9px">'+f+' of '+q+' filmed today'+(a.role?(' &middot; '+esc(a.role)):'')+'</div>'
+      +'<div style="height:8px;background:var(--line2);border-radius:20px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:var(--grad);border-radius:20px"></div></div></div>';
+  }).join('')+'</div>';
+}
+function renderTfPreview(){
+  var el=document.getElementById('tfPreviewCard'); if(!el) return;
+  var items=[]; tfAccts().forEach(function(a){ (tfOwnedIdeas(a.handle)||[]).forEach(function(x){ items.push(x); }); });
+  items.sort(function(a,b){return (b.views||0)-(a.views||0);});
+  var top=items.slice(0,4);
+  if(!top.length){ el.style.display='none'; return; }
+  el.style.display='';
+  var rows=top.map(function(x){
+    return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)">'
+      +'<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(x.pname||'(product)')+'</div>'
+      +'<div class="h-sub" style="font-size:12px">'+tfFmt(x.views)+' views'+(x.days!=null?(' &middot; '+tfRecency(x.days)):'')+'</div></div>'
+      +(x.link?'<a href="'+esc(x.link)+'" target="_blank" rel="noopener" style="color:var(--blue);font-weight:600;font-size:12.5px;text-decoration:none">Watch &nearr;</a>':'')+'</div>';
+  }).join('');
+  el.innerHTML='<div style="display:flex;align-items:center;margin-bottom:4px"><b style="font-size:15px">Top to film</b><a onclick="showView(\'tofilm\')" style="margin-left:auto;color:var(--blue);font-weight:600;font-size:12.5px;cursor:pointer">Open To film &rarr;</a></div><div class="h-sub" style="font-size:12.5px">Owned winners, last 14 days.</div>'+rows;
 }
 
 // ---------- TO FILM (dashboard) ----------
