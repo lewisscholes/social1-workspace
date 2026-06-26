@@ -619,6 +619,17 @@ html,body{overscroll-behavior:none;}
 .nx-pill.acc{background:var(--blue-soft);color:var(--blue)}
 .nx-lk{color:var(--blue);text-decoration:none;font-size:12.5px;font-weight:600;cursor:pointer;flex:none}
 .nx-mini{background:var(--panel);border:1px solid var(--line2);border-radius:9px;padding:7px 12px;font-size:12.5px;cursor:pointer;color:var(--muted);font-weight:600;flex:none}
+.nx-mini.nx-done{color:var(--cyan);border-color:var(--cyan)}
+.nx-vth{position:relative;width:48px;height:64px;border-radius:11px;flex:none;overflow:hidden;background:linear-gradient(160deg,#3a1322,#120a16);display:flex;align-items:center;justify-content:center;text-decoration:none}
+.nx-vth img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.nx-vth-scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 42%,rgba(0,0,0,.5));z-index:1}
+.nx-vth-play{position:relative;z-index:2;width:24px;height:24px;border-radius:50%;background:rgba(254,44,85,.94);display:flex;align-items:center;justify-content:center}
+.nx-vth-play svg{width:11px;height:11px;fill:#fff;margin-left:1px}
+.nx-boxlab{font-size:11px;color:var(--muted);font-weight:600;margin-right:2px;flex:none}
+.nx-boxes{display:flex;gap:6px;flex:none;align-items:center}
+.nx-box{width:30px;height:30px;border-radius:8px;border:1px solid var(--line2);background:var(--panel);color:var(--muted);font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.nx-box.on{background:var(--grad);border-color:transparent;color:#fff}
+.nx-box svg{width:14px;height:14px;stroke:#fff}
 .nx-vgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
 .nx-vcard{cursor:pointer}
 .nx-vthumb{position:relative;aspect-ratio:9/16;border-radius:13px;overflow:hidden;background:linear-gradient(160deg,#3a1322,#120a16);display:flex;align-items:center;justify-content:center}
@@ -1839,20 +1850,39 @@ function renderToFilm(){
   card.innerHTML=seg
     +'<div class="nx-h2">To film</div><div class="nx-h2sub">Owned products with a winning video in the last 14 days. Winning products take ~60% of filming.</div>'+rows
     +'<div class="nx-h2" style="margin-top:26px">Request samples</div><div class="nx-h2sub">Trending products you do not own yet.</div>'+srows;
+  try{ [].slice.call(card.querySelectorAll('.nx-vthimg')).forEach(function(im){ var v=im.getAttribute('data-vid'),u=im.getAttribute('data-url'); if(v&&u) fetchThumb(v,u,im); }); }catch(e){}
   try{ setFilmedMetric(); }catch(e){}
+}
+function nxVThumb(x){
+  var vid=(String(x.link||'').match(/\/video\/(\d+)/)||[])[1];
+  if(!vid) return nxThumb(x.pid,x.pname);
+  return '<a class="nx-vth" href="'+esc(x.link)+'" target="_blank" rel="noopener">'
+    +'<img class="nx-vthimg" data-vid="'+vid+'" data-url="'+esc(x.link)+'" referrerpolicy="no-referrer" alt="" onerror="this.remove()">'
+    +'<span class="nx-vth-scrim"></span>'
+    +'<span class="nx-vth-play"><svg viewBox="0 0 24 24"><use href="#i-play"></use></svg></span></a>';
+}
+function nxFilmCtl(x){
+  var c=tfTicks[x.key]||0, tgt=x.target||1, key=tfJs(x.key), ang=tfJs(x.angle);
+  if(tgt<=1){
+    var on=c>=1;
+    return '<button class="nx-mini'+(on?' nx-done':'')+'" onclick="tfFilmStep(\''+key+'\','+(on?0:1)+',\''+x.pid+'\',\''+x.acct+'\',\''+ang+'\')">'+(on?'Filmed':'Mark filmed')+'</button>';
+  }
+  var h='<span class="nx-boxlab">'+c+'/'+tgt+'</span><div class="nx-boxes">';
+  for(var i=1;i<=tgt;i++){
+    var fl=i<=c;
+    h+='<button class="nx-box'+(fl?' on':'')+'" title="Mark '+i+' of '+tgt+' filmed" onclick="tfFilmStep(\''+key+'\','+i+',\''+x.pid+'\',\''+x.acct+'\',\''+ang+'\')">'+(fl?'<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"></use></svg>':i)+'</button>';
+  }
+  h+='</div>';
+  return h;
 }
 function nxTfRow2(x){
   var p=tfProduct(x.pid)||{};
   var pill=p.winning?'<span class="nx-pill win">winning</span>':('<span class="nx-pill acc">'+esc((tfAcct(x.acct)||{}).label||x.acct||'')+'</span>');
-  var c=tfTicks[x.key]||0, tgt=x.target||1;
-  var btn=(c>=tgt)
-    ?'<button class="nx-mini" style="color:var(--cyan);border-color:var(--cyan)" onclick="tfFilmStep(\''+tfJs(x.key)+'\',0,\''+x.pid+'\',\''+x.acct+'\',\''+tfJs(x.angle)+'\')">Filmed</button>'
-    :'<button class="nx-mini" onclick="tfFilmStep(\''+tfJs(x.key)+'\','+(c+1)+',\''+x.pid+'\',\''+x.acct+'\',\''+tfJs(x.angle)+'\')">Mark filmed</button>';
-  return '<div class="nx-row">'+nxThumb(x.pid,x.pname)
+  return '<div class="nx-row">'+nxVThumb(x)
     +'<div style="flex:1;min-width:0"><div class="nx-nm">'+esc(x.pname||'(product)')+'</div>'
-    +'<div class="nx-meta">'+pill+' '+tfFmt(x.views)+' views'+(x.days!=null?(' &middot; '+tfRecency(x.days)):'')+(tgt>1?(' &middot; '+c+'/'+tgt):'')+'</div></div>'
+    +'<div class="nx-meta">'+pill+' '+tfFmt(x.views)+' views'+(x.days!=null?(' &middot; '+tfRecency(x.days)):'')+'</div></div>'
     +(x.link?'<a class="nx-lk" href="'+esc(x.link)+'" target="_blank" rel="noopener">Watch &nearr;</a>':'')
-    +btn+'</div>';
+    +nxFilmCtl(x)+'</div>';
 }
 function nxSampleRow(x){
   var yes=x.decision==='yes';
