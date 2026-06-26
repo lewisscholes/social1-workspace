@@ -1414,7 +1414,7 @@ async function deleteTrMem(id){
 
 // ---------- products ----------
 async function loadProducts(){
-  const {data}=await sb.from('products').select('id,name,price,original_price,discount,offer,rating,units_sold,benefits,description,listing_url,info_updated_at,owned,priority,source_link').order('name');
+  const {data}=await sb.from('products').select('id,name,price,original_price,discount,offer,rating,units_sold,benefits,description,listing_url,info_updated_at,owned,priority,winning,details,source_link').order('name');
   state.products=data||[];
   const sel=document.getElementById('fProduct');
   if(sel){ const cur=sel.value; sel.innerHTML='<option value="">All products</option>'+state.products.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join(''); sel.value=cur; }
@@ -1850,18 +1850,57 @@ function renderProductsView(){
   const all=state.products||[]; const owned=all.filter(p=>p.owned), not=all.filter(p=>!p.owned);
   const co=document.getElementById('pcOwned'); if(co)co.textContent=owned.length;
   const cn=document.getElementById('pcNot'); if(cn)cn.textContent=not.length;
-  const list=(state.prodTab==='not')?not:owned;
   const wrap=document.getElementById('productsList'); const empty=document.getElementById('productsEmpty');
-  if(empty)empty.classList.toggle('hide',list.length>0);
-  if(wrap)wrap.innerHTML=list.map(prodRow).join('');
+  if(state.prodTab==='not'){
+    if(empty)empty.classList.toggle('hide',not.length>0);
+    if(wrap)wrap.innerHTML=not.map(prodRow).join('');
+    return;
+  }
+  // Owned tab: two-column board (Owned | Winning products). Drag a product into Winning to prioritise it.
+  if(empty)empty.classList.add('hide');
+  const win=owned.filter(p=>p.winning), reg=owned.filter(p=>!p.winning);
+  if(wrap)wrap.innerHTML=
+    '<div class="pri-cols">'
+    +'<div class="pri-col" id="ownCol" data-win="0"><div class="pri-h">Owned <span class="cnt">'+reg.length+'</span></div>'
+    +'<div id="ownList">'+(reg.length?reg.map(p=>prodCard(p)).join(''):'<div class="h-sub" style="padding:8px 2px">No products here.</div>')+'</div></div>'
+    +'<div class="pri-col" id="winCol" data-win="1" style="background:var(--blue-soft);border-color:#bfe3f7"><div class="pri-h">Winning products <span class="cnt">'+win.length+'</span></div>'
+    +'<div class="h-sub" style="font-size:12px;margin:-2px 0 9px">Drag winners here -- these get prioritised for filming (~60% of videos).</div>'
+    +'<div id="winList">'+(win.length?win.map(p=>prodCard(p)).join(''):'<div class="h-sub" style="padding:8px 2px">Drag your best owned products here.</div>')+'</div></div>'
+    +'</div>';
+  prodBindDrag();
 }
-function prodRow(p){
+function prodImg(p){
+  var u=(p.details&&p.details.image_url)||'';
+  if(u) return '<img referrerpolicy="no-referrer" src="'+esc(u)+'" alt="" style="width:50px;height:50px;border-radius:10px;object-fit:cover;flex:0 0 auto;background:#eef1f6">';
+  var ltr=((p.name||'?').replace(/[^A-Za-z0-9]/g,'')[0]||'?').toUpperCase();
+  return '<div style="width:50px;height:50px;border-radius:10px;flex:0 0 auto;background:#eef1f6;display:flex;align-items:center;justify-content:center;color:#aeb4c2;font-size:18px;font-weight:700">'+esc(ltr)+'</div>';
+}
+function prodLinkBits(p){
   const link=p.source_link||p.listing_url||'';
   const linkHtml=link?'<a href="'+esc(link)+'" target="_blank" rel="noopener" style="font-size:12px;font-weight:600;color:#1850c4">link ↗</a>':'<span class="h-sub" style="font-size:12px">no link</span>';
-  return '<div class="card" style="display:flex;align-items:center;gap:10px;padding:12px 14px;margin-bottom:10px;flex-wrap:wrap">'
-    +'<div style="flex:1;min-width:140px"><div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.name)+(p.priority?' <span style="color:#d8961e">★</span>':'')+'</div>'
-      +'<div style="display:flex;align-items:center;gap:8px;margin-top:5px">'+linkHtml+'<button class="btn ghost sm" style="padding:3px 8px" onclick="setProductLinkModal(\''+p.id+'\')">'+(link?'Edit link':'Add link')+'</button></div></div>'
-    +'<button class="btn ghost sm" onclick="togglePriority(\''+p.id+'\')">'+(p.priority?'★ Priority':'☆ Priority')+'</button>'
+  return '<div style="display:flex;align-items:center;gap:8px;margin-top:5px">'+linkHtml+'<button class="btn ghost sm" style="padding:3px 8px" onclick="setProductLinkModal(\''+p.id+'\')">'+(link?'Edit link':'Add link')+'</button></div>';
+}
+function prodCard(p){
+  return '<div class="prod-card" draggable="true" data-id="'+p.id+'" style="display:flex;align-items:center;gap:11px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 11px;margin-bottom:9px;cursor:grab">'
+    +prodImg(p)
+    +'<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.name)+'</div>'+prodLinkBits(p)+'</div>'
+    +'<button class="btn ghost sm" style="flex:0 0 auto" onclick="moveWinning(\''+p.id+'\','+(p.winning?0:1)+')">'+(p.winning?'Move to Owned':'Mark winning')+'</button>'
+    +'</div>';
+}
+async function moveWinning(id,val){ const {error}=await sb.from('products').update({winning:!!val}).eq('id',id); if(error){toast('Failed','err');return;} const p=tfProduct(id); if(p)p.winning=!!val; toast(val?'Marked winning':'Moved to Owned','ok'); renderProductsView(); }
+var _prodDragId=null;
+function prodBindDrag(){
+  document.querySelectorAll('#view-products .prod-card').forEach(function(el){ el.ondragstart=function(e){ _prodDragId=el.dataset.id; if(e.dataTransfer)e.dataTransfer.effectAllowed='move'; }; });
+  ['ownCol','winCol'].forEach(function(cid){ var col=document.getElementById(cid); if(!col)return;
+    col.ondragover=function(e){ e.preventDefault(); col.classList.add('drag'); };
+    col.ondragleave=function(){ col.classList.remove('drag'); };
+    col.ondrop=function(e){ e.preventDefault(); col.classList.remove('drag'); if(_prodDragId){ moveWinning(_prodDragId, +col.dataset.win); _prodDragId=null; } };
+  });
+}
+function prodRow(p){
+  return '<div class="card" style="display:flex;align-items:center;gap:11px;padding:12px 14px;margin-bottom:10px">'
+    +prodImg(p)
+    +'<div style="flex:1;min-width:140px"><div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.name)+'</div>'+prodLinkBits(p)+'</div>'
     +'<button class="btn sm" onclick="toggleOwned(\''+p.id+'\')">'+(p.owned?'Owned ✓':'Mark owned')+'</button>'
     +'</div>';
 }
