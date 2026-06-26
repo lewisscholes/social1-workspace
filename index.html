@@ -1507,7 +1507,7 @@ function tfFilmedToday(){ var m={}; (tfTickRows||[]).forEach(function(t){ var a=
 function renderTracker(elId){
   var el=document.getElementById(elId); if(!el) return;
   var filmed=tfFilmedToday();
-  el.innerHTML='<div class="nx-acct">'+tfAccts().map(function(a){
+  el.innerHTML='<div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 10px">Filming progress &middot; today</div><div class="nx-acct">'+tfAccts().map(function(a){
     var f=filmed[a.handle]||0, q=a.quota||0, pct=q?Math.min(100,Math.round(f/q*100)):0;
     return '<div class="nx-acard"><div class="nm">'+esc(a.label||a.handle)+'</div>'
       +'<div class="q">'+f+' of '+q+' filmed today'+(a.role?(' &middot; '+esc(a.role)):'')+'</div>'
@@ -1561,8 +1561,11 @@ function renderDashOverview(){
   var leftRows=top.length?top.map(function(x){return nxTfRow(x,false);}).join(''):'<div class="nx-h2sub" style="padding:6px 0">Nothing in the last 14 days yet.</div>';
   var wins=(state.dashWins||[]).slice(0,4);
   var grid=wins.length?('<div class="nx-vgrid">'+wins.map(dashWinCard).join('')+'</div>'):'<div class="nx-h2sub" style="padding:6px 0">No winning videos yet.</div>';
+  var samp=[]; try{ samp=tfSamples().slice(0,3); }catch(e){}
+  var sRows=samp.length?samp.map(nxSampleRow).join(''):'<div class="nx-h2sub" style="padding:6px 0">Nothing scraped from Social One today yet.</div>';
   el.innerHTML='<div class="nx-cols">'
-    +'<div><div class="nx-h2">Top to film <a onclick="showView(\'tofilm\')">Open To film &rarr;</a></div><div class="nx-h2sub">Owned winners, last 14 days.</div>'+leftRows+'</div>'
+    +'<div><div class="nx-h2">Top to film <a onclick="showView(\'tofilm\')">Open To film &rarr;</a></div><div class="nx-h2sub">Owned winners, last 14 days.</div>'+leftRows
+      +'<div class="nx-h2" style="margin-top:22px">Request samples <a onclick="showView(\'tofilm\')">Open To film &rarr;</a></div><div class="nx-h2sub">Trending products you do not own yet.</div>'+sRows+'</div>'
     +'<div><div class="nx-h2">Winning videos <a onclick="showView(\'watch\')">All &rarr;</a></div><div class="nx-h2sub">Gaining fast on your watch list.</div>'+grid+'</div>'
     +'</div>';
   wins.forEach(function(v){ var im=document.getElementById('dwth_'+v.id); if(im&&v.url) fetchThumb(v.tiktok_video_id||v.id,v.url,im); });
@@ -1817,6 +1820,56 @@ function renderToFilm(){
   card.innerHTML=h;
   hydrateTfThumbs();
   setFilmedMetric();
+}
+function renderToFilm(){
+  var card=document.getElementById('toFilmCard'); if(!card) return;
+  card.style.display='';
+  if(!state.tfAcct)state.tfAcct='all';
+  var accts=(state.tfAcct==='all')?tfAcctHandles():[state.tfAcct];
+  var planned=[]; accts.forEach(function(a){ planned=planned.concat(tfPlan(a)); });
+  var pf=(state.tfProd||'').toLowerCase().trim();
+  if(pf) planned=planned.filter(function(x){return (x.pname||'').toLowerCase().indexOf(pf)>=0;});
+  try{ planned.sort(tfRecencyCmp); }catch(e){}
+  var todo=planned.filter(function(x){return (tfTicks[x.key]||0)<x.target;});
+  var tabs=[['all','All']].concat(tfAccts().map(function(a){return [a.handle,(a.label||a.handle)+' ('+(a.quota||0)+'/day)'];}));
+  var seg='<div class="nx-seg">'+tabs.map(function(o){return '<button class="'+(o[0]===state.tfAcct?'on':'')+'" onclick="setTfAcct(\''+o[0]+'\')">'+esc(o[1])+'</button>';}).join('')+'<button class="nx-mini" style="margin-left:auto" onclick="tfManageAccts()">Accounts</button></div>';
+  var rows=todo.length?todo.slice(0,40).map(nxTfRow2).join(''):'<div class="nx-h2sub" style="padding:6px 0">Nothing to film right now -- mark products owned or wait for today\'s scrape.</div>';
+  var samples=tfSamples();
+  var srows=samples.length?samples.map(nxSampleRow).join(''):'<div class="nx-h2sub" style="padding:6px 0">Nothing scraped from Social One today yet -- run the videos scraper.</div>';
+  card.innerHTML=seg
+    +'<div class="nx-h2">To film</div><div class="nx-h2sub">Owned products with a winning video in the last 14 days. Winning products take ~60% of filming.</div>'+rows
+    +'<div class="nx-h2" style="margin-top:26px">Request samples</div><div class="nx-h2sub">Trending products you do not own yet.</div>'+srows;
+  try{ setFilmedMetric(); }catch(e){}
+}
+function nxTfRow2(x){
+  var p=tfProduct(x.pid)||{};
+  var pill=p.winning?'<span class="nx-pill win">winning</span>':('<span class="nx-pill acc">'+esc((tfAcct(x.acct)||{}).label||x.acct||'')+'</span>');
+  var c=tfTicks[x.key]||0, tgt=x.target||1;
+  var btn=(c>=tgt)
+    ?'<button class="nx-mini" style="color:var(--cyan);border-color:var(--cyan)" onclick="tfFilmStep(\''+tfJs(x.key)+'\',0,\''+x.pid+'\',\''+x.acct+'\',\''+tfJs(x.angle)+'\')">Filmed</button>'
+    :'<button class="nx-mini" onclick="tfFilmStep(\''+tfJs(x.key)+'\','+(c+1)+',\''+x.pid+'\',\''+x.acct+'\',\''+tfJs(x.angle)+'\')">Mark filmed</button>';
+  return '<div class="nx-row">'+nxThumb(x.pid,x.pname)
+    +'<div style="flex:1;min-width:0"><div class="nx-nm">'+esc(x.pname||'(product)')+'</div>'
+    +'<div class="nx-meta">'+pill+' '+tfFmt(x.views)+' views'+(x.days!=null?(' &middot; '+tfRecency(x.days)):'')+(tgt>1?(' &middot; '+c+'/'+tgt):'')+'</div></div>'
+    +(x.link?'<a class="nx-lk" href="'+esc(x.link)+'" target="_blank" rel="noopener">Watch &nearr;</a>':'')
+    +btn+'</div>';
+}
+function nxSampleRow(x){
+  var yes=x.decision==='yes';
+  var btn=yes?'<button class="nx-mini" style="color:var(--cyan);border-color:var(--cyan)" onclick="sampleDecide(\''+x.pid+'\',\'\')">Ordering</button>'
+    :'<button class="nx-mini" onclick="sampleDecide(\''+x.pid+'\',\'yes\')">Request</button>';
+  return '<div class="nx-row">'+nxThumb(x.pid,x.pname)
+    +'<div style="flex:1;min-width:0"><div class="nx-nm">'+esc(x.pname||'(product)')+'</div>'
+    +'<div class="nx-meta">'+(x.gmv?('&#163;'+tfFmt(x.gmv)+' GMV &middot; '):'')+tfFmt(x.views)+' views'+(x.days!=null?(' &middot; '+tfRecency(x.days)):'')+'</div></div>'
+    +(x.link?'<a class="nx-lk" href="'+esc(x.link)+'" target="_blank" rel="noopener">View &nearr;</a>':'')
+    +btn+'</div>';
+}
+function tfFilmStep(key,n,pid,acct,angle){
+  tfSetTick(key,n,pid,acct,angle);
+  var c=tfTicks[key]||0, found=false; tfTickRows=tfTickRows||[];
+  tfTickRows.forEach(function(t){ if(t.idea_key===key){ t.count=c; t.account=acct; found=true; } });
+  if(!found) tfTickRows.push({idea_key:key,count:c,account:acct,product_uid:pid});
+  if(document.getElementById('tfTracker')) renderTracker('tfTracker');
 }
 function tfHistory(){
   var rows=(tfTickRows||[]).filter(function(t){return (t.count||0)>0;}).sort(function(a,b){return (b.count||0)-(a.count||0);});
