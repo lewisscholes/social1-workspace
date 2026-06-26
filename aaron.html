@@ -6441,6 +6441,8 @@ function aiRender(){
   var scored=rows.filter(function(x){return x.status==='scored'&&x.score_overall!=null;});
   var recent=scored.slice(0,20);
   var avg=recent.length?(recent.reduce(function(a,x){return a+Number(x.score_overall);},0)/recent.length):null;
+  function aiAvgOf(f){ var a=scored.filter(function(x){return x[f]!=null;}).map(function(x){return Number(x[f]);}); return a.length?(a.reduce(function(s,v){return s+v;},0)/a.length):null; }
+  var avgDead=aiAvgOf('score_dead'), avgRetake=aiAvgOf('score_retake');
   var en=!(aiState.settings&&aiState.settings.enabled===false);
   var counts={scored:scored.length,
     queued:rows.filter(function(x){return x.status==='queued'||x.status==='transcribing'||x.status==='generating';}).length,
@@ -6454,6 +6456,8 @@ function aiRender(){
     +'<button class="btn '+(en?'ghost':'')+'" onclick="aiToggle()">'+(en?'Pause learning':'Resume learning')+'</button></div>';
   var conf='<div class="card" style="display:flex;gap:22px;align-items:center;flex-wrap:wrap;margin:12px 0">'
     +'<div><div style="font-size:40px;font-weight:800;line-height:1">'+(avg==null?'--':aiPct(avg))+'</div><div class="h-sub">confidence (avg cut match, last '+recent.length+')</div></div>'
+    +'<div><div style="font-size:24px;font-weight:800;line-height:1;color:#1f9d55">'+(avgDead==null?'--':aiPct(avgDead))+'</div><div class="h-sub">dead-space</div></div>'
+    +'<div><div style="font-size:24px;font-weight:800;line-height:1;color:#D7342C">'+(avgRetake==null?'--':aiPct(avgRetake))+'</div><div class="h-sub">retakes</div></div>'
     +'<div style="min-height:44px;display:flex;align-items:flex-end">'+(spark||'<span class="h-sub">no scores yet</span>')+'</div>'
     +'<span style="flex:1"></span>'
     +'<div class="h-sub" style="text-align:right;font-size:12.5px">'+counts.scored+' scored &middot; '+counts.queued+' in progress<br>'+counts.skipped+' skipped (no speech) &middot; '+counts.error+' errors</div></div>';
@@ -6501,7 +6505,11 @@ function aiOpen(id){
     +'<div class="h-sub" style="margin:0 0 12px">'+Math.round(dur)+'s raw &middot; match '+aiPct(x.score_overall)+'</div>'
     +'<div style="font-size:12px;font-weight:700;margin:0 0 4px">Human kept ('+(x.n_human_segments||0)+' cuts)</div>'+aiBars(x.human_segments,dur,'#1f9d55')
     +'<div style="font-size:12px;font-weight:700;margin:12px 0 4px">AI kept ('+(x.n_ai_segments||0)+' cuts)</div>'+aiBars(x.ai_segments,dur,'#D7342C')
-    +'<div class="h-sub" style="margin-top:14px;font-size:12.5px">Overlap (IoU) '+aiPct(100*(det.iou||0))+' &middot; Precision '+aiPct(100*(det.precision||0))+' &middot; Recall '+aiPct(100*(det.recall||0))+'</div>'
+    +'<div style="display:flex;gap:10px;margin-top:14px">'
+    +'<div class="card" style="flex:1;margin:0;text-align:center"><div style="font-size:20px;font-weight:800;color:#1f9d55">'+(x.score_dead==null?'--':aiPct(x.score_dead))+'</div><div class="h-sub" style="font-size:12px">dead-space match</div></div>'
+    +'<div class="card" style="flex:1;margin:0;text-align:center"><div style="font-size:20px;font-weight:800;color:#D7342C">'+(x.score_retake==null?'--':aiPct(x.score_retake))+'</div><div class="h-sub" style="font-size:12px">retake match</div></div>'
+    +'</div>'
+    +'<div class="h-sub" style="margin-top:12px;font-size:12.5px">Overall overlap (IoU) '+aiPct(100*(det.iou||0))+' &middot; Precision '+aiPct(100*(det.precision||0))+' &middot; Recall '+aiPct(100*(det.recall||0))+'</div>'
     +'<div class="h-sub" style="font-size:12px;margin-top:6px">Green = what the human kept. Red = what the AI would keep. The more they overlap, the higher the score.</div>'
     +'<div class="actions"><button class="btn ghost" onclick="closeModal()">Close</button></div>';
   showModal(body);
