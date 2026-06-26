@@ -908,8 +908,8 @@ a{color:#B0211A}
       </div>
       <div class="metrics" id="dashMetrics"></div>
       <div id="tfTrackerDash"></div>
-      <div class="card" id="tfPreviewCard" style="display:none"></div>
-      <div class="card">
+      <div id="dashCols"></div>
+      <div class="card" id="dashBrowse" style="display:none">
         <div class="toolbar">
           <input id="fHandle" placeholder="Handle contains…" oninput="renderDash()">
           <select id="fProduct" onchange="renderDash()"><option value="">All products</option></select>
@@ -1701,15 +1701,16 @@ async function loadDashboard(refresh){
   const {data,error}=await sb.from('scraped_videos').select('*').order('last_scraped_at',{ascending:false});
   if(error){ toast('Load failed: '+error.message,'err'); return; }
   state.results=data||[];
-  // top-line stats now reflect OUR OWN activity (not scraped data)
-  await renderOwnMetrics();
+  try{ var wc=await sb.from('watch_videos').select('id',{count:'exact',head:true}).eq('flagged',true).neq('status','dismissed'); state.winCount=wc.count||0; }catch(e){ state.winCount=0; }
+  try{ var wq=await sb.from('watch_videos').select('id,handle,url,tiktok_video_id,vel_24h').eq('flagged',true).neq('status','dismissed').order('vel_24h',{ascending:false}).limit(4); state.dashWins=wq.data||[]; }catch(e){ state.dashWins=[]; }
   document.getElementById('dashSub').textContent=state.results.length+' competitor videos · deduped, updated on each re-scrape';
   loadJobs();
   renderDash();
   await loadTicks();
   renderToFilm();
+  renderOverviewStats();
   renderTracker('tfTrackerDash');
-  renderTfPreview();
+  renderDashOverview();
   if(refresh) toast('Refreshed','ok');
 }
 async function loadToFilm(refresh){ await loadDashboard(); renderTracker('tfTracker'); if(refresh) toast('Refreshed','ok'); }
@@ -1725,20 +1726,44 @@ function renderTracker(elId){
       +'<div style="height:8px;background:var(--line2);border-radius:20px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:var(--grad);border-radius:20px"></div></div></div>';
   }).join('')+'</div>';
 }
-function renderTfPreview(){
-  var el=document.getElementById('tfPreviewCard'); if(!el) return;
+function renderOverviewStats(){
+  var el=document.getElementById('dashMetrics'); if(!el) return;
+  var today=tfToday();
+  var newToday=(state.results||[]).filter(function(r){return String(r.first_seen_at||'').slice(0,10)===today;}).length;
+  var owned=(state.products||[]).filter(function(p){return p.owned;});
+  var ownedWinning=owned.filter(function(p){return p.winning;}).length;
+  var tf=0; tfAccts().forEach(function(a){ tf+=(tfOwnedIdeas(a.handle)||[]).length; });
+  var win=(state.winCount!=null)?state.winCount:0;
+  function card(l,v,d){ return '<div class="dstat"><div class="dval">'+v+'</div><div class="dlbl">'+l+'</div>'+(d?'<div class="h-sub" style="font-size:11.5px;margin-top:3px">'+d+'</div>':'')+'</div>'; }
+  el.innerHTML=card('New videos today',newToday,'')
+    +card('To film',tf,owned.length+' owned')
+    +card('Winning videos',win,ownedWinning+' winning products')
+    +card('Owned products',owned.length,'');
+}
+function dashWinCard(v){
+  return '<div><div style="position:relative;aspect-ratio:9/16;border-radius:13px;overflow:hidden;background:linear-gradient(160deg,#3a1322,#120a16)">'
+    +'<img id="dwth_'+esc(v.id)+'" referrerpolicy="no-referrer" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">'
+    +'<span style="position:absolute;left:7px;bottom:7px;background:rgba(0,0,0,.62);color:#fff;font-size:11px;font-weight:700;padding:3px 7px;border-radius:7px">&#9650; '+wNum(v.vel_24h)+'</span></div>'
+    +'<div style="font-weight:600;font-size:12.5px;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(v.handle||'')+'</div>'
+    +'<div style="font-size:11.5px;color:var(--blue);font-weight:600">+'+wNum(v.vel_24h)+' / 24h</div></div>';
+}
+function renderDashOverview(){
+  var el=document.getElementById('dashCols'); if(!el) return;
   var items=[]; tfAccts().forEach(function(a){ (tfOwnedIdeas(a.handle)||[]).forEach(function(x){ items.push(x); }); });
   items.sort(function(a,b){return (b.views||0)-(a.views||0);});
   var top=items.slice(0,4);
-  if(!top.length){ el.style.display='none'; return; }
-  el.style.display='';
-  var rows=top.map(function(x){
+  var leftRows=top.length?top.map(function(x){
     return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)">'
       +'<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(x.pname||'(product)')+'</div>'
       +'<div class="h-sub" style="font-size:12px">'+tfFmt(x.views)+' views'+(x.days!=null?(' &middot; '+tfRecency(x.days)):'')+'</div></div>'
       +(x.link?'<a href="'+esc(x.link)+'" target="_blank" rel="noopener" style="color:var(--blue);font-weight:600;font-size:12.5px;text-decoration:none">Watch &nearr;</a>':'')+'</div>';
-  }).join('');
-  el.innerHTML='<div style="display:flex;align-items:center;margin-bottom:4px"><b style="font-size:15px">Top to film</b><a onclick="showView(\'tofilm\')" style="margin-left:auto;color:var(--blue);font-weight:600;font-size:12.5px;cursor:pointer">Open To film &rarr;</a></div><div class="h-sub" style="font-size:12.5px">Owned winners, last 14 days.</div>'+rows;
+  }).join(''):'<div class="h-sub" style="padding:10px 0">Nothing in the last 14 days yet.</div>';
+  var left='<div class="card"><div style="display:flex;align-items:center;margin-bottom:2px"><b style="font-size:15px">Top to film</b><a onclick="showView(\'tofilm\')" style="margin-left:auto;color:var(--blue);font-weight:600;font-size:12.5px;cursor:pointer">Open To film &rarr;</a></div><div class="h-sub" style="font-size:12.5px">Owned winners, last 14 days.</div>'+leftRows+'</div>';
+  var wins=state.dashWins||[];
+  var grid=wins.length?('<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+wins.slice(0,4).map(dashWinCard).join('')+'</div>'):'<div class="h-sub" style="padding:10px 0">No winning videos yet.</div>';
+  var right='<div class="card"><div style="display:flex;align-items:center;margin-bottom:2px"><b style="font-size:15px">Winning videos</b><a onclick="showView(\'watch\')" style="margin-left:auto;color:var(--blue);font-weight:600;font-size:12.5px;cursor:pointer">Watch list &rarr;</a></div><div class="h-sub" style="font-size:12.5px;margin-bottom:10px">Gaining fast on your watch list.</div>'+grid+'</div>';
+  el.innerHTML='<div class="dash-cols2" style="display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start;margin-bottom:18px">'+left+right+'</div>';
+  wins.slice(0,4).forEach(function(v){ var im=document.getElementById('dwth_'+v.id); if(im&&v.url) fetchThumb(v.tiktok_video_id||v.id,v.url,im); });
 }
 
 // ---------- TO FILM (dashboard) ----------
