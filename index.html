@@ -1916,6 +1916,7 @@ function renderWatch(){
   var fEl=document.getElementById('wFlagged');
   if(fEl) fEl.innerHTML=watchState.videos.length? watchState.videos.map(wVideoCard).join('')
     : '<div class="empty"><div>No breakout videos yet. Once a watched creator posts something gaining '+wNum(watchState.threshold)+'+ views in 24h, it appears here.</div></div>';
+  if(fEl && watchState.videos.length){ watchState.videos.forEach(function(v){ var im=document.getElementById('wth_'+v.id); if(im && v.url) fetchThumb(v.tiktok_video_id||v.id, v.url, im); }); }
   var ft=document.getElementById('wtab-flagged'); if(ft) ft.textContent='Winning videos'+(watchState.videos.length?(' ('+watchState.videos.length+')'):'');
   var note=document.getElementById('wThreshNote'); if(note) note.textContent=watchState.creators.length+' creator'+(watchState.creators.length===1?'':'s')+' watched';
 }
@@ -1942,9 +1943,9 @@ function wCreatorCard(c,flag){
 function wVideoCard(v){
   var prod=v.product_name?('<div class="h-sub" style="font-size:12px;margin:6px 0 8px">Product: <b style="color:var(--ink)">'+esc(v.product_name)+'</b></div>')
     :'<div class="h-sub" style="font-size:12px;margin:6px 0 8px">Product not detected</div>';
-  var thumb=v.thumb?('background-image:url(\''+esc(v.thumb)+'\');background-size:cover;background-position:center'):'background:linear-gradient(160deg,#5b2440,#2a1f3a 60%,#0e1019)';
   return '<div class="card" style="padding:0;overflow:hidden">'
-    +'<div style="position:relative;aspect-ratio:9/16;max-height:220px;'+thumb+'">'
+    +'<div style="position:relative;aspect-ratio:9/16;max-height:220px;background:linear-gradient(160deg,#5b2440,#2a1f3a 60%,#0e1019);overflow:hidden">'
+    +'<img id="wth_'+esc(v.id)+'" referrerpolicy="no-referrer" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block">'
     +'<span style="position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.62);color:#fff;font-weight:800;font-size:14px;padding:4px 8px;border-radius:7px">&#9650; +'+wNum(v.vel_24h)+' / 24h</span>'
     +'<span style="position:absolute;right:8px;top:8px;background:#fe2c55;color:#fff;font-size:10px;font-weight:800;padding:3px 7px;border-radius:999px">NEW</span></div>'
     +'<div style="padding:11px 12px"><div style="font-size:13px;line-height:1.35;max-height:36px;overflow:hidden">'+esc(v.caption||'(no caption)')+'</div>'
