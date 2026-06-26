@@ -1479,6 +1479,8 @@ function tfTimeMax(){ return ({'7d':7,'30d':30})[state.tfTime]||999999; }
 function tfIdeaKey(pid,angle){ return pid+'|'+angle.slice(0,30).toLowerCase(); }
 function tfJs(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/[\r\n]+/g,' '); }
 var TF_WEEK_CAP=5, TF_DAY_CAP=2, SAMPLE_LIMIT=10, SAMPLE_RECENCY_DAYS=10;
+var TF_MAX_DAYS=14; // to-film list only includes videos posted within this many days
+function tfRecent(r){ var d=tfPostedDays(r&&r.posted_date); return d!=null && d<=TF_MAX_DAYS; }
 var TF_QUOTA={}; TF_QUOTA[TF_ACCT_LINACRE]=25; TF_QUOTA[TF_ACCT_YAS]=10;
 var tfTicks={}, tfTickRows=[], tfWeek={}, tfSamplePicks={};
 function tfLocalDay(iso){ if(!iso)return null; var d=new Date(iso); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
@@ -1502,6 +1504,7 @@ function tfIdeas(){
   var groups={};
   (state.results||[]).forEach(function(r){
     if(!r.product_uid) return;
+    if(!tfRecent(r)) return;
     var acct=tfAcctOf(r.video_type);
     if(acctF!=='all' && acct!==acctF) return;
     var p=tfProduct(r.product_uid); var pname=p?p.name:'';
@@ -1525,6 +1528,7 @@ function tfOwnedIdeas(acct){
   var groups={};
   (state.results||[]).forEach(function(r){
     if(!r.product_uid || tfAcctOf(r.video_type)!==acct) return;
+    if(!tfRecent(r)) return;
     var p=tfProduct(r.product_uid); if(!(p&&p.owned)) return;
     var views=parseNum(r.views)||0, gmv=parseNum(r.creator_gmv)||0;
     var ovs=(r.raw&&Array.isArray(r.raw.textOverlays))?r.raw.textOverlays:(r.text_overlays?[r.text_overlays]:[]);
@@ -1705,6 +1709,7 @@ function tfSamples(){
   var pf=(state.tfProd||'').toLowerCase().trim(); var groups={};
   (state.results||[]).forEach(function(r){
     if(!r.product_uid) return;
+    if(!tfRecent(r)) return;
     var p=tfProduct(r.product_uid); if(p&&p.owned) return;
     if(r.source && r.source!=='videos') return;
     if(tfSamplePicks[r.product_uid]==='no') return;
