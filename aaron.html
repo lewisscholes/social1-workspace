@@ -613,6 +613,8 @@ html,body{overscroll-behavior:none;}
 .nx-lk{color:var(--blue);text-decoration:none;font-size:12.5px;font-weight:600;cursor:pointer;flex:none}
 .nx-mini{background:var(--panel);border:1px solid var(--line2);border-radius:9px;padding:7px 12px;font-size:12.5px;cursor:pointer;color:var(--muted);font-weight:600;flex:none}
 .nx-mini.nx-done{color:var(--cyan);border-color:var(--cyan)}
+.nx-mini.nx-decline{color:var(--red)}
+.nx-mini.nx-decline:hover{border-color:var(--red)}
 .nx-vth{position:relative;width:48px;height:64px;border-radius:11px;flex:none;overflow:hidden;background:linear-gradient(160deg,#3a1322,#120a16);display:flex;align-items:center;justify-content:center;text-decoration:none}
 .nx-vth img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .nx-vth-scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 42%,rgba(0,0,0,.5));z-index:1}
@@ -648,6 +650,12 @@ html,body{overscroll-behavior:none;}
 .nx-seg-sm button{padding:6px 11px;font-size:12px}
 .nx-date{background:var(--panel);border:1px solid var(--line2);border-radius:9px;padding:6px 10px;color:var(--ink);font:inherit;font-size:12.5px;color-scheme:dark;cursor:pointer}
 .nx-date.on{border-color:var(--blue);color:var(--blue)}
+.nx-calwrap{position:relative;display:inline-flex}
+.nx-cal{width:36px;height:34px;display:inline-flex;align-items:center;justify-content:center;background:var(--panel);border:1px solid var(--line2);border-radius:9px;color:var(--muted);cursor:pointer}
+.nx-cal:hover{border-color:var(--muted);color:var(--ink)}
+.nx-cal.on{border-color:var(--blue);color:var(--blue)}
+.nx-cal svg{width:16px;height:16px;stroke:currentColor;fill:none}
+.nx-caldate{position:absolute;right:0;bottom:0;width:1px;height:1px;opacity:0;border:0;padding:0;pointer-events:none}
 .wv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
 .wv-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
 .wv-top{display:flex;gap:14px;padding:14px}
@@ -1366,15 +1374,15 @@ a{color:#B0211A}
         <span style="flex:1"></span>
         <button class="btn" onclick="watchAddPrompt()"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-2px"><use href="#i-plus"></use></svg> Add creator</button>
       </div>
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 4px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0 0">
         <div class="seg" id="wTabs" style="margin:0">
           <button class="active" id="wtab-creators" onclick="setWatchTab('creators')">Watched creators</button>
           <button id="wtab-flagged" onclick="setWatchTab('flagged')">Winning videos</button>
         </div>
         <div id="wDateBar" style="margin-left:auto;display:none"></div>
       </div>
-      <div id="wPaneCreators"><div id="wCreators" class="cards"></div></div>
-      <div id="wPaneFlagged" class="hide"><div id="wFlagged" class="wv-grid"></div></div>
+      <div id="wPaneCreators" style="margin-top:18px"><div id="wCreators" class="cards"></div></div>
+      <div id="wPaneFlagged" class="hide" style="margin-top:18px"><div id="wFlagged" class="wv-grid"></div></div>
     </section>
 
     <section id="view-priority" class="hide">
@@ -1791,7 +1799,7 @@ async function loadDashboard(refresh){
   renderDashOverview();
   if(refresh) toast('Refreshed','ok');
 }
-async function loadToFilm(refresh){ state.tfDay=tfDayForFilter(state.tfDateF); await loadDashboard(); renderTracker('tfTracker'); if(refresh) toast('Refreshed','ok'); }
+async function loadToFilm(refresh){ if(!state.tfDateF)state.tfDateF='7d'; state.tfDay=tfDayForFilter(state.tfDateF); await loadDashboard(); renderTracker('tfTracker'); if(refresh) toast('Refreshed','ok'); }
 function tfFilmedToday(){ var m={}; (tfTickRows||[]).forEach(function(t){ var a=t.account||''; if(a) m[a]=(m[a]||0)+(t.count||0); }); return m; }
 function renderTracker(elId){
   var el=document.getElementById(elId); if(!el) return;
@@ -2116,6 +2124,7 @@ function renderToFilm(){
   var card=document.getElementById('toFilmCard'); if(!card) return;
   card.style.display='';
   if(!state.tfAcct)state.tfAcct='all';
+  if(!state.tfDateF)state.tfDateF='7d';
   var accts=(state.tfAcct==='all')?tfAcctHandles():[state.tfAcct];
   var planned=[]; accts.forEach(function(a){ planned=planned.concat(tfPlan(a)); });
   var pf=(state.tfProd||'').toLowerCase().trim();
@@ -2124,17 +2133,19 @@ function renderToFilm(){
   var todo=planned.filter(function(x){return (tfTicks[x.key]||0)<x.target;});
   if(state.tfDateF && state.tfDateF!=='all') todo=todo.filter(tfDateMatch);
   var tabs=[['all','All']].concat(tfAccts().map(function(a){return [a.handle,(a.label||a.handle)+' ('+(a.quota||0)+'/day)'];}));
-  var seg='<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:4px 0 18px">'
+  var seg='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 18px">'
     +'<div class="nx-seg" style="margin:0">'+tabs.map(function(o){return '<button class="'+(o[0]===state.tfAcct?'on':'')+'" onclick="setTfAcct(\''+o[0]+'\')">'+esc(o[1])+'</button>';}).join('')+'</div>'
-    +'<div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+nxDateBar(state.tfDateF,'setTfDateF','')
-    +'<button class="nx-mini" onclick="tfManageAccts()">Accounts</button></div></div>';
-  var emptyMsg=(state.tfDateF&&state.tfDateF!=='all')?'Nothing surfaced for this date -- try All time.':'Nothing to film right now -- mark products owned or wait for today\'s scrape.';
+    +'<button class="nx-mini" onclick="tfManageAccts()">Accounts</button>'
+    +'<div style="margin-left:auto">'+nxDateBar(state.tfDateF,'setTfDateF',{includeAll:false})+'</div></div>';
+  var emptyMsg=(state.tfDateF&&state.tfDateF!=='7d')?'Nothing surfaced for this date -- try Last 7 days.':'Nothing to film right now -- mark products owned or wait for today\'s scrape.';
   var rows=todo.length?todo.slice(0,40).map(nxTfRow2).join(''):'<div class="nx-h2sub" style="padding:6px 0">'+emptyMsg+'</div>';
   var samples=tfSamples();
   var srows=samples.length?samples.map(nxSampleRow).join(''):'<div class="nx-h2sub" style="padding:6px 0">Nothing scraped from Social One today yet -- run the videos scraper.</div>';
+  var skipped=Object.keys(tfSamplePicks).filter(function(k){return tfSamplePicks[k]==='no';}).length;
+  var sampSub='Trending products you do not own yet.'+(skipped?(' &middot; <a onclick="sampleResetNo()" style="cursor:pointer;color:var(--blue)">'+skipped+' declined, reset</a>'):'');
   card.innerHTML=seg
     +'<div class="nx-h2">To film</div><div class="nx-h2sub">Owned products with a winning video in the last 14 days. Winning products take ~60% of filming.</div>'+rows
-    +'<div class="nx-h2" style="margin-top:26px">Request samples</div><div class="nx-h2sub">Trending products you do not own yet.</div>'+srows;
+    +'<div class="nx-h2" style="margin-top:26px">Request samples</div><div class="nx-h2sub">'+sampSub+'</div>'+srows;
   try{ [].slice.call(card.querySelectorAll('.nx-vthimg')).forEach(function(im){ var v=im.getAttribute('data-vid'),u=im.getAttribute('data-url'); if(v&&u) fetchThumb(v,u,im); }); }catch(e){}
   try{ setFilmedMetric(); }catch(e){}
 }
@@ -2171,8 +2182,8 @@ function nxTfRow2(x){
 }
 function nxSampleRow(x){
   var yes=x.decision==='yes';
-  var btn=yes?'<button class="nx-mini" style="color:var(--cyan);border-color:var(--cyan)" onclick="sampleDecide(\''+x.pid+'\',\'\')">Ordering</button>'
-    :'<button class="nx-mini" onclick="sampleDecide(\''+x.pid+'\',\'yes\')">Request</button>';
+  var btn=yes?'<button class="nx-mini nx-done" onclick="sampleDecide(\''+x.pid+'\',\'\')">Ordering</button>'
+    :'<button class="nx-mini" onclick="sampleDecide(\''+x.pid+'\',\'yes\')">Request</button><button class="nx-mini nx-decline" title="Decline" onclick="sampleDecide(\''+x.pid+'\',\'no\')">Decline</button>';
   return '<div class="nx-row">'+nxThumb(x.pid,x.pname)
     +'<div style="flex:1;min-width:0"><div class="nx-nm">'+esc(x.pname||'(product)')+'</div>'
     +'<div class="nx-meta">'+(x.gmv?('&#163;'+tfFmt(x.gmv)+' GMV &middot; '):'')+tfFmt(x.views)+' views'+(x.days!=null?(' &middot; '+tfRecency(x.days)):'')+'</div></div>'
@@ -2190,14 +2201,16 @@ function tfFilmStep(key,n,pid,acct,angle){
 function tfDayOffset(n){ var d=new Date(Date.now()-n*86400000); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
 function tfYesterday(){ return tfDayOffset(1); }
 function nxDateMatchDay(d,f){ if(!f||f==='all')return true; if(!d)return false; if(f==='today')return d===tfToday(); if(f==='yesterday')return d===tfYesterday(); if(f==='7d')return d>=tfDayOffset(6); return d===f; }
-function nxDateBar(cur,fn,label){
-  cur=cur||'all';
+function nxDateBar(cur,fn,opts){
+  opts=opts||{}; var fb=opts.includeAll?'all':'7d'; cur=cur||fb;
   function b(v,l){ return '<button class="'+(cur===v?'on':'')+'" onclick="'+fn+'(\''+v+'\')">'+l+'</button>'; }
   var spec=(cur!=='all'&&cur!=='today'&&cur!=='yesterday'&&cur!=='7d')?cur:'';
-  return '<div class="nx-datebar">'+(label?'<span class="nx-dlab">'+label+'</span>':'')+'<div class="nx-seg nx-seg-sm">'
-    +b('all','All time')+b('today','Today')+b('yesterday','Yesterday')+b('7d','Last 7 days')
-    +'</div><input type="date" class="nx-date'+(spec?' on':'')+'" value="'+spec+'" max="'+tfToday()+'" onchange="'+fn+'(this.value||\'all\')"></div>';
+  var btns=(opts.includeAll?b('all','All time'):'')+b('today','Today')+b('yesterday','Yesterday')+b('7d','Last 7 days');
+  var cal='<span class="nx-calwrap"><button type="button" class="nx-cal'+(spec?' on':'')+'" title="'+(spec||'Pick a date')+'" onclick="nxOpenPicker(this)"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-calendar"></use></svg></button>'
+    +'<input type="date" class="nx-caldate" value="'+spec+'" max="'+tfToday()+'" onchange="'+fn+'(this.value||\''+fb+'\')"></span>';
+  return '<div class="nx-datebar"><div class="nx-seg nx-seg-sm">'+btns+'</div>'+cal+'</div>';
 }
+function nxOpenPicker(btn){ try{ var i=btn.parentNode.querySelector('input.nx-caldate'); if(!i)return; if(i.showPicker) i.showPicker(); else { i.focus(); i.click(); } }catch(e){} }
 function tfDayForFilter(f){ if(!f||f==='all'||f==='7d'||f==='today') return tfToday(); if(f==='yesterday') return tfYesterday(); return f; }
 async function setTfDateF(v){ state.tfDateF=v; state.tfDay=tfDayForFilter(v); await loadTicks(); renderToFilm(); renderTracker('tfTracker'); }
 function tfDateMatch(x){ return nxDateMatchDay(x.seenDay||x.scrapedDay||'', state.tfDateF); }
@@ -2487,7 +2500,7 @@ function renderWatch(){
   var cEl=document.getElementById('wCreators');
   if(cEl) cEl.innerHTML=watchState.creators.length? watchState.creators.map(function(c){ return wCreatorCard(c, flagByC[c.id]||0); }).join('')
     : '<div class="empty"><div>No creators yet. Tap <b>Add creator</b> and paste a TikTok profile URL to start watching.</div></div>';
-  var bar=document.getElementById('wDateBar'); if(bar){ bar.innerHTML=nxDateBar(watchState.dateF,'setWatchDateF',''); bar.style.display=(watchState.tab==='flagged')?'':'none'; }
+  var bar=document.getElementById('wDateBar'); if(bar){ bar.innerHTML=nxDateBar(watchState.dateF,'setWatchDateF',{includeAll:true}); bar.style.display=(watchState.tab==='flagged')?'':'none'; }
   var list=watchState.videos.filter(wDateMatch);
   var fEl=document.getElementById('wFlagged');
   if(fEl) fEl.innerHTML=list.length? list.map(wVideoCard).join('')
