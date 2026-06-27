@@ -1811,12 +1811,28 @@ function renderTracker(elId){
       +'<div class="nx-bar"><i style="width:'+pct+'%"></i></div></div>';
   }).join('')+'</div>';
 }
+// Build the list of candidate product-image URLs, best first. The scraper sometimes
+// stores a Social One placeholder (discord.png via /_next/image) in details.image_url --
+// ignore that and prefer the canonical S3 image keyed by social1_id.
+function prodImgUrls(p){
+  p=p||{}; var d=p.details||{}; var out=[];
+  if(d.social1_id) out.push('https://social-listening-images.s3.us-east-2.amazonaws.com/products/'+d.social1_id+'.jpg');
+  var u=d.image_url||'';
+  if(u && u.indexOf('discord')<0 && u.indexOf('/_next/image')<0) out.push(u);
+  return out;
+}
+// Walk the fallback chain on load error; when all candidates fail, remove the img so the
+// letter avatar shows (never a broken-image icon).
+function nxImgError(img){
+  try{ var fb=(img.getAttribute('data-fb')||'').split('|').filter(Boolean);
+    if(fb.length){ var n=fb.shift(); img.setAttribute('data-fb',fb.join('|')); img.src=n; }
+    else { img.remove(); } }catch(e){ try{ img.remove(); }catch(_){} }
+}
 function nxThumb(pid,name){
-  var p=tfProduct(pid)||{}; var u=(p.details&&p.details.image_url)||'';
-  if(p.details&&p.details.social1_id) u=u||('https://social-listening-images.s3.us-east-2.amazonaws.com/products/'+p.details.social1_id+'.jpg');
+  var p=tfProduct(pid)||{}; var urls=prodImgUrls(p);
   var ltr=esc(((name||'?').replace(/[^A-Za-z0-9]/g,'')[0]||'?').toUpperCase());
-  if(u) return '<div class="nx-thumb" style="background:#2a2030">'+ltr+'<img src="'+esc(u)+'" referrerpolicy="no-referrer" onerror="this.remove()"></div>';
-  return '<div class="nx-thumb" style="background:#3a2a33">'+ltr+'</div>';
+  if(!urls.length) return '<div class="nx-thumb" style="background:#3a2a33">'+ltr+'</div>';
+  return '<div class="nx-thumb" style="background:#2a2030">'+ltr+'<img src="'+esc(urls[0])+'" referrerpolicy="no-referrer" data-fb="'+esc(urls.slice(1).join('|'))+'" onerror="nxImgError(this)"></div>';
 }
 function nxTfRow(x,withFilmed){
   var p=tfProduct(x.pid)||{};
