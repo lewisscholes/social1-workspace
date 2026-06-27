@@ -3394,6 +3394,7 @@ async function loadEditor(){
     if(!signed[v.id]){const {data:s}=await sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600);if(s?.signedUrl)signed[v.id]=s.signedUrl;}
   }
   swRender();
+  swEnsureSigned(8);   // keep a wider window of upcoming clips signed + warmed in the background
 }
 
 function swRender(){
@@ -3413,7 +3414,7 @@ function swRender(){
           const sc=1-depth*0.035; const ty=depth*9;
           return `<div class="sw-card ${isTop?'is-top':''}" data-id="${v.id}" data-idx="${swIdx+i}"
             style="transform:scale(${sc}) translateY(${ty}px);z-index:${10-depth};${!isTop?'pointer-events:none':''}">
-            ${signed[v.id]?`<video src="${signed[v.id]}" autoplay muted loop playsinline></video>`:`<div class="sw-card-ph">Loading…</div>`}
+            ${signed[v.id]?`<video src="${signed[v.id]}" autoplay muted loop playsinline preload="auto"></video>`:`<div class="sw-card-ph">Loading…</div>`}
             ${swOverlayHtml(v)}
           </div>`;
         }).join('')}
@@ -3527,11 +3528,36 @@ function swFly(dir){
 
 function swAdvance(){
   swIdx++;
-  // Preload next card's URL
-  const next=swVids[swIdx+2];
-  if(next&&!signed[next.id]) sb.storage.from(BUCKET).createSignedUrl(previewPath(next),3600).then(({data:s})=>{if(s?.signedUrl)signed[next.id]=s.signedUrl;});
   swRender();
+  swEnsureSigned(6);   // keep a wider window of upcoming clips signed + warmed so the next swipes are instant
 }
+// ---- Deck preloading: always keep the next few clips ready so swiping never waits on the network ----
+function mteIsOpen(){ const m=document.getElementById('mte'); return !!(m&&m.classList.contains('open')); }
+var swWarmPool={};   // id -> hidden <video> quietly buffering an upcoming clip
+async function swEnsureSigned(n){
+  n=n||6;
+  const need=[]; for(let i=0;i<n;i++){ const v=swVids[swIdx+i]; if(v&&!signed[v.id]) need.push({v:v,i:i}); }
+  if(need.length){
+    await Promise.all(need.map(async o=>{ try{ const {data:s}=await sb.storage.from(BUCKET).createSignedUrl(previewPath(o.v),3600); if(s&&s.signedUrl) signed[o.v.id]=s.signedUrl; }catch(e){} }));
+    // only repaint if a *visible* card (top 3) just gained its URL -> avoids restarting the playing top video
+    const affectedVisible=need.some(o=>o.i<3 && signed[o.v.id]);
+    if(affectedVisible && !mteIsOpen()){ try{ swRender(); }catch(e){} }
+  }
+  swWarm();
+}
+function swWarm(){
+  if(mteIsOpen()) return;   // never compete with the editor's player for decoders/bandwidth
+  const WIN=2;   // warm just the next couple (iOS limits how many video decoders can be live)
+  for(let i=1;i<=WIN;i++){ const v=swVids[swIdx+i]; if(!v) continue; const u=signed[v.id]; if(!u||swWarmPool[v.id]) continue;
+    const pv=document.createElement('video'); pv.muted=true; pv.playsInline=true; pv.preload='auto'; pv.src=u;
+    pv.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
+    try{ pv.load(); }catch(e){}
+    document.body.appendChild(pv); swWarmPool[v.id]=pv;
+  }
+  // free anything outside the warm window so memory/decoders stay bounded
+  Object.keys(swWarmPool).forEach(id=>{ const idx=swVids.findIndex(x=>x.id===id); if(idx<swIdx || idx>swIdx+WIN){ try{ const el=swWarmPool[id]; el.pause(); el.removeAttribute('src'); el.load(); el.remove(); }catch(e){} delete swWarmPool[id]; } });
+}
+function swClearWarm(){ Object.keys(swWarmPool).forEach(id=>{ try{ const el=swWarmPool[id]; el.pause(); el.removeAttribute('src'); el.load(); el.remove(); }catch(e){} delete swWarmPool[id]; }); }
 // Skip: move the front clip ~4 places back in the pile (not to the very end), so something else can jump the queue.
 function swSkip(){
   if(swVids.length - swIdx < 2){ try{ toast('Nothing to skip past','ok'); }catch(e){} return; }
@@ -3542,6 +3568,7 @@ function swSkip(){
     swVids.splice(insertAt,0,cur);
     for(let i=0;i<3;i++){ const v=swVids[swIdx+i]; if(v&&!signed[v.id]) sb.storage.from(BUCKET).createSignedUrl(previewPath(v),3600).then(({data:s})=>{ if(s&&s.signedUrl){ signed[v.id]=s.signedUrl; swRender(); } }).catch(()=>{}); }
     swRender();
+    swEnsureSigned(6);
     try{ toast('Skipped -- it will come back round shortly','ok'); }catch(e){}
   };
   if(card){ card.classList.add('fly-left'); setTimeout(doMove,360); } else { doMove(); }
@@ -3824,6 +3851,7 @@ async function mteOpen(id){
   document.getElementById('mteSheet').classList.remove('open');
   document.getElementById('mte').classList.add('open');
   document.querySelectorAll('.sw-card video').forEach(x=>{ try{x.pause(); x.removeAttribute('src'); x.load();}catch(e){} });   // fully release the deck's video decoders -> the editor's player isn't starved (no multi-second play stalls)
+  try{ swClearWarm(); }catch(e){}   // also release the background warm-pool so the editor has all the decoders/bandwidth
   mteLockScroll(true);
   mteBindTl();
   requestAnimationFrame(mteRelayout); setTimeout(mteRelayout,160); setTimeout(mteRelayout,520);   // re-fit once the native webview reports the true width (fixes scrub/zoom/select/waveform)
@@ -3847,6 +3875,7 @@ function mteClose(){
   document.getElementById('mteSheet').classList.remove('open');
   mteLockScroll(false);
   try{ swRender(); }catch(e){}   // rebuild the deck (restores the video sources we released on open)
+  try{ swEnsureSigned(6); }catch(e){}   // re-warm the upcoming clips so the deck is instantly swipeable again
 }
 
 // ---- Instant seeking: keep the (small 480p) proxy fully in memory as a blob, so every
