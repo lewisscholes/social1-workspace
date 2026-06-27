@@ -684,6 +684,48 @@ html,body{overscroll-behavior:none;}
 .wv-btn.pink{border-color:var(--blue);color:var(--blue)}
 .wv-btn svg{width:14px;height:14px;stroke:currentColor;fill:none}
 @media(max-width:820px){.nx-stats{grid-template-columns:repeat(2,1fr)}.nx-cols{grid-template-columns:1fr}.wv-grid{grid-template-columns:1fr}}
+/* ---- Retainers ---- */
+.rt-month{align-self:center;font-size:13px;color:var(--muted);font-weight:600}
+.rt-month b{color:var(--ink)}
+.rt-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:26px}
+.rt-stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.rt-stat .l{font-size:12.5px;color:var(--muted);margin-bottom:9px;font-weight:600}
+.rt-stat .v{font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.rt-stat .v .of{font-size:17px;color:var(--muted);font-weight:700;margin-left:3px}
+.rt-stat .d{font-size:12px;margin-top:7px;font-weight:600;color:var(--muted)}
+.rt-stat.accent .v{color:var(--blue)}
+.rt-stat.cyan .v{color:var(--cyan)}
+.rt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+.rt-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+.rt-card.done{border-color:rgba(47,208,138,.5)}
+.rt-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.rt-logo{width:42px;height:42px;border-radius:11px;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:#fff;background:linear-gradient(160deg,#3a2233,#1a1320)}
+.rt-brand{font-weight:800;font-size:15.5px}
+.rt-bsub{display:flex;align-items:center;gap:7px;margin-top:5px;flex-wrap:wrap}
+.rt-amt{font-size:13px;font-weight:800}
+.rt-amt small{color:var(--muted);font-weight:600;font-size:11px}
+.rt-x{margin-left:auto;color:#6b6b73;background:transparent;border:0;cursor:pointer;font-size:18px;line-height:1;padding:2px 7px;border-radius:7px}
+.rt-x:hover{color:var(--ink);background:#1f1f24}
+.rt-prog{display:flex;align-items:baseline;justify-content:space-between;font-size:13px;font-weight:700;margin:2px 0 8px}
+.rt-prog .complete{color:var(--green)}
+.rt-prog .pct{color:var(--muted)}
+.rt-bar{height:8px;background:var(--line2);border-radius:20px;overflow:hidden;margin-bottom:14px}
+.rt-bar i{display:block;height:100%;background:var(--grad);border-radius:20px;transition:width .25s ease}
+.rt-bar i.complete{background:linear-gradient(135deg,#2fd08a,#48e3a3)}
+.rt-boxes{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:7px}
+.rt-box{aspect-ratio:1/1;min-height:34px;border-radius:9px;border:1px solid var(--line2);background:var(--panel);color:var(--muted);font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.rt-box:hover{border-color:var(--muted)}
+.rt-box.on{background:var(--grad);border-color:transparent;color:#fff}
+.rt-box.on svg{width:15px;height:15px;stroke:#fff;fill:none;stroke-width:3}
+.rt-addcard{display:flex;align-items:center;justify-content:center;border:1.5px dashed var(--line);border-radius:16px;min-height:170px;color:var(--muted);font-weight:700;font-size:13.5px;cursor:pointer;gap:8px}
+.rt-addcard:hover{border-color:var(--blue);color:var(--blue)}
+.rt-addcard svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2}
+.rt-field{margin-bottom:13px}
+.rt-field label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px}
+.rt-field input{width:100%;background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;color:var(--ink);font:inherit;font-size:14px;box-sizing:border-box}
+.rt-field input:focus{outline:none;border-color:var(--blue)}
+.rt-row2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+@media(max-width:820px){.rt-stats{grid-template-columns:1fr;gap:10px}.rt-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body><svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><symbol id="i-arrow-down" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></symbol><symbol id="i-arrow-right" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></symbol><symbol id="i-arrow-up" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></symbol><symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5.76.76 1.23 1.52 1.41 2.5"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol><symbol id="i-cap" viewBox="0 0 24 24"><path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 2.5 2 6 2s6-1 6-2v-5"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol><symbol id="i-check-circle" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol><symbol id="i-chevron-up" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol><symbol id="i-corner" viewBox="0 0 24 24"><polyline points="15 10 20 15 15 20"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></symbol><symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol><symbol id="i-film" viewBox="0 0 24 24"><rect x="2.5" y="3" width="19" height="18" rx="2"/><line x1="7.5" y1="3" x2="7.5" y2="21"/><line x1="16.5" y1="3" x2="16.5" y2="21"/><line x1="2.5" y1="12" x2="21.5" y2="12"/><line x1="2.5" y1="7.5" x2="7.5" y2="7.5"/><line x1="2.5" y1="16.5" x2="7.5" y2="16.5"/><line x1="16.5" y1="16.5" x2="21.5" y2="16.5"/><line x1="16.5" y1="7.5" x2="21.5" y2="7.5"/></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></symbol><symbol id="i-grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1.4" fill="currentColor" stroke="none"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol><symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.59-1.41L12 12l-4.41 4.42A2 2 0 0 0 7 17.83V22"/><path d="M7 2v4.17a2 2 0 0 0 .59 1.41L12 12l4.41-4.42A2 2 0 0 0 17 6.17V2"/></symbol><symbol id="i-inbox" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></symbol><symbol id="i-message" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol><symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"/></symbol><symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol><symbol id="i-pencil" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20" fill="currentColor" stroke="none"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-7.7L21 8"/><path d="M21 3v5h-5"/></symbol><symbol id="i-repeat" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></symbol><symbol id="i-rows" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="1"/><rect x="3" y="13" width="18" height="7" rx="1"/></symbol><symbol id="i-ruler" viewBox="0 0 24 24"><path d="M21.3 8.7 8.7 21.3a1 1 0 0 1-1.4 0l-4.6-4.6a1 1 0 0 1 0-1.4L15.3 2.7a1 1 0 0 1 1.4 0l4.6 4.6a1 1 0 0 1 0 1.4Z"/><path d="m7.5 10.5 2 2"/><path d="m10.5 7.5 2 2"/><path d="m13.5 4.5 2 2"/></symbol><symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9"/></symbol><symbol id="i-sparkles" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8L4.3 10.7l5.8 1.9L12 18.4l1.9-5.8 5.8-1.9-5.8-1.9z" fill="currentColor" stroke="none"/><path d="M19 4v3"/><path d="M17.5 5.5h3"/></symbol><symbol id="i-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26" fill="currentColor" stroke="none"/></symbol><symbol id="i-table" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="12" y1="3" x2="12" y2="21"/></symbol><symbol id="i-tag" viewBox="0 0 24 24"><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol><symbol id="i-type" viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></symbol><symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a4 4 0 0 1 0 8h-1"/></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol><symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol><symbol id="i-volume" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></symbol><symbol id="i-volume-x" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/></symbol><symbol id="i-wand" viewBox="0 0 24 24"><path d="m3 21 18-18"/><path d="M14 7l3 3"/><path d="M5 6v3"/><path d="M3.5 7.5h3"/><path d="M19 14v3"/><path d="M17.5 15.5h3"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol><symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol></svg>
@@ -719,6 +761,7 @@ html,body{overscroll-behavior:none;}
       <button class="nav-btn" id="nav-tofilm" onclick="showView('tofilm')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-film"></use></svg></span> To film</button>
       <button class="nav-btn" id="nav-watch" onclick="showView('watch')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-star"></use></svg></span> Watch list</button>
       <button class="nav-btn" id="nav-products" onclick="showView('products')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tag"></use></svg></span> Products</button>
+      <button class="nav-btn" id="nav-retainers" onclick="showView('retainers')"><span class="ic"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M7 15h4"/></svg></span> Retainers</button>
     </div>
     <div class="nav-grow"></div>
     <div class="nav-sep"></div>
@@ -1227,6 +1270,21 @@ html,body{overscroll-behavior:none;}
         <div id="ownAccList"></div>
       </div>
     </section>
+
+    <section id="view-retainers" class="hide">
+      <div class="head">
+        <div>
+          <h2 class="h-title">Retainers</h2>
+          <div class="h-sub">Track your brand retainers and tick off each deliverable through the month.</div>
+        </div>
+        <div style="flex:1"></div>
+        <span class="rt-month" id="rtMonthLabel"></span>
+        <button class="btn" onclick="rtOpenAdd()"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-2px"><use href="#i-plus"></use></svg> Add retainer</button>
+      </div>
+      <div class="rt-stats" id="rtStats"></div>
+      <div class="nx-h2" style="margin-bottom:12px">Brand retainers</div>
+      <div class="rt-grid" id="rtGrid"></div>
+    </section>
   </main>
 
   <nav class="bottomnav">
@@ -1244,6 +1302,7 @@ html,body{overscroll-behavior:none;}
     <div class="tsheet-sub">Everything outside the daily workflow</div>
     <button class="tsheet-item" onclick="toolsGo('scraper')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-inbox"></use></svg></span> Scraper Results</button>
     <button class="tsheet-item" onclick="toolsGo('files')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-folder"></use></svg></span> Files</button>
+    <button class="tsheet-item" id="tsheet-retainers" onclick="toolsGo('retainers')"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M7 15h4"/></svg></span> Retainers</button>
     <button class="tsheet-item" id="tsheet-team" onclick="toolsGo('team')" style="display:none"><span class="ti"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-users"></use></svg></span> Team &amp; Access</button>
   </div>
 </div>
@@ -1272,13 +1331,14 @@ function prodName(id){ const p=state.products.find(x=>x.id===id); return p?p.nam
 // ---------- nav ----------
 function showView(v){
   state.currentView=v;
-  ['dashboard','tofilm','bank','files','products','priority','watch','scraper','settings','editor','schedule','overlays','training','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
+  ['dashboard','tofilm','bank','files','products','priority','watch','retainers','scraper','settings','editor','schedule','overlays','training','team'].forEach(n=>{ const s=document.getElementById('view-'+n); if(s) s.classList.toggle('hide', n!==v); const b=document.getElementById('nav-'+n); if(b) b.classList.toggle('active', n===v); const bb=document.getElementById('bnav-'+n); if(bb) bb.classList.toggle('active', n===v); });
   var na=document.getElementById('nav-access'); if(na) na.classList.toggle('active', v==='team');
   closeDrawer(); closeToolsSheet();
   if(v==='dashboard') loadDashboard();
   if(v==='tofilm') loadToFilm();
   if(v==='files') loadFiles();
   if(v==='products') loadProductsView();
+  if(v==='retainers') loadRetainers();
   if(v==='priority') loadPriorityView();
   if(v==='watch') loadWatch();
   if(v==='scraper') loadScraperView();
@@ -2387,6 +2447,73 @@ async function ownAccAdd(){
 }
 async function ownAccRemove(id){
   try{ await sb.from('watch_creators').update({active:false}).eq('id',id); ownAccLoad(); toast('Removed','ok'); }catch(e){ toast('Failed','err'); }
+}
+// ---------- RETAINERS (brand deliverables tracker, monthly) ----------
+function rtMonth(){ var d=new Date(); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,7); }
+function rtMonthLabel(){ try{ return new Date(rtMonth()+'-01T00:00:00').toLocaleDateString(undefined,{month:'long',year:'numeric'}); }catch(e){ return rtMonth(); } }
+function rtGbp(n){ n=+n||0; return '£'+n.toLocaleString('en-GB'); }
+function rtJs(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/[\r\n]+/g,' '); }
+function rtDone(id){ return (state.rtTicks&&state.rtTicks[id])||0; }
+async function loadRetainers(){
+  try{ var r=await sb.from('retainers').select('*').eq('active',true).order('created_at',{ascending:true}); state.retainers=r.data||[]; }catch(e){ state.retainers=[]; }
+  try{ var t=await sb.from('retainer_ticks').select('retainer_id,count').eq('month',rtMonth()); state.rtTicks={}; (t.data||[]).forEach(function(x){ state.rtTicks[x.retainer_id]=x.count||0; }); }catch(e){ state.rtTicks={}; }
+  renderRetainers();
+}
+function renderRetainers(){
+  var ml=document.getElementById('rtMonthLabel'); if(ml) ml.innerHTML='Month <b>'+esc(rtMonthLabel())+'</b>';
+  var list=state.retainers||[];
+  var paid=list.reduce(function(s,r){return s+(+r.amount||0);},0);
+  var done=list.reduce(function(s,r){return s+rtDone(r.id);},0);
+  var total=list.reduce(function(s,r){return s+(+r.quota||0);},0);
+  var st=document.getElementById('rtStats');
+  if(st) st.innerHTML=
+     '<div class="rt-stat accent"><div class="l">Paid in retainers this month</div><div class="v">'+rtGbp(paid)+'</div><div class="d">'+list.length+' retainer'+(list.length!==1?'s':'')+'</div></div>'
+    +'<div class="rt-stat cyan"><div class="l">Videos delivered</div><div class="v">'+done+'<span class="of">/ '+total+'</span></div><div class="d">across all brands</div></div>'
+    +'<div class="rt-stat"><div class="l">Brands worked with</div><div class="v">'+list.length+'</div><div class="d">active retainers</div></div>';
+  var g=document.getElementById('rtGrid');
+  if(g) g.innerHTML=(list.length?list.map(rtCard).join(''):'')+'<div class="rt-addcard" onclick="rtOpenAdd()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add retainer</div>';
+}
+function rtCard(r){
+  var done=rtDone(r.id), total=+r.quota||0, pct=total?Math.round(done/total*100):0, complete=total>0&&done>=total;
+  var ltr=esc(((r.brand||'?').replace(/[^A-Za-z0-9]/g,'')[0]||'?').toUpperCase());
+  var boxes='';
+  for(var i=1;i<=total;i++){ var on=i<=done; boxes+='<button class="rt-box'+(on?' on':'')+'" onclick="rtToggle(\''+r.id+'\','+i+')">'+(on?'<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>':i)+'</button>'; }
+  return '<div class="rt-card'+(complete?' done':'')+'">'
+    +'<div class="rt-top"><div class="rt-logo">'+ltr+'</div>'
+    +'<div style="min-width:0"><div class="rt-brand">'+esc(r.brand||'(brand)')+'</div>'
+    +'<div class="rt-bsub">'+(r.account?'<span class="nx-pill acc">'+esc(r.account)+'</span> ':'')+'<span class="rt-amt">'+rtGbp(r.amount)+'<small>/mo</small></span></div></div>'
+    +'<button class="rt-x" title="Remove" onclick="rtRemove(\''+r.id+'\',\''+rtJs(r.brand)+'\')">&times;</button></div>'
+    +'<div class="rt-prog"><span class="'+(complete?'complete':'')+'">'+done+' of '+total+' delivered'+(complete?' &#10003;':'')+'</span><span class="pct">'+pct+'%</span></div>'
+    +'<div class="rt-bar"><i class="'+(complete?'complete':'')+'" style="width:'+pct+'%"></i></div>'
+    +'<div class="rt-boxes">'+boxes+'</div></div>';
+}
+async function rtToggle(id,n){
+  var prev=rtDone(id); var c=(prev===n)?n-1:n; if(c<0)c=0;
+  state.rtTicks=state.rtTicks||{}; state.rtTicks[id]=c; renderRetainers();
+  try{ await sb.from('retainer_ticks').upsert({retainer_id:id,month:rtMonth(),count:c,updated_at:new Date().toISOString()},{onConflict:'retainer_id,month'}); }catch(e){ toast('Save failed','err'); }
+}
+function rtOpenAdd(){
+  showModal('<div style="text-align:left"><h3 style="margin:0 0 4px">Add retainer</h3>'
+    +'<p class="h-sub" style="margin:0 0 14px;font-size:13px">A brand you have a monthly deliverable deal with.</p>'
+    +'<div class="rt-field"><label>Brand name</label><input id="rtBrand" placeholder="e.g. Medicube"></div>'
+    +'<div class="rt-field"><label>Account filming for them</label><input id="rtAcct" placeholder="@yourhandle"></div>'
+    +'<div class="rt-row2"><div class="rt-field"><label>Paying (£ / month)</label><input id="rtAmt" inputmode="numeric" placeholder="1500"></div>'
+    +'<div class="rt-field"><label>Videos to deliver</label><input id="rtQty" inputmode="numeric" placeholder="10"></div></div>'
+    +'<div style="display:flex;gap:9px;margin-top:16px"><button class="btn" onclick="rtSaveAdd()">Add retainer</button><button class="btn ghost" onclick="closeModal()">Cancel</button></div></div>');
+  setTimeout(function(){ var e=document.getElementById('rtBrand'); if(e)e.focus(); },60);
+}
+async function rtSaveAdd(){
+  var brand=(val('rtBrand')||'').trim(); if(!brand){ toast('Enter a brand name','err'); return; }
+  var acct=(val('rtAcct')||'').trim();
+  var amount=parseInt((val('rtAmt')||'').replace(/[^0-9]/g,''),10)||0;
+  var quota=parseInt((val('rtQty')||'').replace(/[^0-9]/g,''),10)||1;
+  try{ var res=await sb.from('retainers').insert({brand:brand,account:acct,amount:amount,quota:quota,active:true}); if(res.error)throw res.error;
+    closeModal(); toast('Retainer added','ok'); loadRetainers();
+  }catch(e){ toast('Could not add: '+((e&&e.message)||e),'err'); }
+}
+async function rtRemove(id,brand){
+  if(!confirm('Remove the retainer for '+(brand||'this brand')+'? (kept for history, hidden from the list)')) return;
+  try{ await sb.from('retainers').update({active:false}).eq('id',id); toast('Removed','ok'); loadRetainers(); }catch(e){ toast('Failed','err'); }
 }
 async function saveEmailSettings(){
   var email=(val('setEmail')||'').trim();
