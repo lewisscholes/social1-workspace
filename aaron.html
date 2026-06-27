@@ -642,13 +642,32 @@ html,body{overscroll-behavior:none;}
 .nx-seg{display:inline-flex;gap:3px;background:var(--line2);border-radius:11px;padding:4px;margin:4px 0 18px;flex-wrap:wrap}
 .nx-seg button{border:0;background:transparent;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
 .nx-seg button.on{background:var(--blue);color:#fff}
-.nx-datebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:2px 0 16px}
+.nx-datebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0}
 .nx-dlab{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700}
 .nx-seg-sm{margin:0}
 .nx-seg-sm button{padding:6px 11px;font-size:12px}
 .nx-date{background:var(--panel);border:1px solid var(--line2);border-radius:9px;padding:6px 10px;color:var(--ink);font:inherit;font-size:12.5px;color-scheme:dark;cursor:pointer}
 .nx-date.on{border-color:var(--blue);color:var(--blue)}
-@media(max-width:820px){.nx-stats{grid-template-columns:repeat(2,1fr)}.nx-cols{grid-template-columns:1fr}}
+.wv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
+.wv-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.wv-top{display:flex;gap:14px;padding:14px}
+.wv-thumb{position:relative;width:118px;flex:none;aspect-ratio:9/16;border-radius:11px;overflow:hidden;background:linear-gradient(160deg,#5b2440,#2a1f3a 60%,#0e1019)}
+.wv-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.wv-new{position:absolute;left:8px;top:8px;background:var(--blue);color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;z-index:2;letter-spacing:.04em}
+.wv-vel{position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.66);color:#fff;font-weight:800;font-size:12.5px;padding:4px 8px;border-radius:8px;z-index:2;display:flex;align-items:center;gap:4px}
+.wv-vel svg{width:11px;height:11px;fill:#fff;stroke:none}
+.wv-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.wv-cap{font-size:14px;line-height:1.35;font-weight:600;max-height:76px;overflow:hidden}
+.wv-handle{font-size:12.5px;color:var(--muted)}
+.wv-meta{font-size:12.5px;color:var(--muted)}
+.wv-chip{align-self:flex-start;font-size:11.5px;font-weight:600;color:var(--muted);background:var(--line2);border-radius:8px;padding:4px 9px;margin-top:2px}
+.wv-chip.prod{color:var(--cyan);background:var(--cyan-soft)}
+.wv-actions{display:flex;gap:8px;flex-wrap:wrap;padding:11px 14px;border-top:1px solid var(--line)}
+.wv-btn{background:transparent;border:1px solid var(--line2);border-radius:9px;padding:8px 12px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.wv-btn:hover{border-color:var(--muted)}
+.wv-btn.pink{border-color:var(--blue);color:var(--blue)}
+.wv-btn svg{width:14px;height:14px;stroke:currentColor;fill:none}
+@media(max-width:820px){.nx-stats{grid-template-columns:repeat(2,1fr)}.nx-cols{grid-template-columns:1fr}.wv-grid{grid-template-columns:1fr}}
 </style>
 <style>
   .es-client{position:absolute;left:14px;bottom:14px;display:flex;align-items:center;gap:8px;color:#fff;font-size:13px;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.6);z-index:5}
@@ -1347,12 +1366,15 @@ a{color:#B0211A}
         <span style="flex:1"></span>
         <button class="btn" onclick="watchAddPrompt()"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-2px"><use href="#i-plus"></use></svg> Add creator</button>
       </div>
-      <div class="seg" id="wTabs" style="margin:14px 0 4px">
-        <button class="active" id="wtab-creators" onclick="setWatchTab('creators')">Watched creators</button>
-        <button id="wtab-flagged" onclick="setWatchTab('flagged')">Winning videos</button>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 4px">
+        <div class="seg" id="wTabs" style="margin:0">
+          <button class="active" id="wtab-creators" onclick="setWatchTab('creators')">Watched creators</button>
+          <button id="wtab-flagged" onclick="setWatchTab('flagged')">Winning videos</button>
+        </div>
+        <div id="wDateBar" style="margin-left:auto;display:none"></div>
       </div>
       <div id="wPaneCreators"><div id="wCreators" class="cards"></div></div>
-      <div id="wPaneFlagged" class="hide"><div id="wDateBar"></div><div id="wFlagged" class="cards"></div></div>
+      <div id="wPaneFlagged" class="hide"><div id="wFlagged" class="wv-grid"></div></div>
     </section>
 
     <section id="view-priority" class="hide">
@@ -1769,15 +1791,15 @@ async function loadDashboard(refresh){
   renderDashOverview();
   if(refresh) toast('Refreshed','ok');
 }
-async function loadToFilm(refresh){ await loadDashboard(); renderTracker('tfTracker'); if(refresh) toast('Refreshed','ok'); }
+async function loadToFilm(refresh){ state.tfDay=tfDayForFilter(state.tfDateF); await loadDashboard(); renderTracker('tfTracker'); if(refresh) toast('Refreshed','ok'); }
 function tfFilmedToday(){ var m={}; (tfTickRows||[]).forEach(function(t){ var a=t.account||''; if(a) m[a]=(m[a]||0)+(t.count||0); }); return m; }
 function renderTracker(elId){
   var el=document.getElementById(elId); if(!el) return;
-  var filmed=tfFilmedToday();
-  el.innerHTML='<div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 10px">Filming progress &middot; today</div><div class="nx-acct">'+tfAccts().map(function(a){
+  var filmed=tfFilmedToday(); var dl=tfDayLabel();
+  el.innerHTML='<div style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 10px">Filming progress &middot; '+esc(dl.toLowerCase())+'</div><div class="nx-acct">'+tfAccts().map(function(a){
     var f=filmed[a.handle]||0, q=a.quota||0, pct=q?Math.min(100,Math.round(f/q*100)):0;
     return '<div class="nx-acard"><div class="nm">'+esc(a.label||a.handle)+'</div>'
-      +'<div class="q">'+f+' of '+q+' filmed today'+(a.role?(' &middot; '+esc(a.role)):'')+'</div>'
+      +'<div class="q">'+f+' of '+q+' filmed'+(a.role?(' &middot; '+esc(a.role)):'')+'</div>'
       +'<div class="nx-bar"><i style="width:'+pct+'%"></i></div></div>';
   }).join('')+'</div>';
 }
@@ -2102,8 +2124,10 @@ function renderToFilm(){
   var todo=planned.filter(function(x){return (tfTicks[x.key]||0)<x.target;});
   if(state.tfDateF && state.tfDateF!=='all') todo=todo.filter(tfDateMatch);
   var tabs=[['all','All']].concat(tfAccts().map(function(a){return [a.handle,(a.label||a.handle)+' ('+(a.quota||0)+'/day)'];}));
-  var seg='<div class="nx-seg">'+tabs.map(function(o){return '<button class="'+(o[0]===state.tfAcct?'on':'')+'" onclick="setTfAcct(\''+o[0]+'\')">'+esc(o[1])+'</button>';}).join('')+'<button class="nx-mini" style="margin-left:auto" onclick="tfManageAccts()">Accounts</button></div>';
-  seg+=nxDateBar(state.tfDateF,'setTfDateF','Surfaced');
+  var seg='<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:4px 0 18px">'
+    +'<div class="nx-seg" style="margin:0">'+tabs.map(function(o){return '<button class="'+(o[0]===state.tfAcct?'on':'')+'" onclick="setTfAcct(\''+o[0]+'\')">'+esc(o[1])+'</button>';}).join('')+'</div>'
+    +'<div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+nxDateBar(state.tfDateF,'setTfDateF','')
+    +'<button class="nx-mini" onclick="tfManageAccts()">Accounts</button></div></div>';
   var emptyMsg=(state.tfDateF&&state.tfDateF!=='all')?'Nothing surfaced for this date -- try All time.':'Nothing to film right now -- mark products owned or wait for today\'s scrape.';
   var rows=todo.length?todo.slice(0,40).map(nxTfRow2).join(''):'<div class="nx-h2sub" style="padding:6px 0">'+emptyMsg+'</div>';
   var samples=tfSamples();
@@ -2170,11 +2194,12 @@ function nxDateBar(cur,fn,label){
   cur=cur||'all';
   function b(v,l){ return '<button class="'+(cur===v?'on':'')+'" onclick="'+fn+'(\''+v+'\')">'+l+'</button>'; }
   var spec=(cur!=='all'&&cur!=='today'&&cur!=='yesterday'&&cur!=='7d')?cur:'';
-  return '<div class="nx-datebar"><span class="nx-dlab">'+(label||'Date')+'</span><div class="nx-seg nx-seg-sm">'
+  return '<div class="nx-datebar">'+(label?'<span class="nx-dlab">'+label+'</span>':'')+'<div class="nx-seg nx-seg-sm">'
     +b('all','All time')+b('today','Today')+b('yesterday','Yesterday')+b('7d','Last 7 days')
     +'</div><input type="date" class="nx-date'+(spec?' on':'')+'" value="'+spec+'" max="'+tfToday()+'" onchange="'+fn+'(this.value||\'all\')"></div>';
 }
-function setTfDateF(v){ state.tfDateF=v; renderToFilm(); }
+function tfDayForFilter(f){ if(!f||f==='all'||f==='7d'||f==='today') return tfToday(); if(f==='yesterday') return tfYesterday(); return f; }
+async function setTfDateF(v){ state.tfDateF=v; state.tfDay=tfDayForFilter(v); await loadTicks(); renderToFilm(); renderTracker('tfTracker'); }
 function tfDateMatch(x){ return nxDateMatchDay(x.seenDay||x.scrapedDay||'', state.tfDateF); }
 function tfHistory(){
   var rows=(tfTickRows||[]).filter(function(t){return (t.count||0)>0;}).sort(function(a,b){return (b.count||0)-(a.count||0);});
@@ -2308,7 +2333,7 @@ function tfCard(x,mode){
 }
 async function tfSetTick(key,n,pid,acct,angle){
   var prev=tfTicks[key]||0; var c=(prev===n)?n-1:n; tfTicks[key]=c; tfWeek[key]=Math.max(0,(tfWeek[key]||0)+(c-prev)); renderToFilm();
-  try{ await sb.from('film_ticks').upsert({idea_key:key,day:tfToday(),count:c,product_uid:pid,account:acct,angle:String(angle||'').slice(0,120),updated_at:new Date().toISOString()},{onConflict:'idea_key,day'}); }catch(e){}
+  try{ await sb.from('film_ticks').upsert({idea_key:key,day:tfActiveDay(),count:c,product_uid:pid,account:acct,angle:String(angle||'').slice(0,120),updated_at:new Date().toISOString()},{onConflict:'idea_key,day'}); }catch(e){}
 }
 async function tfMarkOwned(pid){
   const {error}=await sb.from('products').update({owned:true}).eq('id',pid);
@@ -2456,17 +2481,17 @@ async function loadWatch(){
   try{ var v=await sb.from('watch_videos').select('*').eq('flagged',true).neq('status','dismissed').order('vel_24h',{ascending:false}).limit(60); watchState.videos=v.data||[]; }catch(e){ watchState.videos=[]; }
   renderWatch();
 }
-function setWatchTab(t){ watchState.tab=t; var a=document.getElementById('wtab-creators'),b=document.getElementById('wtab-flagged'); if(a)a.classList.toggle('active',t==='creators'); if(b)b.classList.toggle('active',t==='flagged'); var pc=document.getElementById('wPaneCreators'),pf=document.getElementById('wPaneFlagged'); if(pc)pc.classList.toggle('hide',t!=='creators'); if(pf)pf.classList.toggle('hide',t!=='flagged'); }
+function setWatchTab(t){ watchState.tab=t; var a=document.getElementById('wtab-creators'),b=document.getElementById('wtab-flagged'); if(a)a.classList.toggle('active',t==='creators'); if(b)b.classList.toggle('active',t==='flagged'); var pc=document.getElementById('wPaneCreators'),pf=document.getElementById('wPaneFlagged'); if(pc)pc.classList.toggle('hide',t!=='creators'); if(pf)pf.classList.toggle('hide',t!=='flagged'); var db=document.getElementById('wDateBar'); if(db)db.style.display=(t==='flagged')?'':'none'; }
 function renderWatch(){
   var flagByC={}; watchState.videos.forEach(function(v){ flagByC[v.creator_id]=(flagByC[v.creator_id]||0)+1; });
   var cEl=document.getElementById('wCreators');
   if(cEl) cEl.innerHTML=watchState.creators.length? watchState.creators.map(function(c){ return wCreatorCard(c, flagByC[c.id]||0); }).join('')
     : '<div class="empty"><div>No creators yet. Tap <b>Add creator</b> and paste a TikTok profile URL to start watching.</div></div>';
-  var bar=document.getElementById('wDateBar'); if(bar) bar.innerHTML=nxDateBar(watchState.dateF,'setWatchDateF','Flagged');
+  var bar=document.getElementById('wDateBar'); if(bar){ bar.innerHTML=nxDateBar(watchState.dateF,'setWatchDateF',''); bar.style.display=(watchState.tab==='flagged')?'':'none'; }
   var list=watchState.videos.filter(wDateMatch);
   var fEl=document.getElementById('wFlagged');
   if(fEl) fEl.innerHTML=list.length? list.map(wVideoCard).join('')
-    : '<div class="empty"><div>'+((watchState.dateF&&watchState.dateF!=='all')?('No winning videos flagged for this date. Try <b>All time</b>.'):('No breakout videos yet. Once a watched creator posts something gaining '+wNum(watchState.threshold)+'+ views in 24h, it appears here.'))+'</div></div>';
+    : '<div class="empty" style="grid-column:1/-1"><div>'+((watchState.dateF&&watchState.dateF!=='all')?('No winning videos flagged for this date. Try <b>All time</b>.'):('No breakout videos yet. Once a watched creator posts something gaining '+wNum(watchState.threshold)+'+ views in 24h, it appears here.'))+'</div></div>';
   if(fEl && list.length){ list.forEach(function(v){ var im=document.getElementById('wth_'+v.id); if(im && v.url) fetchThumb(v.tiktok_video_id||v.id, v.url, im); }); }
   var ft=document.getElementById('wtab-flagged'); if(ft) ft.textContent='Winning videos'+(list.length?(' ('+list.length+')'):'');
   var note=document.getElementById('wThreshNote'); if(note) note.textContent=watchState.creators.length+' creator'+(watchState.creators.length===1?'':'s')+' watched';
@@ -2492,20 +2517,22 @@ function wCreatorCard(c,flag){
     +'<button class="btn ghost sm" onclick="watchRemove(\''+c.id+'\')" title="Remove">&times;</button></div></div>';
 }
 function wVideoCard(v){
-  var prod=v.product_name?('<div class="h-sub" style="font-size:12px;margin:6px 0 8px">Product: <b style="color:var(--ink)">'+esc(v.product_name)+'</b></div>')
-    :'<div class="h-sub" style="font-size:12px;margin:6px 0 8px">Product not detected</div>';
-  return '<div class="card" style="padding:0;overflow:hidden">'
-    +'<div style="position:relative;aspect-ratio:9/16;max-height:220px;background:linear-gradient(160deg,#5b2440,#2a1f3a 60%,#0e1019);overflow:hidden">'
-    +'<img id="wth_'+esc(v.id)+'" referrerpolicy="no-referrer" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block">'
-    +'<span style="position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.62);color:#fff;font-weight:800;font-size:14px;padding:4px 8px;border-radius:7px">&#9650; +'+wNum(v.vel_24h)+' / 24h</span>'
-    +'<span style="position:absolute;right:8px;top:8px;background:#fe2c55;color:#fff;font-size:10px;font-weight:800;padding:3px 7px;border-radius:999px">NEW</span></div>'
-    +'<div style="padding:11px 12px"><div style="font-size:13px;line-height:1.35;max-height:36px;overflow:hidden">'+esc(v.caption||'(no caption)')+'</div>'
-    +'<div class="h-sub" style="font-size:12px;margin:5px 0 0">'+esc(v.handle||'')+' . '+wNum(v.views)+' total'+(v.posted_date?(' . '+esc(v.posted_date)):'')+'</div>'+prod
-    +'<div style="display:flex;gap:7px;flex-wrap:wrap">'
-    +(v.product_name?'<button class="btn sm" onclick="watchOrderSample(\''+v.id+'\')">Order sample</button>':'<button class="btn ghost sm" onclick="watchOpen(\''+v.id+'\')">Find product</button>')
-    +'<button class="btn ghost sm" onclick="watchAddFilm(\''+v.id+'\')">Add to film</button>'
-    +'<button class="btn ghost sm" onclick="watchOpen(\''+v.id+'\')">Open</button>'
-    +'<button class="btn ghost sm" onclick="watchDismiss(\''+v.id+'\')">Dismiss</button></div></div></div>';
+  var prodChip=v.product_name?('<span class="wv-chip prod">'+esc(v.product_name)+'</span>'):'<span class="wv-chip">Product not detected</span>';
+  var first=v.product_name
+    ?'<button class="wv-btn pink" onclick="watchOrderSample(\''+v.id+'\')">Order sample</button>'
+    :'<button class="wv-btn pink" onclick="watchOpen(\''+v.id+'\')">Find product</button>';
+  return '<div class="wv-card"><div class="wv-top">'
+    +'<div class="wv-thumb"><span class="wv-new">NEW</span>'
+    +'<img id="wth_'+esc(v.id)+'" referrerpolicy="no-referrer" alt="" onerror="this.style.display=\'none\'">'
+    +'<span class="wv-vel"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 5 4 19 20 19"></polygon></svg> +'+wNum(v.vel_24h)+' / 24h</span></div>'
+    +'<div class="wv-body"><div class="wv-cap">'+esc(v.caption||'(no caption)')+'</div>'
+    +'<div class="wv-handle">'+esc(v.handle||'')+'</div>'
+    +'<div class="wv-meta">'+wNum(v.views)+' total'+(v.posted_date?(' &middot; '+esc(v.posted_date)):'')+'</div>'
+    +prodChip+'</div></div>'
+    +'<div class="wv-actions">'+first
+    +'<button class="wv-btn" onclick="watchAddFilm(\''+v.id+'\')"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-film"></use></svg> Add to film</button>'
+    +'<button class="wv-btn" onclick="watchOpen(\''+v.id+'\')"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-corner"></use></svg> Open</button>'
+    +'<button class="wv-btn" onclick="watchDismiss(\''+v.id+'\')"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-x"></use></svg> Dismiss</button></div></div>';
 }
 function watchAddPrompt(){
   showModal('<div style="text-align:left"><h3 style="margin:0 0 4px">Add a creator to watch</h3>'
