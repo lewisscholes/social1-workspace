@@ -8,6 +8,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="theme-color" content="#000000" />
 <title>The Post Haus</title>
+<!-- build: dashfix2 -->
+
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:wght@300..900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1874,6 +1876,7 @@ async function loadDashboard(refresh){
   loadJobs();
   renderDash();
   await loadTicks();
+  try{ var mm=await sb.from('tofilm_manual').select('*').eq('day',tfActiveDay()).order('created_at',{ascending:false}); state.tfManual=mm.data||[]; }catch(e){ state.tfManual=[]; }
   renderToFilm();
   renderOverviewStats();
   renderDashOverview();
@@ -2283,8 +2286,10 @@ function renderToFilm(){
   var srows=samples.length?samples.map(nxSampleRow).join(''):'<div class="nx-h2sub" style="padding:6px 0">Nothing scraped from Social One today yet -- run the videos scraper.</div>';
   var skipped=Object.keys(tfSamplePicks).filter(function(k){return tfSamplePicks[k]==='no';}).length;
   var sampSub='Trending products you do not own yet.'+(skipped?(' &middot; <a onclick="sampleResetNo()" style="cursor:pointer;color:var(--blue)">'+skipped+' declined, reset</a>'):'');
+  var manual=(state.tfManual||[]).map(function(m){ return {pid:m.product_uid, pname:m.pname, views:m.views, link:m.link, days:null, acct:m.account, key:'manual:'+m.id, target:1, seenDay:m.day, manualId:m.id}; });
+  var manualRows=manual.length?('<div class="nx-h2sub" style="margin:2px 0 8px;color:var(--cyan);font-weight:700">Added from your watch list</div>'+manual.map(nxTfRow2).join('')):'';
   card.innerHTML=seg
-    +'<div class="nx-h2">To film</div><div class="nx-h2sub">Owned products with a winning video in the last 14 days. Winning products take ~60% of filming.</div>'+rows
+    +'<div class="nx-h2">To film</div><div class="nx-h2sub">Owned products with a winning video in the last 14 days. Winning products take ~60% of filming.</div>'+manualRows+rows
     +'<div class="nx-h2" style="margin-top:26px">Request samples</div><div class="nx-h2sub">'+sampSub+'</div>'+srows;
   try{ [].slice.call(card.querySelectorAll('.nx-vthimg')).forEach(function(im){ var v=im.getAttribute('data-vid'),u=im.getAttribute('data-url'); if(v&&u) fetchThumb(v,u,im); }); }catch(e){}
   try{ setFilmedMetric(); }catch(e){}
@@ -2631,7 +2636,7 @@ async function loadWatch(){
   try{ var s=await sb.from('watch_settings').select('default_threshold').eq('id',1).single(); if(s.data&&s.data.default_threshold)watchState.threshold=s.data.default_threshold; }catch(e){}
   var th=document.getElementById('wThresh'); if(th)th.value=watchState.threshold.toLocaleString();
   try{ var c=await sb.from('watch_creators').select('*').order('created_at',{ascending:false}); watchState.creators=c.data||[]; }catch(e){ watchState.creators=[]; }
-  try{ var v=await sb.from('watch_videos').select('*').eq('flagged',true).neq('status','dismissed').order('vel_24h',{ascending:false}).limit(60); watchState.videos=v.data||[]; }catch(e){ watchState.videos=[]; }
+  try{ var v=await sb.from('watch_videos').select('*').eq('flagged',true).not('status','in','("dismissed","added","filmed")').order('vel_24h',{ascending:false}).limit(60); watchState.videos=v.data||[]; }catch(e){ watchState.videos=[]; }
   renderWatch();
 }
 function setWatchTab(t){ watchState.tab=t; var a=document.getElementById('wtab-creators'),b=document.getElementById('wtab-flagged'); if(a)a.classList.toggle('active',t==='creators'); if(b)b.classList.toggle('active',t==='flagged'); var pc=document.getElementById('wPaneCreators'),pf=document.getElementById('wPaneFlagged'); if(pc)pc.classList.toggle('hide',t!=='creators'); if(pf)pf.classList.toggle('hide',t!=='flagged'); var db=document.getElementById('wDateBar'); if(db)db.style.display=(t==='flagged')?'':'none'; }
@@ -2880,12 +2885,14 @@ async function watchOrderSample(id){
 }
 async function watchAddFilm(id){
   var v=watchVid(id); if(!v)return;
-  try{ var pid=v.product_uid;
-    if(!pid && v.product_name){ var pr=await sb.from('products').insert({name:v.product_name,source_link:v.url,owned:false}).select('id').single(); pid=pr.data&&pr.data.id; }
-    var today=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
-    await sb.from('ed_film_queue').insert({day:today,product_uid:pid||null,hook:(v.caption||'').slice(0,160),reason:'Watch list: '+(v.handle||'')+' +'+wNum(v.vel_24h)+'/24h',status:'todo'});
-    await sb.from('watch_videos').update({status:'filmed'}).eq('id',id);
-    watchState.videos=watchState.videos.filter(function(x){return x.id!==id;}); renderWatch(); toast('Added to To-Film');
+  try{
+    var acct=((tfAccts()[0])||{}).handle||'';
+    var row={ day:tfToday(), product_uid:v.product_uid||null, pname:(v.product_name||v.handle||'(idea)'),
+              link:v.url||'', handle:v.handle||'', views:parseNum(v.views)||0, account:acct };
+    var ins=await sb.from('tofilm_manual').insert(row); if(ins.error) throw ins.error;
+    await sb.from('watch_videos').update({status:'added'}).eq('id',id);   // leaves the Winning list (query excludes non-flagged-actionable)
+    watchState.videos=watchState.videos.filter(function(x){return x.id!==id;}); renderWatch();
+    toast('Added to To-film','ok');
   }catch(e){ toast('Failed: '+((e&&e.message)||e),'err'); }
 }
 function renderPriority(){
