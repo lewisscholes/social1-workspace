@@ -728,6 +728,7 @@ html,body{overscroll-behavior:none;}
 .rt-field input{width:100%;background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;color:var(--ink);font:inherit;font-size:14px;box-sizing:border-box}
 .rt-field input:focus{outline:none;border-color:var(--blue)}
 .rt-row2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.dash-range{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
 @media(max-width:820px){.rt-stats{grid-template-columns:1fr;gap:10px}.rt-grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -799,7 +800,7 @@ html,body{overscroll-behavior:none;}
           <div class="h-sub" id="dashSub">Loading…</div>
         </div>
         <div class="h-actions">
-          <button class="btn" onclick="openScrapeModal()"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-plus"></use></svg> Scrape</button>
+          <div class="dash-range" id="dashRange"></div>
           <button class="btn ghost" onclick="loadDashboard(true)"><svg class="svic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-refresh"></use></svg> Refresh</button>
         </div>
       </div>
@@ -1614,7 +1615,12 @@ async function loadDashboard(refresh){
   state.results=data||[];
   try{ var wc=await sb.from('watch_videos').select('id',{count:'exact',head:true}).eq('flagged',true).neq('status','dismissed'); state.winCount=wc.count||0; }catch(e){ state.winCount=0; }
   try{ var wq=await sb.from('watch_videos').select('id,handle,url,tiktok_video_id,vel_24h').eq('flagged',true).neq('status','dismissed').order('vel_24h',{ascending:false}).limit(4); state.dashWins=wq.data||[]; }catch(e){ state.dashWins=[]; }
+  // last 31 days of filming + flagging, so the dashboard date selector can total any range client-side
+  var since=tfDayOffset(31);
+  try{ var ft=await sb.from('film_ticks').select('day,count').gte('day',since); state.dashFilmRows=ft.data||[]; }catch(e){ state.dashFilmRows=[]; }
+  try{ var fl=await sb.from('watch_videos').select('flagged_at').eq('flagged',true).neq('status','dismissed'); state.dashFlaggedRows=fl.data||[]; }catch(e){ state.dashFlaggedRows=[]; }
   document.getElementById('dashSub').textContent=state.results.length+' competitor videos · deduped, updated on each re-scrape';
+  renderDashRange();
   loadJobs();
   renderDash();
   await loadTicks();
@@ -1667,20 +1673,64 @@ function nxTfRow(x,withFilmed){
     +(x.link?'<a class="nx-lk" href="'+esc(x.link)+'" target="_blank" rel="noopener">Watch &nearr;</a>':'')
     +(withFilmed&&x.key?'<button class="nx-mini" onclick="tfTickIdea(\''+esc(x.key)+'\')">Mark filmed</button>':'')+'</div>';
 }
+// ---- Dashboard date range (replaces the manual Scrape button) ----
+function dashRangeDays(){
+  var dr=state.dashRange||{mode:'today'}; var to=tfToday(), from=to;
+  if(dr.mode==='3d') from=tfDayOffset(2);
+  else if(dr.mode==='7d') from=tfDayOffset(6);
+  else if(dr.mode==='custom'){ from=dr.from||to; to=dr.to||tfToday(); }
+  return {from:from,to:to};
+}
+function dashRangeLabel(){
+  var dr=state.dashRange||{mode:'today'};
+  if(dr.mode==='today') return 'Today';
+  if(dr.mode==='3d') return 'Last 3 days';
+  if(dr.mode==='7d') return 'Last 7 days';
+  var r=dashRangeDays(); function f(d){ try{ return new Date(d+'T00:00:00').toLocaleDateString(undefined,{day:'numeric',month:'short'}); }catch(e){ return d; } }
+  return (r.from===r.to)? f(r.from) : (f(r.from)+' - '+f(r.to));
+}
+function renderDashRange(){
+  var el=document.getElementById('dashRange'); if(!el) return;
+  var m=(state.dashRange||{mode:'today'}).mode;
+  function b(v,l){ return '<button class="'+(m===v?'on':'')+'" onclick="setDashRange(\''+v+'\')">'+l+'</button>'; }
+  el.innerHTML='<div class="nx-seg nx-seg-sm">'+b('today','Today')+b('3d','Last 3 days')+b('7d','Last 7 days')+'</div>'
+    +'<button class="nx-cal'+(m==='custom'?' on':'')+'" title="'+(m==='custom'?esc(dashRangeLabel()):'Pick a date range')+'" onclick="dashOpenRange()"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-calendar"></use></svg></button>';
+}
+function setDashRange(mode){ state.dashRange={mode:mode}; renderDashRange(); renderOverviewStats(); }
+function dashOpenRange(){
+  var r=dashRangeDays();
+  showModal('<div style="text-align:left"><h3 style="margin:0 0 4px">Pick a date range</h3>'
+    +'<p class="h-sub" style="margin:0 0 14px;font-size:13px">View all data gathered over a period (up to 30 days).</p>'
+    +'<div class="rt-row2"><div class="rt-field"><label>From</label><input id="dashFrom" type="date" max="'+tfToday()+'" value="'+r.from+'"></div>'
+    +'<div class="rt-field"><label>To</label><input id="dashTo" type="date" max="'+tfToday()+'" value="'+r.to+'"></div></div>'
+    +'<div style="display:flex;gap:9px;margin-top:14px"><button class="btn" onclick="dashApplyRange()">Apply</button><button class="btn ghost" onclick="closeModal()">Cancel</button></div></div>');
+}
+function dashApplyRange(){
+  var from=val('dashFrom'), to=val('dashTo'); if(!from||!to){ toast('Pick both dates','err'); return; }
+  if(from>to){ var t=from; from=to; to=t; }
+  var d1=new Date(to+'T00:00:00'), d0=new Date(from+'T00:00:00');
+  if(Math.round((d1-d0)/86400000)+1>30){ var nf=new Date(d1.getTime()-29*86400000); from=nf.getFullYear()+'-'+('0'+(nf.getMonth()+1)).slice(-2)+'-'+('0'+nf.getDate()).slice(-2); toast('Limited to 30 days','ok'); }
+  state.dashRange={mode:'custom',from:from,to:to}; closeModal(); renderDashRange(); renderOverviewStats();
+}
 function renderOverviewStats(){
   var el=document.getElementById('dashMetrics'); if(!el) return;
-  var today=tfToday();
-  var newToday=(state.results||[]).filter(function(r){return String(r.first_seen_at||'').slice(0,10)===today;}).length;
-  var owned=(state.products||[]).filter(function(p){return p.owned;});
-  var ownedWinning=owned.filter(function(p){return p.winning;}).length;
-  var tf=0; tfAccts().forEach(function(a){ tf+=(tfOwnedIdeas(a.handle)||[]).length; });
-  var win=(state.winCount!=null)?state.winCount:0;
+  var r=dashRangeDays(); var inR=function(d){ return d && d>=r.from && d<=r.to; };
+  // 1) videos filmed in range (from film_ticks)
+  var filmed=(state.dashFilmRows||[]).reduce(function(s,x){ return s+(inR(String(x.day||'').slice(0,10))?(+x.count||0):0); },0);
+  // 2) to-film items newly surfaced ("dragged in") in range
+  var tfNew=0; tfAccts().forEach(function(a){ (tfOwnedIdeas(a.handle)||[]).forEach(function(idea){ if(inR(idea.seenDay)) tfNew++; }); });
+  // 3) winning videos flagged in range
+  var winNew=(state.dashFlaggedRows||[]).filter(function(x){ return inR(tfLocalDay(x.flagged_at)); }).length;
+  // 4) products (total) + winning
+  var prods=(state.products||[]); var prodWin=prods.filter(function(p){return p.winning;}).length;
+  var owned=prods.filter(function(p){return p.owned;});
+  var rl=dashRangeLabel();
   function stat(l,v,d,dc){ return '<div class="nx-stat"><div class="l">'+l+'</div><div class="v">'+v+'</div>'+(d?'<div class="d" style="color:'+(dc||'var(--cyan)')+'">'+d+'</div>':'')+'</div>'; }
   el.innerHTML='<div class="nx-stats">'
-    +stat('New videos today',newToday,'')
-    +stat('To film',tf,owned.length+' owned','var(--muted)')
-    +stat('Winning videos',win,ownedWinning+' winning','var(--cyan)')
-    +stat('Owned products',owned.length,ownedWinning+' winning','var(--muted)')
+    +stat('Videos filmed',filmed,esc(rl),'var(--muted)')
+    +stat('To film',tfNew,owned.length+' owned','var(--muted)')
+    +stat('Winning videos',winNew,esc(rl),'var(--cyan)')
+    +stat('Products',prods.length,prodWin+' winning','var(--muted)')
     +'</div>';
 }
 function dashWinCard(v){
