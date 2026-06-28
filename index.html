@@ -1721,16 +1721,16 @@ function renderOverviewStats(){
   var tfNew=0; tfAccts().forEach(function(a){ (tfOwnedIdeas(a.handle)||[]).forEach(function(idea){ if(inR(idea.seenDay)) tfNew++; }); });
   // 3) winning videos flagged in range
   var winNew=(state.dashFlaggedRows||[]).filter(function(x){ return inR(tfLocalDay(x.flagged_at)); }).length;
-  // 4) products (total) + winning
-  var prods=(state.products||[]); var prodWin=prods.filter(function(p){return p.winning;}).length;
-  var owned=prods.filter(function(p){return p.owned;});
+  // 4) products we OWN (+ how many of those are winning)
+  var prods=(state.products||[]); var owned=prods.filter(function(p){return p.owned;});
+  var ownedWin=owned.filter(function(p){return p.winning;}).length;
   var rl=dashRangeLabel();
   function stat(l,v,d,dc){ return '<div class="nx-stat"><div class="l">'+l+'</div><div class="v">'+v+'</div>'+(d?'<div class="d" style="color:'+(dc||'var(--cyan)')+'">'+d+'</div>':'')+'</div>'; }
   el.innerHTML='<div class="nx-stats">'
     +stat('Videos filmed',filmed,esc(rl),'var(--muted)')
     +stat('To film',tfNew,owned.length+' owned','var(--muted)')
     +stat('Winning videos',winNew,esc(rl),'var(--cyan)')
-    +stat('Products',prods.length,prodWin+' winning','var(--muted)')
+    +stat('Products',owned.length,ownedWin+' winning','var(--muted)')
     +'</div>';
 }
 function dashWinCard(v){
@@ -2782,30 +2782,9 @@ async function createRun(){
   closeModal(); toast(freq>0?('Scheduled -- runs now, then every '+freq+'h'):'Run queued -- the workhorse will pick it up','ok'); loadScraperView();
 }
 
-// Top-line = our own activity for ONE selected date range: Uploaded / Edited / Posted
-async function renderOwnMetrics(){
-  const {data}=await sb.from('videos').select('created_at,posted_at,kind');
-  state.metricVids=data||[];
-  if(!state.dashRange) state.dashRange=7;
-  renderDashMetrics();
-}
-function renderDashMetrics(){
-  const V=state.metricVids||[]; const d=state.dashRange||7;
-  const now=Date.now(), day=86400000;
-  const t0=(()=>{ const dd=new Date(); dd.setHours(0,0,0,0); return dd.getTime(); })();
-  const inWin=ts=>{ if(!ts) return false; const t=new Date(ts).getTime(); return d===1 ? t>=t0 : (now-t)<=d*day; };
-  const up=V.filter(v=>v.kind!=='edited'&&inWin(v.created_at)).length;   // raw uploads
-  const ed=V.filter(v=>v.kind==='edited'&&inWin(v.created_at)).length;   // rendered edited clips (Edited bucket)
-  // posted: the send flow stamps posted_at on BOTH the raw clip and its edited render --
-  // count each underlying clip once, not twice.
-  const po=(()=>{ const seen=new Set(); let n=0; V.forEach(v=>{ if(!inWin(v.posted_at))return; const k=(v.kind==='edited')?(v.source_video_id||v.id):v.id; if(seen.has(k))return; seen.add(k); n++; }); return n; })();
-  const ranges=[[1,'Today'],[7,'Last 7 days'],[14,'14 days'],[30,'30 days']];
-  const toggle='<div class="rangetoggle">'+ranges.map(r=>'<button class="rtbtn'+(r[0]===d?' on':'')+'" onclick="setDashRange('+r[0]+')">'+r[1]+'</button>').join('')+'</div>';
-  const stat=(l,v)=>'<div class="dstat"><div class="dval">'+v+'</div><div class="dlbl">'+l+'</div></div>';
-  const filmed='<div class="dstat"><div class="dval" id="statFilmed">'+(window.tfFilmedTotal?tfFilmedTotal():0)+'</div><div class="dlbl">Filmed</div></div>';
-  document.getElementById('dashMetrics').innerHTML=toggle+'<div class="dbox">'+filmed+stat('Uploaded',up)+stat('Edited',ed)+stat('Posted',po)+'</div>';
-}
-function setDashRange(d){ state.dashRange=d; renderDashMetrics(); }
+// (legacy dashboard analytics removed -- the dashboard now uses renderOverviewStats + the
+//  date-range selector at the top. The old renderOwnMetrics/renderDashMetrics/setDashRange
+//  were dead code and collided with the new setDashRange, hijacking the date buttons.)
 function flatScraped(r){
   const caps=(r.raw&&Array.isArray(r.raw.textOverlays))?r.raw.textOverlays.map(x=>String(x).trim()).filter(Boolean):(r.text_overlays?[r.text_overlays]:[]);
   return { product:prodName(r.product_uid), handle:r.handle||'', date:r.posted_date||'', videoType:r.video_type||'', isAd:r.is_ad?'Yes':'No',
