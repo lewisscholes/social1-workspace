@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="theme-color" content="#000000" />
 <title>The Post Haus</title>
-<!-- build: dashfix2 -->
+<!-- build: 20260628-autoupdate -->
 
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:wght@300..900&display=swap" rel="stylesheet">
@@ -1871,6 +1871,7 @@ async function loadDashboard(refresh){
   var since=tfDayOffset(31);
   try{ var ft=await sb.from('film_ticks').select('day,count').gte('day',since); state.dashFilmRows=ft.data||[]; }catch(e){ state.dashFilmRows=[]; }
   try{ var fl=await sb.from('watch_videos').select('flagged_at').eq('flagged',true).neq('status','dismissed'); state.dashFlaggedRows=fl.data||[]; }catch(e){ state.dashFlaggedRows=[]; }
+  try{ var dm=await sb.from('tofilm_manual').select('day').gte('day',since); state.dashManualRows=dm.data||[]; }catch(e){ state.dashManualRows=[]; }
   document.getElementById('dashSub').textContent=state.results.length+' competitor videos · deduped, updated on each re-scrape';
   renderDashRange();
   loadJobs();
@@ -1972,6 +1973,8 @@ function renderOverviewStats(){
   var filmed=(state.dashFilmRows||[]).reduce(function(s,x){ return s+(inR(String(x.day||'').slice(0,10))?(+x.count||0):0); },0);
   // 2) to-film items newly surfaced ("dragged in") in range
   var tfNew=0; tfAccts().forEach(function(a){ (tfOwnedIdeas(a.handle)||[]).forEach(function(idea){ if(inR(idea.seenDay)) tfNew++; }); });
+  // include videos manually added from the watch list (in range)
+  tfNew+=(state.dashManualRows||[]).filter(function(x){ return inR(String(x.day||'').slice(0,10)); }).length;
   // 3) winning videos flagged in range
   var winNew=(state.dashFlaggedRows||[]).filter(function(x){ return inR(tfLocalDay(x.flagged_at)); }).length;
   // 4) products we OWN (+ how many of those are winning)
@@ -5706,6 +5709,29 @@ function initNativePolish(){
   try{ if(window.Capacitor.isPluginAvailable('SplashScreen') && P.SplashScreen){ setTimeout(function(){ try{ P.SplashScreen.hide(); }catch(e){} }, 250); } }catch(e){}
 }
 if(document.readyState==='complete'||document.readyState==='interactive'){ setTimeout(initNativePolish,0); } else { document.addEventListener('DOMContentLoaded', initNativePolish); }
+// --- auto-update: detect a newer deployed build and reload, so no manual hard-refresh is ever needed ---
+var MILO_BUILD='20260628-autoupdate';
+var __miloUpdating=false;
+async function miloCheckUpdate(){
+  if(__miloUpdating) return;
+  try{
+    var url=location.pathname.split('?')[0]+'?_u='+Date.now();
+    var res=await fetch(url,{cache:'no-store'});
+    if(!res.ok) return;
+    var txt=await res.text();
+    var m=txt.match(/build:\s*([\w.\-]+)/);
+    var live=m?m[1]:null;
+    if(live && live!==MILO_BUILD){
+      __miloUpdating=true;
+      try{ if(window.caches&&caches.keys){ var ks=await caches.keys(); await Promise.all(ks.map(function(k){return caches.delete(k);})); } }catch(e){}
+      location.replace(location.pathname.split('?')[0]+'?v='+encodeURIComponent(live));
+    }
+  }catch(e){}
+}
+setInterval(miloCheckUpdate, 4*60*1000);
+document.addEventListener('visibilitychange', function(){ if(!document.hidden) miloCheckUpdate(); });
+window.addEventListener('focus', miloCheckUpdate);
+setTimeout(miloCheckUpdate, 8000);
 async function nativeSaveFromUrl(url, filename){
   const C=window.Capacitor.Plugins;
   const safe=(filename||'video.mp4').replace(/[^\w.\-]+/g,'_');
