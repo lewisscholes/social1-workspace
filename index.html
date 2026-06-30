@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="theme-color" content="#000000" />
 <title>milo</title>
-<!-- build: 20260628-dash-winning -->
+<!-- build: 20260628-invoices -->
 
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:wght@300..900&display=swap" rel="stylesheet">
@@ -735,6 +735,12 @@ html,body{overscroll-behavior:none;}
 .rt-field input:focus{outline:none;border-color:var(--blue)}
 .rt-row2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 .dash-range{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rt-sechead{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin:16px 0 8px;border-top:1px solid var(--line);padding-top:14px}
+.rt-actions{display:flex;gap:8px;margin-top:12px}
+.rt-gen{flex:1;background:var(--grad);border:0;color:#fff;border-radius:9px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer}
+.rt-gen:disabled{opacity:.55;cursor:default}
+.rt-edit{background:var(--panel);border:1px solid var(--line2);color:var(--muted);border-radius:9px;padding:9px 13px;font-size:12.5px;font-weight:600;cursor:pointer}
+.rt-edit:hover{border-color:var(--muted);color:var(--ink)}
 @media(max-width:820px){.rt-stats{grid-template-columns:1fr;gap:10px}.rt-grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -2595,31 +2601,126 @@ function rtCard(r,isCur){
     +(isCur?'<button class="rt-x" title="Remove" onclick="rtRemove(\''+r.retainer_id+'\',\''+rtJs(r.brand)+'\')">&times;</button>':'')+'</div>'
     +'<div class="rt-prog"><span class="'+(complete?'complete':'')+'">'+done+' of '+total+' delivered'+(complete?' &#10003;':'')+'</span><span class="pct">'+pct+'%</span></div>'
     +'<div class="rt-bar"><i class="'+(complete?'complete':'')+'" style="width:'+pct+'%"></i></div>'
-    +'<div class="rt-boxes">'+boxes+'</div></div>';
+    +'<div class="rt-boxes">'+boxes+'</div>'
+    +(isCur?'<div class="rt-actions"><button class="rt-gen" onclick="rtGenInvoice(\''+r.retainer_id+'\')">Generate invoice</button><button class="rt-edit" onclick="rtOpenAdd(\''+r.retainer_id+'\')">Details</button></div>':'')
+    +'</div>';
 }
 async function rtToggle(id,n){
   var row=(state.rtRows||[]).find(function(x){return x.retainer_id===id;}); if(!row) return;
   var prev=+row.count||0; var c=(prev===n)?n-1:n; if(c<0)c=0; row.count=c; renderRetainers();
   try{ await sb.from('retainer_ticks').upsert({retainer_id:id,month:state.rtMonthSel,count:c,brand:row.brand,account:row.account,amount:row.amount,quota:row.quota,updated_at:new Date().toISOString()},{onConflict:'retainer_id,month'}); }catch(e){ toast('Save failed','err'); }
 }
-function rtOpenAdd(){
-  showModal('<div style="text-align:left"><h3 style="margin:0 0 4px">Add retainer</h3>'
-    +'<p class="h-sub" style="margin:0 0 14px;font-size:13px">A brand you have a monthly deliverable deal with.</p>'
-    +'<div class="rt-field"><label>Brand name</label><input id="rtBrand" placeholder="e.g. Medicube"></div>'
-    +'<div class="rt-field"><label>Account filming for them</label><input id="rtAcct" placeholder="@yourhandle"></div>'
-    +'<div class="rt-row2"><div class="rt-field"><label>Paying (£ / month)</label><input id="rtAmt" inputmode="numeric" placeholder="1500"></div>'
-    +'<div class="rt-field"><label>Videos to deliver</label><input id="rtQty" inputmode="numeric" placeholder="10"></div></div>'
-    +'<div style="display:flex;gap:9px;margin-top:16px"><button class="btn" onclick="rtSaveAdd()">Add retainer</button><button class="btn ghost" onclick="closeModal()">Cancel</button></div></div>');
+function rtRetainer(id){ return (state.retainers||[]).find(function(x){return x.id===id;})||null; }
+function rtOpenAdd(editId){
+  var r=editId?rtRetainer(editId):null;
+  function v(k){ return (r&&r[k]!=null)?String(r[k]):''; }
+  function bd(k,def){ return (r&&r[k])?String(r[k]):(r?'':def); }
+  showModal('<div style="text-align:left;max-height:78vh;overflow:auto"><h3 style="margin:0 0 4px">'+(r?'Edit retainer &amp; invoice details':'Add retainer')+'</h3>'
+    +'<p class="h-sub" style="margin:0 0 14px;font-size:13px">'+(r?'Update this client and its saved invoice details.':'Set this up once, then use Generate invoice each month.')+'</p>'
+    +'<div class="rt-field"><label>Brand name</label><input id="rtBrand" placeholder="e.g. Ara Fitness" value="'+esc(v('brand'))+'"></div>'
+    +'<div class="rt-field"><label>Account filming for them</label><input id="rtAcct" placeholder="@yourhandle" value="'+esc(v('account'))+'"></div>'
+    +'<div class="rt-row2"><div class="rt-field"><label>Paying (£ / month)</label><input id="rtAmt" inputmode="numeric" placeholder="500" value="'+esc(v('amount'))+'"></div>'
+    +'<div class="rt-field"><label>Videos to deliver</label><input id="rtQty" inputmode="numeric" placeholder="10" value="'+esc(v('quota'))+'"></div></div>'
+    +'<div class="rt-sechead">Invoice details</div>'
+    +'<div class="rt-field"><label>Bill to (company)</label><input id="rtBillName" placeholder="Ara Fitness Ltd," value="'+esc(v('bill_name'))+'"></div>'
+    +'<div class="rt-field"><label>Bill to (address)</label><textarea id="rtBillAddr" rows="3" placeholder="Kings Head House, 15 London End, Beaconsfield, England, HP9 2HN">'+esc(v('bill_address'))+'</textarea></div>'
+    +'<div class="rt-field"><label>Invoice line item</label><input id="rtItem" placeholder="50x tiktok shop affiliate videos (@yasandlew/@linkedbylinacre)" value="'+esc(v('line_item'))+'"></div>'
+    +'<div class="rt-row2"><div class="rt-field"><label>Bank name</label><input id="rtBankName" value="'+esc(bd('bank_name','Yasmin Linacre'))+'"></div>'
+    +'<div class="rt-field"><label>Sort code</label><input id="rtBankSort" value="'+esc(bd('bank_sort','60-13-04'))+'"></div></div>'
+    +'<div class="rt-field"><label>Account number</label><input id="rtBankAcct" value="'+esc(bd('bank_account','40830977'))+'"></div>'
+    +'<div style="display:flex;gap:9px;margin-top:16px"><button class="btn" onclick="rtSaveAdd('+(editId?('\''+editId+'\''):'')+')">'+(r?'Save':'Add retainer')+'</button><button class="btn ghost" onclick="closeModal()">Cancel</button></div></div>');
   setTimeout(function(){ var e=document.getElementById('rtBrand'); if(e)e.focus(); },60);
 }
-async function rtSaveAdd(){
+async function rtSaveAdd(editId){
   var brand=(val('rtBrand')||'').trim(); if(!brand){ toast('Enter a brand name','err'); return; }
   var acct=(val('rtAcct')||'').trim();
   var amount=parseInt((val('rtAmt')||'').replace(/[^0-9]/g,''),10)||0;
   var quota=parseInt((val('rtQty')||'').replace(/[^0-9]/g,''),10)||1;
-  try{ var res=await sb.from('retainers').insert({brand:brand,account:acct,amount:amount,quota:quota,active:true}); if(res.error)throw res.error;
-    state.rtMonthSel=rtMonth(); closeModal(); toast('Retainer added','ok'); loadRetainers();
-  }catch(e){ toast('Could not add: '+((e&&e.message)||e),'err'); }
+  var item=(val('rtItem')||'').trim() || (quota+'x tiktok shop affiliate videos ('+(acct||'')+')');
+  var rec={brand:brand,account:acct,amount:amount,quota:quota,
+    bill_name:(val('rtBillName')||'').trim(), bill_address:(val('rtBillAddr')||'').trim(), line_item:item,
+    bank_name:(val('rtBankName')||'').trim(), bank_account:(val('rtBankAcct')||'').trim(), bank_sort:(val('rtBankSort')||'').trim()};
+  try{
+    if(editId){ var u=await sb.from('retainers').update(rec).eq('id',editId); if(u.error)throw u.error; }
+    else { rec.active=true; var ins=await sb.from('retainers').insert(rec); if(ins.error)throw ins.error; }
+    state.rtMonthSel=rtMonth(); closeModal(); toast(editId?'Saved':'Retainer added','ok'); loadRetainers();
+  }catch(e){ toast('Could not save: '+((e&&e.message)||e),'err'); }
+}
+// ---- Invoice generation (jsPDF, downloaded PDF that matches the sample) ----
+function ensureJsPDF(){
+  return new Promise(function(res,rej){
+    if(window.jspdf&&window.jspdf.jsPDF) return res();
+    var s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s.onload=function(){ (window.jspdf&&window.jspdf.jsPDF)?res():rej(new Error('jspdf missing')); };
+    s.onerror=function(){ rej(new Error('jspdf load failed')); };
+    document.head.appendChild(s);
+  });
+}
+function rtFmtDate(d){ try{ return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }catch(e){ return d.toISOString().slice(0,10); } }
+function rtIso(d){ return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
+async function rtGenInvoice(id){
+  var r=rtRetainer(id); if(!r){ toast('Retainer not found','err'); return; }
+  if(!r.bill_name && !r.bill_address){ toast('Add invoice details first','err'); rtOpenAdd(id); return; }
+  try{ await ensureJsPDF(); }catch(e){ toast('Could not load PDF library (check connection)','err'); return; }
+  var nextNo=1163;
+  try{ var q=await sb.from('invoices').select('invoice_no').order('invoice_no',{ascending:false}).limit(1); if(q.data&&q.data.length&&q.data[0].invoice_no){ nextNo=Math.max(1162,q.data[0].invoice_no)+1; } }catch(e){}
+  var today=new Date(), issued=rtFmtDate(today);
+  var amount=+r.amount||0;
+  var item=r.line_item || ((r.quota||0)+'x tiktok shop affiliate videos ('+(r.account||'')+')');
+  var data={no:nextNo,issued:issued,due:issued,amount:amount,item:item,
+    billName:r.bill_name||r.brand||'', billAddr:r.bill_address||'',
+    bankName:r.bank_name||'', bankAcct:r.bank_account||'', bankSort:r.bank_sort||''};
+  try{ rtBuildInvoicePdf(data); }catch(e){ toast('PDF build failed: '+((e&&e.message)||e),'err'); return; }
+  try{ await sb.from('invoices').insert({retainer_id:id,invoice_no:nextNo,issued_on:rtIso(today),due_on:rtIso(today),amount:amount,item:item,bill_name:data.billName,bill_address:data.billAddr,bank_name:data.bankName,bank_account:data.bankAcct,bank_sort:data.bankSort}); }catch(e){}
+  toast('Invoice #'+nextNo+' generated','ok');
+}
+function rtBuildInvoicePdf(d){
+  var J=window.jspdf.jsPDF, doc=new J({unit:'pt',format:'a4'});
+  var W=doc.internal.pageSize.getWidth(), L=56, R=W-56, GBP='£';
+  function money(n){ return GBP+(Number(n)||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+  // top-left: bill-to company + address
+  var y=66; doc.setTextColor(35,35,35); doc.setFont('helvetica','bold'); doc.setFontSize(10.5);
+  doc.text(String(d.billName||''), L, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(70,70,70);
+  var addr=String(d.billAddr||'').split(/\r?\n|,\s*/).map(function(s){return s.trim();}).filter(Boolean);
+  addr.forEach(function(ln,i){ y+=13; doc.text(ln+(i<addr.length-1?',':''), L, y); });
+  // top-right: INVOICE + number
+  doc.setTextColor(95,95,95); doc.setFont('helvetica','normal'); doc.setFontSize(30); doc.text('INVOICE', R, 72, {align:'right'});
+  doc.setFontSize(11); doc.setTextColor(120,120,120); doc.text('# '+d.no, R, 92, {align:'right'});
+  // right meta: Date / Due / Balance Due box
+  var ry=168, lblX=R-118, valX=R;
+  doc.setFontSize(10); doc.setTextColor(120,120,120); doc.text('Date:', lblX, ry, {align:'right'});
+  doc.setTextColor(35,35,35); doc.setFont('helvetica','bold'); doc.text(d.issued, valX, ry, {align:'right'});
+  doc.setFont('helvetica','normal'); doc.setTextColor(120,120,120); doc.text('Due Date:', lblX, ry+22, {align:'right'});
+  doc.setTextColor(35,35,35); doc.setFont('helvetica','bold'); doc.text(d.due, valX, ry+22, {align:'right'});
+  doc.setFillColor(238,238,238); doc.rect(R-244, ry+34, 244, 26, 'F');
+  doc.setTextColor(35,35,35); doc.setFont('helvetica','bold'); doc.setFontSize(10.5);
+  doc.text('Balance Due:', R-130, ry+51, {align:'right'}); doc.text(money(d.amount), valX-8, ry+51, {align:'right'});
+  // left: Bill To + bank details
+  var by=188; doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(120,120,120); doc.text('Bill To:', L, by);
+  doc.setFont('helvetica','bold'); doc.setTextColor(35,35,35); doc.text('Bank details:', L, by+18);
+  doc.setFont('helvetica','normal'); doc.setTextColor(70,70,70);
+  doc.text('Name: '+(d.bankName||''), L, by+32);
+  doc.text('Account number: '+(d.bankAcct||''), L, by+45);
+  doc.text('Sort code: '+(d.bankSort||''), L, by+58);
+  // table header
+  var ty=304, cQty=R-250, cRate=R-120, cAmt=R;
+  doc.setFillColor(62,62,62); doc.rect(L, ty, R-L, 26, 'F');
+  doc.setTextColor(236,236,236); doc.setFontSize(9.5); doc.setFont('helvetica','normal');
+  doc.text('Item', L+8, ty+17); doc.text('Quantity', cQty, ty+17, {align:'right'});
+  doc.text('Rate', cRate, ty+17, {align:'right'}); doc.text('Amount', cAmt-2, ty+17, {align:'right'});
+  // row
+  var rly=ty+46; doc.setTextColor(30,30,30); doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
+  doc.text(doc.splitTextToSize(String(d.item||''), cQty-L-28), L+8, rly);
+  doc.setFont('helvetica','normal'); doc.setTextColor(70,70,70);
+  doc.text('1', cQty, rly, {align:'right'}); doc.text(money(d.amount), cRate, rly, {align:'right'}); doc.text(money(d.amount), cAmt-2, rly, {align:'right'});
+  // totals
+  var sy=ty+150; doc.setFontSize(9.5);
+  doc.setTextColor(120,120,120); doc.text('Subtotal:', cRate, sy, {align:'right'}); doc.setTextColor(35,35,35); doc.text(money(d.amount), cAmt-2, sy, {align:'right'});
+  doc.setTextColor(120,120,120); doc.text('Tax (0%):', cRate, sy+22, {align:'right'}); doc.setTextColor(35,35,35); doc.text(money(0), cAmt-2, sy+22, {align:'right'});
+  doc.setTextColor(120,120,120); doc.text('Total:', cRate, sy+44, {align:'right'}); doc.setTextColor(35,35,35); doc.setFont('helvetica','bold'); doc.text(money(d.amount), cAmt-2, sy+44, {align:'right'});
+  doc.save('Invoice '+d.no+'.pdf');
 }
 async function rtRemove(id,brand){
   if(!confirm('Remove the retainer for '+(brand||'this brand')+'? Past months keep their history.')) return;
@@ -5473,7 +5574,7 @@ function initNativePolish(){
 }
 if(document.readyState==='complete'||document.readyState==='interactive'){ setTimeout(initNativePolish,0); } else { document.addEventListener('DOMContentLoaded', initNativePolish); }
 // --- auto-update: detect a newer deployed build and reload, so no manual hard-refresh is ever needed ---
-var MILO_BUILD='20260628-dash-winning';
+var MILO_BUILD='20260628-invoices';
 var __miloUpdating=false;
 async function miloCheckUpdate(){
   if(__miloUpdating) return;
