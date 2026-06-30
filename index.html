@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="theme-color" content="#000000" />
 <title>milo</title>
-<!-- build: 20260628-tofilm-winners -->
+<!-- build: 20260628-dash-winning -->
 
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:wght@300..900&display=swap" rel="stylesheet">
@@ -607,7 +607,7 @@ html,body{overscroll-behavior:none;}
 .nx-stat .l{font-size:12.5px;color:var(--muted);margin-bottom:8px}
 .nx-stat .v{font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1}
 .nx-stat .d{font-size:12px;margin-top:5px;font-weight:600}
-.nx-cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:30px;align-items:start}
+.nx-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,460px);gap:30px;align-items:start}
 .nx-h2{font-size:16px;font-weight:700;margin:0 0 2px;display:flex;align-items:center}
 .nx-h2 a{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--blue);cursor:pointer;text-decoration:none}
 .nx-h2sub{font-size:12.5px;color:var(--muted);margin:0 0 10px}
@@ -642,8 +642,12 @@ html,body{overscroll-behavior:none;}
 .nx-play svg{width:14px;height:14px;fill:#fff;margin-left:2px}
 .nx-vbadge{position:absolute;left:7px;bottom:7px;background:rgba(0,0,0,.62);color:#fff;font-size:11px;font-weight:700;padding:3px 7px;border-radius:7px;z-index:1}
 .nx-vbadge b{color:var(--cyan)}
-.nx-vname{font-weight:600;font-size:12.5px;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.nx-vsub{font-size:11.5px;color:var(--blue);font-weight:600}
+.nx-vname{font-weight:600;font-size:13.5px;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nx-vsub{font-size:12.5px;color:var(--blue);font-weight:600}
+.nx-btnstack{display:flex;flex-direction:column;gap:6px;flex:none}
+.nx-btnstack .nx-mini{width:100%;text-align:center}
+.nx-viewall{display:block;width:100%;margin-top:14px;background:var(--panel);border:1px solid var(--line2);border-radius:11px;padding:12px;font-size:13px;font-weight:700;color:var(--blue);cursor:pointer;text-align:center}
+.nx-viewall:hover{border-color:var(--blue)}
 .nx-acct{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:20px}
 .nx-acard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
 .nx-acard .nm{font-weight:700;font-size:14px}
@@ -1668,11 +1672,12 @@ function nxThumb(pid,name){
   if(!urls.length) return '<div class="nx-thumb" style="background:#3a2a33">'+ltr+'</div>';
   return '<div class="nx-thumb" style="background:#2a2030">'+ltr+'<img src="'+esc(urls[0])+'" referrerpolicy="no-referrer" data-fb="'+esc(urls.slice(1).join('|'))+'" onerror="nxImgError(this)"></div>';
 }
+function nxClip(s,n){ s=String(s==null?'':s); return s.length>n ? s.slice(0,n).replace(/\s+\S*$/,'')+'...' : s; }
 function nxTfRow(x,withFilmed){
   var p=tfProduct(x.pid)||{};
   var pill=p.winning?'<span class="nx-pill win">winning</span>':('<span class="nx-pill acc">'+esc((tfAcct(x.acct)||{}).label||'')+'</span>');
   return '<div class="nx-row">'+nxThumb(x.pid,x.pname)
-    +'<div style="flex:1;min-width:0"><div class="nx-nm">'+esc(x.pname||'(product)')+'</div>'
+    +'<div style="flex:1;min-width:0"><div class="nx-nm">'+esc(nxClip(x.pname||'(product)',26))+'</div>'
     +'<div class="nx-meta">'+pill+' '+tfFmt(x.views)+' views'+(x.days!=null?(' &middot; '+tfRecency(x.days)):'')+'</div></div>'
     +(x.link?'<a class="nx-lk" href="'+esc(x.link)+'" target="_blank" rel="noopener">Watch &nearr;</a>':'')
     +(withFilmed&&x.key?'<button class="nx-mini" onclick="tfTickIdea(\''+esc(x.key)+'\')">Mark filmed</button>':'')+'</div>';
@@ -1759,7 +1764,8 @@ function renderDashOverview(){
   el.innerHTML='<div class="nx-cols">'
     +'<div><div class="nx-h2">Top to film <a onclick="showView(\'tofilm\')">Open To film &rarr;</a></div><div class="nx-h2sub">Owned winners, last 14 days.</div>'+leftRows
       +'<div class="nx-h2" style="margin-top:22px">Request samples <a onclick="showView(\'tofilm\')">Open To film &rarr;</a></div><div class="nx-h2sub">Trending products you do not own yet.</div>'+sRows+'</div>'
-    +'<div><div class="nx-h2">Winning videos <a onclick="showView(\'watch\')">All &rarr;</a></div><div class="nx-h2sub">Gaining fast on your watch list.</div>'+grid+'</div>'
+    +'<div><div class="nx-h2">Winning videos <a onclick="showView(\'watch\')">All &rarr;</a></div><div class="nx-h2sub">Gaining fast on your watch list.</div>'+grid
+      +'<button class="nx-viewall" onclick="showView(\'watch\')">View all winning videos &rarr;</button></div>'
     +'</div>';
   wins.forEach(function(v){ var im=document.getElementById('dwth_'+v.id); if(im&&v.url) fetchThumb(v.tiktok_video_id||v.id,v.url,im); });
 }
@@ -2093,7 +2099,7 @@ function nxSampleRow(x){
     +'<div style="flex:1;min-width:0"><div class="nx-nm">'+esc(x.pname||'(product)')+'</div>'
     +'<div class="nx-meta">'+(x.gmv?('&#163;'+tfFmt(x.gmv)+' GMV &middot; '):'')+tfFmt(x.views)+' views'+(x.days!=null?(' &middot; '+tfRecency(x.days)):'')+'</div></div>'
     +(x.link?'<a class="nx-lk" href="'+esc(x.link)+'" target="_blank" rel="noopener">View &nearr;</a>':'')
-    +btn+'</div>';
+    +'<div class="nx-btnstack">'+btn+'</div></div>';
 }
 function tfFilmStep(key,n,pid,acct,angle){
   tfSetTick(key,n,pid,acct,angle);
@@ -5467,7 +5473,7 @@ function initNativePolish(){
 }
 if(document.readyState==='complete'||document.readyState==='interactive'){ setTimeout(initNativePolish,0); } else { document.addEventListener('DOMContentLoaded', initNativePolish); }
 // --- auto-update: detect a newer deployed build and reload, so no manual hard-refresh is ever needed ---
-var MILO_BUILD='20260628-tofilm-winners';
+var MILO_BUILD='20260628-dash-winning';
 var __miloUpdating=false;
 async function miloCheckUpdate(){
   if(__miloUpdating) return;
