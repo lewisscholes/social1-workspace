@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="theme-color" content="#000000" />
 <title>milo</title>
-<!-- build: 20260628-invoices -->
+<!-- build: 20260703-scraper-health -->
 
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:wght@300..900&display=swap" rel="stylesheet">
@@ -648,6 +648,20 @@ html,body{overscroll-behavior:none;}
 .nx-btnstack .nx-mini{width:100%;text-align:center}
 .nx-viewall{display:block;width:100%;margin-top:14px;background:var(--panel);border:1px solid var(--line2);border-radius:11px;padding:12px;font-size:13px;font-weight:700;color:var(--blue);cursor:pointer;text-align:center}
 .nx-viewall:hover{border-color:var(--blue)}
+/* ---- Scraper health ---- */
+.sh-dot{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}
+.sh-dot.ok{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.2)}
+.sh-dot.bad{background:var(--red);box-shadow:0 0 0 3px rgba(254,44,85,.22)}
+.sh-row{padding:12px 0;border-top:1px solid var(--line)}
+.sh-name{font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sh-badge{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;letter-spacing:.02em}
+.sh-badge.ok{background:rgba(34,197,94,.16);color:#22c55e}
+.sh-badge.bad{background:var(--red-soft,rgba(254,44,85,.16));color:var(--red)}
+.sh-fix{margin-top:10px;background:var(--line2);border-radius:10px;padding:12px 14px}
+.sh-steps{margin:0;padding-left:18px;font-size:13px;line-height:1.6}
+.sh-steps li{margin:3px 0}
+.sh-steps b{color:var(--ink)}
+.sh-alert-item{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
 .nx-acct{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:20px}
 .nx-acard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
 .nx-acard .nm{font-weight:700;font-size:14px}
@@ -1258,6 +1272,9 @@ html,body{overscroll-behavior:none;}
           <h2 class="h-title">Settings</h2>
           <div class="h-sub">Account and notification preferences.</div>
         </div>
+      </div>
+      <div class="card" style="max-width:560px;margin-bottom:14px" id="scraperHealthCard">
+        <div id="scraperHealth"><div class="h-sub">Checking scrapers...</div></div>
       </div>
       <div class="card" style="max-width:560px">
         <div style="font-weight:700;font-size:14px;margin-bottom:4px">Daily summary email</div>
@@ -2498,7 +2515,78 @@ async function loadSettings(){
     if(note){ note.textContent=d.last_sent?('Last summary sent '+new Date(d.last_sent).toLocaleString()+'.'):'No summary sent yet.'; }
   }catch(err){}
   ownAccLoad();
+  recheckScraperHealth();
 }
+// ---------- Scraper health monitor ----------
+var SCRAPER_CHECKS = [
+  { key:'products', name:'Daily product scrape',
+    desc:'Scrapes every owned product on Social One for today\'s top videos. Feeds the To-film list.',
+    table:'scraped_videos', field:'last_scraped_at', maxHours:30, cmd:'run_daily_scrape.command' },
+  { key:'watch', name:'Winning-video watch scrape',
+    desc:'Scans your watch accounts for fast-rising videos. Feeds the Winning videos list.',
+    table:'watch_videos', field:'last_checked_at', maxHours:30, cmd:'run_creator_watch_worker.command' }
+];
+function shAgo(ms){ if(ms==null) return 'never'; var h=ms/3600000; if(h<1) return Math.max(1,Math.round(h*60))+'m ago'; if(h<48) return Math.round(h)+'h ago'; return Math.round(h/24)+'d ago'; }
+async function loadScraperHealth(){
+  var res=[];
+  for(var i=0;i<SCRAPER_CHECKS.length;i++){
+    var c=SCRAPER_CHECKS[i], latest=null, err=null;
+    try{
+      var q=await sb.from(c.table).select(c.field).order(c.field,{ascending:false}).limit(1);
+      if(q.error) throw q.error;
+      var row=(q.data||[])[0]; latest=row?row[c.field]:null;
+    }catch(e){ err=(e&&e.message)||String(e); }
+    var ms = latest? (Date.now()-new Date(latest).getTime()) : null;
+    var down = err? false : (ms==null || ms > c.maxHours*3600000);   // a query error != scraper down (don't false-alarm)
+    res.push({check:c, latest:latest, ageMs:ms, down:down, err:err});
+  }
+  state.scraperHealth=res;
+  return res;
+}
+function shFixSteps(c){
+  return '<ol class="sh-steps">'
+    +'<li>Make sure the <b>Mac Mini is powered on</b> and connected to the internet.</li>'
+    +'<li>Open the <b>Social1_Share_mac</b> folder on the Mac.</li>'
+    +'<li>Double-click <b>'+esc(c.cmd)+'</b> and let the window finish and close.</li>'
+    +'<li>Wait about 2 minutes, then tap <b>Re-check</b>.</li>'
+    +'</ol>';
+}
+function renderScraperHealth(){
+  var el=document.getElementById('scraperHealth'); if(!el) return;
+  var rows=state.scraperHealth;
+  if(!rows){ el.innerHTML='<div class="h-sub">Checking scrapers...</div>'; return; }
+  var anyDown=rows.some(function(r){return r.down;});
+  var head='<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+    +'<span class="sh-dot '+(anyDown?'bad':'ok')+'"></span>'
+    +'<span style="font-weight:700;font-size:14px">Scraper health</span>'
+    +'<button class="nx-mini" style="margin-left:auto" onclick="recheckScraperHealth()">Re-check</button></div>'
+    +'<div class="h-sub" style="margin-bottom:6px">'+(anyDown?'A scraper has stopped running. Follow the steps below to restart it.':'All scrapers are running normally.')+'</div>';
+  var body=rows.map(function(r){
+    var c=r.check;
+    var status = r.err? '<span class="sh-badge">unknown</span>' : (r.down? '<span class="sh-badge bad">Not running</span>' : '<span class="sh-badge ok">Running</span>');
+    var last = r.err? 'Could not check right now' : ('Last ran '+shAgo(r.ageMs));
+    var fix = r.down? ('<div class="sh-fix">'+shFixSteps(c)+'</div>') : '';
+    return '<div class="sh-row"><div class="sh-name">'+esc(c.name)+' '+status+'</div>'
+      +'<div class="h-sub" style="font-size:12px;margin-top:3px">'+esc(c.desc)+'</div>'
+      +'<div class="h-sub" style="font-size:12px;margin-top:2px">'+last+'</div>'+fix+'</div>';
+  }).join('');
+  el.innerHTML=head+body;
+}
+async function recheckScraperHealth(){ var el=document.getElementById('scraperHealth'); if(el&&!state.scraperHealth) el.innerHTML='<div class="h-sub">Checking scrapers...</div>'; await loadScraperHealth(); renderScraperHealth(); }
+// Blocking startup alert: if a scraper is down, show it before the admin does anything else.
+async function scraperHealthGate(){
+  if(!state.isAdmin) return;
+  try{ await loadScraperHealth(); }catch(e){ return; }
+  var down=(state.scraperHealth||[]).filter(function(r){return r.down;});
+  if(!down.length) return;
+  var list=down.map(function(r){ return '<div class="sh-alert-item"><div class="sh-name">'+esc(r.check.name)+' <span class="sh-badge bad">Not running</span></div>'
+    +'<div class="h-sub" style="font-size:12px;margin:2px 0 8px">Last ran '+shAgo(r.ageMs)+'.</div>'+shFixSteps(r.check)+'</div>'; }).join('');
+  showModal('<div style="text-align:left;max-height:80vh;overflow:auto"><h3 style="margin:0 0 4px;color:var(--red)">&#9888; Scraper alert</h3>'
+    +'<p class="h-sub" style="margin:0 0 14px;font-size:13px">'+(down.length>1?(down.length+' scrapers have'):'A scraper has')+' stopped running. Restart '+(down.length>1?'them':'it')+' so milo keeps getting fresh data.</p>'
+    +list
+    +'<div style="display:flex;gap:9px;margin-top:16px"><button class="btn" onclick="scraperGateRecheck()">I have done it -- re-check</button><button class="btn ghost" onclick="closeModal()">Dismiss for now</button></div></div>');
+}
+async function scraperGateRecheck(){ await loadScraperHealth(); var down=(state.scraperHealth||[]).filter(function(r){return r.down;}); try{ renderScraperHealth(); }catch(e){} if(!down.length){ closeModal(); toast('All scrapers running','ok'); } else { toast(down.length+' still not running -- give it a minute','err'); } }
 // ---------- My accounts (watch my own content) ----------
 async function ownAccLoad(){
   try{ var r=await sb.from('watch_creators').select('*').eq('is_own',true).eq('active',true).order('created_at',{ascending:false}); state.ownAccts=r.data||[]; }catch(e){ state.ownAccts=[]; }
@@ -5574,7 +5662,7 @@ function initNativePolish(){
 }
 if(document.readyState==='complete'||document.readyState==='interactive'){ setTimeout(initNativePolish,0); } else { document.addEventListener('DOMContentLoaded', initNativePolish); }
 // --- auto-update: detect a newer deployed build and reload, so no manual hard-refresh is ever needed ---
-var MILO_BUILD='20260628-invoices';
+var MILO_BUILD='20260703-scraper-health';
 var __miloUpdating=false;
 async function miloCheckUpdate(){
   if(__miloUpdating) return;
@@ -5772,7 +5860,7 @@ function toggleAuthMode(){ authMode=authMode==='login'?'signup':'login'; const s
 function authPrimary(){ authMode==='signup'?doSignup():doLogin(); }
 async function ownProfile(uid){ const{data}=await sb.from('profiles').select('*').eq('id',uid).maybeSingle(); return data; }
 async function gateBySession(session){ let prof=await ownProfile(session.user.id); if(!prof){ await sb.from('profiles').upsert({id:session.user.id,email:session.user.email,status:'pending',last_seen:new Date().toISOString()}); prof=await ownProfile(session.user.id); } else { sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',session.user.id); } state.user={id:session.user.id,email:session.user.email,first_name:prof?prof.first_name:null,status:prof?prof.status:'pending',role:prof?(prof.role||'user'):'user'}; state.isAdmin=state.user.role==='admin'&&state.user.status==='approved'; if(state.user.status==='approved') enterApp(); else setView('pending'); }
-async function enterApp(){ state.viewAs=state.user.id; ['authName','authEmail','authPass'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';}); setView('app'); document.getElementById('sideName').textContent=displayName(state.user)+(state.isAdmin?' (admin)':''); var ag=document.getElementById('adminGroup'); if(ag)ag.style.display=state.isAdmin?'':'none'; document.getElementById('teamLink').style.display=state.isAdmin?'':'none'; var tst=document.getElementById('tsheet-team'); if(tst)tst.style.display=state.isAdmin?'':'none'; initViews(); await loadProducts(); if(!state.user.first_name) promptName(); showView('dashboard'); }
+async function enterApp(){ state.viewAs=state.user.id; ['authName','authEmail','authPass'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';}); setView('app'); document.getElementById('sideName').textContent=displayName(state.user)+(state.isAdmin?' (admin)':''); var ag=document.getElementById('adminGroup'); if(ag)ag.style.display=state.isAdmin?'':'none'; document.getElementById('teamLink').style.display=state.isAdmin?'':'none'; var tst=document.getElementById('tsheet-team'); if(tst)tst.style.display=state.isAdmin?'':'none'; initViews(); await loadProducts(); if(!state.user.first_name) promptName(); showView('dashboard'); setTimeout(function(){ try{ scraperHealthGate(); }catch(e){} }, 1500); }
 function showLogin(){ state.user=null; if(authMode==='signup')toggleAuthMode(); setView('login'); }
 async function refreshAuth(){ const{data}=await sb.auth.getSession(); if(data.session) await gateBySession(data.session); else showLogin(); }
 async function doLogin(){ authMsg(''); const email=val('authEmail').trim(),pw=document.getElementById('authPass').value; if(!email||!pw){authMsg('Enter email and password');return;} const{data,error}=await sb.auth.signInWithPassword({email,password:pw}); if(error){authMsg(error.message);return;} gateBySession(data.session); }
